@@ -4,24 +4,41 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import cors from 'cors'
 import express from 'express'
+import rateLimit from 'express-rate-limit'
+import helmet from 'helmet'
 import multer from 'multer'
+import { createDatabase, id, now } from './database.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
-const dataDir = path.join(rootDir, 'data')
-const uploadsDir = path.join(rootDir, 'uploads')
-const dbPath = path.join(dataDir, 'real-media-db.json')
+const uploadsDir = process.env.UPLOADS_DIR || path.join(rootDir, 'uploads')
 const PORT = Number(process.env.API_PORT || 4000)
 const TEAM_ACCESS_ID = process.env.TEAM_ACCESS_ID || '1234567890'
+const MAX_UPLOAD_GB = Number(process.env.MAX_UPLOAD_GB || 3)
+const CORS_ORIGIN = process.env.CORS_ORIGIN
 
+const repository = createDatabase()
 const app = express()
 
-await fs.mkdir(dataDir, { recursive: true })
 await fs.mkdir(uploadsDir, { recursive: true })
 
-app.use(cors({ origin: true, credentials: true }))
+app.disable('x-powered-by')
+app.use(helmet({ crossOriginResourcePolicy: false }))
+app.use(cors({
+  origin: CORS_ORIGIN ? CORS_ORIGIN.split(',').map((origin) => origin.trim()) : true,
+  credentials: true,
+}))
 app.use(express.json({ limit: '2mb' }))
-app.use('/uploads', express.static(uploadsDir))
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  standardHeaders: true,
+  legacyHeaders: false,
+}))
+app.use('/uploads', express.static(uploadsDir, {
+  maxAge: '7d',
+  immutable: true,
+}))
 
 const storage = multer.diskStorage({
   destination: async (_req, _file, cb) => {
@@ -36,33 +53,8 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 3 * 1024 * 1024 * 1024 },
+  limits: { fileSize: MAX_UPLOAD_GB * 1024 * 1024 * 1024 },
 })
-
-const defaultDb = {
-  users: [],
-  sessions: [],
-  projects: [],
-  portfolio: [],
-  notifications: [],
-}
-
-async function readDb() {
-  try {
-    return { ...defaultDb, ...JSON.parse(await fs.readFile(dbPath, 'utf8')) }
-  } catch {
-    await writeDb(defaultDb)
-    return structuredClone(defaultDb)
-  }
-}
-
-async function writeDb(db) {
-  await fs.writeFile(dbPath, JSON.stringify(db, null, 2))
-}
-
-function id(prefix) {
-  return `${prefix}_${crypto.randomBytes(12).toString('hex')}`
-}
 
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   const hash = crypto.scryptSync(password, salt, 64).toString('hex')
@@ -70,6 +62,7 @@ function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
 }
 
 function verifyPassword(password, stored) {
+  if (!stored) return false
   const [salt, hash] = stored.split(':')
   const check = crypto.scryptSync(password, salt, 64)
   return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), check)
@@ -82,48 +75,20 @@ function publicUser(user) {
   return rest
 }
 
-function now() {
-  return new Date().toISOString()
-}
-
-async function requireAuth(req, res, next) {
+function requireAuth(req, res, next) {
   const token = req.headers.authorization?.replace(/^Bearer\s+/i, '')
   if (!token) return res.status(401).json({ message: 'Missing auth token.' })
 
-  const db = await readDb()
-  const session = db.sessions.find((item) => item.token === token)
-  if (!session) return res.status(401).json({ message: 'Invalid session.' })
+  const user = repository.findUserByToken(token)
+  if (!user) return res.status(401).json({ message: 'Invalid session.' })
 
-  const user = db.users.find((item) => item.id === session.userId)
-  if (!user) return res.status(401).json({ message: 'User not found.' })
-
-  req.db = db
-  req.session = session
   req.user = user
   next()
 }
 
-function createSession(db, user) {
-  const session = {
-    id: id('session'),
-    token: crypto.randomBytes(32).toString('hex'),
-    userId: user.id,
-    createdAt: now(),
-  }
-  db.sessions.push(session)
-  return session
-}
-
-function notify(db, userId, projectId, title, message) {
-  db.notifications.unshift({
-    id: id('note'),
-    userId,
-    projectId,
-    title,
-    message,
-    read: false,
-    createdAt: now(),
-  })
+function createSessionResponse(user) {
+  const session = repository.createSession(user.id)
+  return { token: session.token, user: publicUser(user) }
 }
 
 function serviceQuestions(service) {
@@ -177,108 +142,80 @@ function serviceQuestions(service) {
   return [...base, ...(byService[service] || [])]
 }
 
-function visibleProjects(db, user) {
-  if (user.role === 'team') return db.projects
-  return db.projects.filter((project) => project.clientId === user.id)
+function notifyTeam(project, clientName) {
+  repository.teamUsers().forEach((teamUser) => {
+    repository.notify(teamUser.id, project.id, 'New client project', `${clientName} submitted ${project.title}.`)
+  })
 }
 
-function defaultPortfolio() {
-  return [
-    {
-      id: 'portfolio_brand_identity',
-      title: 'Premium Brand Identity',
-      service: 'Branding',
-      description: 'Visual branding and creative direction for a polished business presence.',
-      client: 'Real Media Studio',
-      outcome: 'Built a sharper launch identity and campaign-ready visuals.',
-      mediaUrl: '',
-      mediaType: 'image',
-      createdAt: now(),
-      updatedAt: now(),
-    },
-    {
-      id: 'portfolio_campaign_design',
-      title: 'Creative Campaign Design',
-      service: 'Marketing',
-      description: 'Content visuals built for social media, ads, and brand recognition.',
-      client: 'Growth Campaign',
-      outcome: 'Created scroll-stopping campaign assets for multi-platform rollout.',
-      mediaUrl: '',
-      mediaType: 'image',
-      createdAt: now(),
-      updatedAt: now(),
-    },
-    {
-      id: 'portfolio_real_media_branding',
-      title: 'Real Media Branding',
-      service: 'Creative Direction',
-      description: 'Logo system, digital brand presentation, and premium visual tone.',
-      client: 'Real Media',
-      outcome: 'A strong red-black brand system designed for global digital work.',
-      mediaUrl: '',
-      mediaType: 'image',
-      createdAt: now(),
-      updatedAt: now(),
-    },
-  ]
+function filePayload(file, projectId) {
+  return {
+    id: id('file'),
+    projectId,
+    originalName: file.originalname,
+    filename: file.filename,
+    size: file.size,
+    mimetype: file.mimetype,
+    url: `/uploads/${file.filename}`,
+    uploadedAt: now(),
+  }
 }
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, teamAccessIdLength: TEAM_ACCESS_ID.length })
+  res.json({
+    ok: true,
+    database: 'sqlite',
+    uploadLimitGb: MAX_UPLOAD_GB,
+    teamAccessIdLength: TEAM_ACCESS_ID.length,
+  })
 })
 
-app.post('/api/auth/client', async (req, res) => {
+app.post('/api/auth/client', (req, res) => {
   const { mode = 'login', name = '', email = '', password = '' } = req.body
   const cleanEmail = email.trim().toLowerCase()
   if (!cleanEmail || !password || (mode === 'register' && !name.trim())) {
     return res.status(400).json({ message: 'Name, email, and password are required.' })
   }
 
-  const db = await readDb()
-  let user = db.users.find((item) => item.email === cleanEmail && item.role === 'client')
-
+  let user = repository.findClientByEmail(cleanEmail)
   if (mode === 'register') {
     if (user) return res.status(409).json({ message: 'Client account already exists. Please login.' })
-    user = {
+    user = repository.insertUser({
       id: id('user'),
       role: 'client',
       name: name.trim(),
       email: cleanEmail,
       passwordHash: hashPassword(password),
+      teamId: null,
       createdAt: now(),
-    }
-    db.users.push(user)
+    })
   } else if (!user || !verifyPassword(password, user.passwordHash)) {
     return res.status(401).json({ message: 'Invalid client login.' })
   }
 
-  const session = createSession(db, user)
-  await writeDb(db)
-  res.json({ token: session.token, user: publicUser(user) })
+  res.json(createSessionResponse(user))
 })
 
-app.post('/api/auth/team', async (req, res) => {
+app.post('/api/auth/team', (req, res) => {
   const { teamId = '', name = 'Real Media Team' } = req.body
   if (!/^\d{10}$/.test(teamId) || teamId !== TEAM_ACCESS_ID) {
     return res.status(401).json({ message: 'Enter a valid 10 digit team ID.' })
   }
 
-  const db = await readDb()
-  let user = db.users.find((item) => item.role === 'team' && item.teamId === TEAM_ACCESS_ID)
+  let user = repository.findTeamById(TEAM_ACCESS_ID)
   if (!user) {
-    user = {
+    user = repository.insertUser({
       id: id('team'),
       role: 'team',
       name: name.trim() || 'Real Media Team',
+      email: null,
+      passwordHash: null,
       teamId: TEAM_ACCESS_ID,
       createdAt: now(),
-    }
-    db.users.push(user)
+    })
   }
 
-  const session = createSession(db, user)
-  await writeDb(db)
-  res.json({ token: session.token, user: publicUser(user) })
+  res.json(createSessionResponse(user))
 })
 
 app.get('/api/me', requireAuth, (req, res) => {
@@ -289,16 +226,11 @@ app.get('/api/questions/:service', requireAuth, (req, res) => {
   res.json({ questions: serviceQuestions(req.params.service) })
 })
 
-app.get('/api/portfolio', requireAuth, async (_req, res) => {
-  const db = await readDb()
-  if (!db.portfolio.length) {
-    db.portfolio = defaultPortfolio()
-    await writeDb(db)
-  }
-  res.json({ portfolio: db.portfolio })
+app.get('/api/portfolio', requireAuth, (_req, res) => {
+  res.json({ portfolio: repository.portfolio() })
 })
 
-app.post('/api/portfolio', requireAuth, upload.single('media'), async (req, res) => {
+app.post('/api/portfolio', requireAuth, upload.single('media'), (req, res) => {
   if (req.user.role !== 'team') {
     return res.status(403).json({ message: 'Only team members can add portfolio work.' })
   }
@@ -308,50 +240,38 @@ app.post('/api/portfolio', requireAuth, upload.single('media'), async (req, res)
     return res.status(400).json({ message: 'Project name, service, and description are required.' })
   }
 
-  const db = await readDb()
-  const media = req.file ? {
-    mediaUrl: `/uploads/${req.file.filename}`,
-    mediaType: req.file.mimetype.startsWith('video/') ? 'video' : 'image',
-    mediaName: req.file.originalname,
-  } : {
-    mediaUrl: '',
-    mediaType: 'image',
-    mediaName: '',
-  }
-
-  const portfolioItem = {
+  const timestamp = now()
+  const portfolioItem = repository.createPortfolio({
     id: id('portfolio'),
     title: title.trim(),
     service: service.trim(),
     description: description.trim(),
     client: client.trim(),
     outcome: outcome.trim(),
-    ...media,
+    mediaUrl: req.file ? `/uploads/${req.file.filename}` : '',
+    mediaType: req.file?.mimetype.startsWith('video/') ? 'video' : 'image',
+    mediaName: req.file?.originalname || '',
     createdBy: req.user.id,
-    createdAt: now(),
-    updatedAt: now(),
-  }
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  })
 
-  db.portfolio.unshift(portfolioItem)
-  await writeDb(db)
   res.status(201).json({ portfolioItem })
 })
 
-app.delete('/api/portfolio/:id', requireAuth, async (req, res) => {
+app.delete('/api/portfolio/:id', requireAuth, (req, res) => {
   if (req.user.role !== 'team') {
     return res.status(403).json({ message: 'Only team members can delete portfolio work.' })
   }
 
-  const db = await readDb()
-  const portfolioItem = db.portfolio.find((item) => item.id === req.params.id)
+  const portfolioItem = repository.portfolioById(req.params.id)
   if (!portfolioItem) return res.status(404).json({ message: 'Portfolio item not found.' })
 
-  db.portfolio = db.portfolio.filter((item) => item.id !== req.params.id)
-  await writeDb(db)
+  repository.deletePortfolio(req.params.id)
   res.json({ ok: true, deletedId: req.params.id })
 })
 
-app.post('/api/projects', requireAuth, upload.array('files', 20), async (req, res) => {
+app.post('/api/projects', requireAuth, upload.array('files', 20), (req, res) => {
   if (req.user.role !== 'client') {
     return res.status(403).json({ message: 'Only clients can start projects.' })
   }
@@ -361,145 +281,126 @@ app.post('/api/projects', requireAuth, upload.array('files', 20), async (req, re
     return res.status(400).json({ message: 'Service, title, and project description are required.' })
   }
 
-  const db = await readDb()
-  const files = (req.files || []).map((file) => ({
-    id: id('file'),
-    originalName: file.originalname,
-    filename: file.filename,
-    size: file.size,
-    mimetype: file.mimetype,
-    url: `/uploads/${file.filename}`,
-    uploadedAt: now(),
-  }))
-
-  const project = {
-    id: id('project'),
-    clientId: req.user.id,
-    clientName: req.user.name,
-    service,
-    title,
-    description,
-    answers: JSON.parse(answers || '{}'),
-    files,
-    status: 'New brief submitted',
-    messages: [
-      {
-        id: id('msg'),
-        senderId: 'system',
-        senderName: 'Real Media',
-        senderRole: 'system',
-        text: 'Project brief received. A project handler will review it and continue here.',
-        createdAt: now(),
-      },
-    ],
-    createdAt: now(),
-    updatedAt: now(),
+  let parsedAnswers
+  try {
+    parsedAnswers = JSON.parse(answers || '{}')
+  } catch {
+    return res.status(400).json({ message: 'Project answers must be valid JSON.' })
   }
 
-  db.projects.unshift(project)
-  notify(db, req.user.id, project.id, 'Project submitted', `${project.title} was sent to the Real Media team.`)
-  db.users.filter((user) => user.role === 'team').forEach((teamUser) => {
-    notify(db, teamUser.id, project.id, 'New client project', `${req.user.name} submitted ${project.title}.`)
-  })
+  const timestamp = now()
+  const projectId = id('project')
+  const project = repository.createProject(
+    {
+      id: projectId,
+      clientId: req.user.id,
+      service,
+      title,
+      description,
+      answersJson: JSON.stringify(parsedAnswers),
+      status: 'New brief submitted',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    },
+    (req.files || []).map((file) => filePayload(file, projectId)),
+    {
+      id: id('msg'),
+      projectId,
+      senderId: 'system',
+      senderName: 'Real Media',
+      senderRole: 'system',
+      text: 'Project brief received. A project handler will review it and continue here.',
+      createdAt: timestamp,
+    },
+  )
 
-  await writeDb(db)
+  repository.notify(req.user.id, project.id, 'Project submitted', `${project.title} was sent to the Real Media team.`)
+  notifyTeam(project, req.user.name)
+
   res.status(201).json({ project })
 })
 
 app.get('/api/projects', requireAuth, (req, res) => {
-  res.json({ projects: visibleProjects(req.db, req.user) })
+  res.json({ projects: repository.visibleProjects(req.user) })
 })
 
 app.get('/api/projects/:id', requireAuth, (req, res) => {
-  const project = visibleProjects(req.db, req.user).find((item) => item.id === req.params.id)
+  const project = repository.visibleProject(req.user, req.params.id)
   if (!project) return res.status(404).json({ message: 'Project not found.' })
   res.json({ project })
 })
 
-app.post('/api/projects/:id/messages', requireAuth, async (req, res) => {
+app.post('/api/projects/:id/messages', requireAuth, (req, res) => {
   const { text = '' } = req.body
   if (!text.trim()) return res.status(400).json({ message: 'Message is required.' })
 
-  const db = await readDb()
-  const project = visibleProjects(db, req.user).find((item) => item.id === req.params.id)
-  if (!project) return res.status(404).json({ message: 'Project not found.' })
+  const existingProject = repository.visibleProject(req.user, req.params.id)
+  if (!existingProject) return res.status(404).json({ message: 'Project not found.' })
 
-  const message = {
+  const project = repository.addMessage(req.params.id, {
     id: id('msg'),
     senderId: req.user.id,
     senderName: req.user.name,
     senderRole: req.user.role,
     text: text.trim(),
     createdAt: now(),
-  }
-  project.messages.push(message)
-  project.updatedAt = now()
+  })
 
   if (req.user.role === 'client') {
-    db.users.filter((user) => user.role === 'team').forEach((teamUser) => {
-      notify(db, teamUser.id, project.id, 'Client message', `${req.user.name}: ${message.text}`)
+    repository.teamUsers().forEach((teamUser) => {
+      repository.notify(teamUser.id, project.id, 'Client message', `${req.user.name}: ${text.trim()}`)
     })
   } else {
-    notify(db, project.clientId, project.id, 'Handler message', `${req.user.name}: ${message.text}`)
+    repository.notify(project.clientId, project.id, 'Handler message', `${req.user.name}: ${text.trim()}`)
   }
 
-  await writeDb(db)
-  res.status(201).json({ message, project })
+  res.status(201).json({ message: project.messages.at(-1), project })
 })
 
-app.patch('/api/projects/:id/status', requireAuth, async (req, res) => {
+app.patch('/api/projects/:id/status', requireAuth, (req, res) => {
   if (req.user.role !== 'team') return res.status(403).json({ message: 'Only team can update status.' })
   const { status = '' } = req.body
   if (!status.trim()) return res.status(400).json({ message: 'Status is required.' })
 
-  const db = await readDb()
-  const project = db.projects.find((item) => item.id === req.params.id)
-  if (!project) return res.status(404).json({ message: 'Project not found.' })
+  const existingProject = repository.visibleProject(req.user, req.params.id)
+  if (!existingProject) return res.status(404).json({ message: 'Project not found.' })
 
-  project.status = status.trim()
-  project.updatedAt = now()
-  notify(db, project.clientId, project.id, 'Project status updated', `${project.title}: ${project.status}`)
-  await writeDb(db)
+  const project = repository.updateProjectStatus(req.params.id, status.trim())
+  repository.notify(project.clientId, project.id, 'Project status updated', `${project.title}: ${project.status}`)
   res.json({ project })
 })
 
-app.post('/api/projects/:id/files', requireAuth, upload.array('files', 20), async (req, res) => {
-  const db = await readDb()
-  const project = visibleProjects(db, req.user).find((item) => item.id === req.params.id)
-  if (!project) return res.status(404).json({ message: 'Project not found.' })
+app.post('/api/projects/:id/files', requireAuth, upload.array('files', 20), (req, res) => {
+  const existingProject = repository.visibleProject(req.user, req.params.id)
+  if (!existingProject) return res.status(404).json({ message: 'Project not found.' })
 
-  const files = (req.files || []).map((file) => ({
-    id: id('file'),
-    originalName: file.originalname,
-    filename: file.filename,
-    size: file.size,
-    mimetype: file.mimetype,
-    url: `/uploads/${file.filename}`,
-    uploadedAt: now(),
-  }))
-  project.files.push(...files)
-  project.updatedAt = now()
-  notify(db, project.clientId, project.id, 'Footage uploaded', `${files.length} file(s) were added to ${project.title}.`)
+  const files = (req.files || []).map((file) => filePayload(file, req.params.id))
+  const project = repository.addProjectFiles(req.params.id, files)
+  repository.notify(project.clientId, project.id, 'Footage uploaded', `${files.length} file(s) were added to ${project.title}.`)
 
-  await writeDb(db)
-  res.status(201).json({ files, project })
+  res.status(201).json({ files: project.files, project })
 })
 
 app.get('/api/notifications', requireAuth, (req, res) => {
-  const notifications = req.db.notifications.filter((item) => item.userId === req.user.id)
-  res.json({ notifications })
+  res.json({ notifications: repository.notificationsForUser(req.user.id) })
 })
 
-app.patch('/api/notifications/read', requireAuth, async (req, res) => {
-  const db = await readDb()
-  db.notifications.forEach((item) => {
-    if (item.userId === req.user.id) item.read = true
-  })
-  await writeDb(db)
+app.patch('/api/notifications/read', requireAuth, (req, res) => {
+  repository.markNotificationsRead(req.user.id)
   res.json({ ok: true })
+})
+
+app.use((err, _req, res, next) => {
+  void next
+  console.error(err)
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ message: err.message })
+  }
+  res.status(500).json({ message: 'Internal server error.' })
 })
 
 app.listen(PORT, () => {
   console.log(`Real Media backend running on http://localhost:${PORT}`)
+  console.log(`SQLite database: ${process.env.DATABASE_PATH || path.resolve(rootDir, 'data', 'real-media.sqlite')}`)
   console.log(`Team login ID: ${TEAM_ACCESS_ID}`)
 })
