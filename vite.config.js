@@ -15,5 +15,5 @@ export default defineConfig({
     port: 4173,
     strictPort: false,
   },
-  base: './'
+  base: '/Real-Media/'
 })
