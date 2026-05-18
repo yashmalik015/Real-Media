@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "api": "node server/index.js",
+    "dev:full": "concurrently \"npm run api\" \"npm run dev\"",
     "dev:3000": "vite --host 0.0.0.0 --port 3000",
     "build": "vite build",
     "lint": "eslint .",
@@ -12,6 +14,10 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",
+    "concurrently": "^9.2.1",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "multer": "^2.1.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "tailwindcss": "^4.3.0"
