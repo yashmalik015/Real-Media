@@ -7,6 +7,7 @@ import express from 'express'
 import rateLimit from 'express-rate-limit'
 import helmet from 'helmet'
 import multer from 'multer'
+import Razorpay from 'razorpay'
 import { createDatabase, id, now } from './database.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -16,6 +17,11 @@ const PORT = Number(process.env.API_PORT || 4000)
 const TEAM_ACCESS_ID = process.env.TEAM_ACCESS_ID || '1234567890'
 const MAX_UPLOAD_GB = Number(process.env.MAX_UPLOAD_GB || 3)
 const CORS_ORIGIN = process.env.CORS_ORIGIN
+
+const razorpay = process.env.RAZORPAY_KEY_ID ? new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+}) : null;
 
 const repository = createDatabase()
 const app = express()
@@ -187,6 +193,8 @@ app.post('/api/auth/client', (req, res) => {
       email: cleanEmail,
       passwordHash: hashPassword(password),
       teamId: null,
+      teamCategory: null,
+      googleId: null,
       createdAt: now(),
     })
   } else if (!user || !verifyPassword(password, user.passwordHash)) {
@@ -211,6 +219,8 @@ app.post('/api/auth/team', (req, res) => {
       email: null,
       passwordHash: null,
       teamId: TEAM_ACCESS_ID,
+      teamCategory: null,
+      googleId: null,
       createdAt: now(),
     })
   }
@@ -227,6 +237,10 @@ app.get('/api/questions/:service', requireAuth, (req, res) => {
 })
 
 app.get('/api/portfolio', requireAuth, (_req, res) => {
+  res.json({ portfolio: repository.portfolio() })
+})
+
+app.get('/api/portfolio/public', (_req, res) => {
   res.json({ portfolio: repository.portfolio() })
 })
 
@@ -276,7 +290,7 @@ app.post('/api/projects', requireAuth, upload.array('files', 20), (req, res) => 
     return res.status(403).json({ message: 'Only clients can start projects.' })
   }
 
-  const { service, title, description, answers = '{}' } = req.body
+  const { service, title, description, answers = '{}', servicePlan = 'Custom', totalAmount = 0 } = req.body
   if (!service || !title || !description) {
     return res.status(400).json({ message: 'Service, title, and project description are required.' })
   }
@@ -290,6 +304,8 @@ app.post('/api/projects', requireAuth, upload.array('files', 20), (req, res) => 
 
   const timestamp = now()
   const projectId = id('project')
+  const amountNum = Number(totalAmount) || 0
+  
   const project = repository.createProject(
     {
       id: projectId,
@@ -298,9 +314,16 @@ app.post('/api/projects', requireAuth, upload.array('files', 20), (req, res) => 
       title,
       description,
       answersJson: JSON.stringify(parsedAnswers),
-      status: 'New brief submitted',
+      status: amountNum > 0 ? 'Pending Payment' : 'New brief submitted',
       createdAt: timestamp,
       updatedAt: timestamp,
+      servicePlan,
+      paymentStatus: amountNum > 0 ? 'pending' : 'fully_paid',
+      totalAmount: amountNum,
+      amountPaid: 0,
+      projectState: 'active',
+      razorpayOrderId: null,
+      razorpayPaymentId: null
     },
     (req.files || []).map((file) => filePayload(file, projectId)),
     {
@@ -309,13 +332,15 @@ app.post('/api/projects', requireAuth, upload.array('files', 20), (req, res) => 
       senderId: 'system',
       senderName: 'Real Media',
       senderRole: 'system',
-      text: 'Project brief received. A project handler will review it and continue here.',
+      text: amountNum > 0 ? 'Project brief received. Please complete the payment to begin.' : 'Project brief received. A project handler will review it and continue here.',
       createdAt: timestamp,
     },
   )
 
-  repository.notify(req.user.id, project.id, 'Project submitted', `${project.title} was sent to the Real Media team.`)
-  notifyTeam(project, req.user.name)
+  if (amountNum === 0) {
+    repository.notify(req.user.id, project.id, 'Project submitted', `${project.title} was sent to the Real Media team.`)
+    notifyTeam(project, req.user.name)
+  }
 
   res.status(201).json({ project })
 })
@@ -370,6 +395,104 @@ app.patch('/api/projects/:id/status', requireAuth, (req, res) => {
   res.json({ project })
 })
 
+app.post('/api/projects/:id/stop', requireAuth, (req, res) => {
+  const project = repository.visibleProject(req.user, req.params.id)
+  if (!project) return res.status(404).json({ message: 'Project not found.' })
+  if (project.projectState !== 'active') return res.status(400).json({ message: 'Project is already stopped or finished.' })
+
+  const updatedProject = repository.updateProjectState(req.params.id, 'stopped')
+  repository.addMessage(req.params.id, {
+    id: id('msg'),
+    senderId: 'system',
+    senderName: 'Real Media',
+    senderRole: 'system',
+    text: `Project has been stopped by ${req.user.name}. All project files have been securely deleted.`,
+    createdAt: now(),
+  })
+  res.json({ project: updatedProject })
+})
+
+app.post('/api/projects/:id/finish', requireAuth, (req, res) => {
+  if (req.user.role !== 'team') return res.status(403).json({ message: 'Only team can finish projects.' })
+  const project = repository.visibleProject(req.user, req.params.id)
+  if (!project) return res.status(404).json({ message: 'Project not found.' })
+  if (project.projectState !== 'active') return res.status(400).json({ message: 'Project is already stopped or finished.' })
+
+  const updatedProject = repository.updateProjectState(req.params.id, 'finished')
+  repository.addMessage(req.params.id, {
+    id: id('msg'),
+    senderId: 'system',
+    senderName: 'Real Media',
+    senderRole: 'system',
+    text: `Project has been marked as finished by ${req.user.name}. All working files have been securely deleted.`,
+    createdAt: now(),
+  })
+  res.json({ project: updatedProject })
+})
+
+app.get('/api/payment/key', requireAuth, (req, res) => {
+  res.json({ key: process.env.RAZORPAY_KEY_ID || null })
+})
+
+app.post('/api/payment/create-order', requireAuth, async (req, res) => {
+  const { projectId, amount } = req.body
+  const project = repository.visibleProject(req.user, projectId)
+  if (!project) return res.status(404).json({ message: 'Project not found.' })
+  
+  if (!razorpay) {
+    // Mock Razorpay response
+    const mockOrderId = `order_mock_${Date.now()}`
+    repository.setRazorpayOrderId(projectId, mockOrderId)
+    return res.json({ id: mockOrderId, amount: amount * 100, currency: 'INR' })
+  }
+
+  try {
+    const order = await razorpay.orders.create({
+      amount: Math.round(amount * 100),
+      currency: 'INR',
+      receipt: `receipt_${projectId}`,
+    })
+    repository.setRazorpayOrderId(projectId, order.id)
+    res.json(order)
+  } catch (e) {
+    res.status(500).json({ message: 'Failed to create payment order.' })
+  }
+})
+
+app.post('/api/payment/verify', requireAuth, (req, res) => {
+  const { projectId, razorpay_payment_id, razorpay_order_id, razorpay_signature, amount } = req.body
+  const project = repository.visibleProject(req.user, projectId)
+  if (!project) return res.status(404).json({ message: 'Project not found.' })
+
+  if (razorpay) {
+    const body = razorpay_order_id + "|" + razorpay_payment_id
+    const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).update(body.toString()).digest('hex')
+    if (expectedSignature !== razorpay_signature) {
+      return res.status(400).json({ message: 'Invalid payment signature.' })
+    }
+  }
+
+  const newAmountPaid = project.amountPaid + amount
+  const newStatus = newAmountPaid >= project.totalAmount ? 'fully_paid' : 'half_paid'
+  
+  const updatedProject = repository.updateProjectPayment(projectId, newStatus, amount, razorpay_payment_id || `mock_pay_${Date.now()}`)
+  repository.updateProjectStatus(projectId, 'Payment Received - Active')
+  
+  repository.addMessage(projectId, {
+    id: id('msg'),
+    senderId: 'system',
+    senderName: 'Real Media',
+    senderRole: 'system',
+    text: `Payment of ₹${amount} received. The project is now active.`,
+    createdAt: now(),
+  })
+  
+  repository.notify(req.user.id, projectId, 'Payment Successful', `Payment of ₹${amount} for ${project.title} was successful.`)
+  notifyTeam(updatedProject, req.user.name)
+
+  res.json({ success: true, project: updatedProject })
+})
+
 app.post('/api/projects/:id/files', requireAuth, upload.array('files', 20), (req, res) => {
   const existingProject = repository.visibleProject(req.user, req.params.id)
   if (!existingProject) return res.status(404).json({ message: 'Project not found.' })
@@ -388,6 +511,54 @@ app.get('/api/notifications', requireAuth, (req, res) => {
 app.patch('/api/notifications/read', requireAuth, (req, res) => {
   repository.markNotificationsRead(req.user.id)
   res.json({ ok: true })
+})
+
+app.get('/api/testimonials', (_req, res) => {
+  res.json({ testimonials: repository.approvedTestimonials() })
+})
+
+app.post('/api/testimonials/verify', requireAuth, (req, res) => {
+  if (req.user.role !== 'client') {
+    return res.status(403).json({ message: 'Only clients can submit project feedback.' })
+  }
+  const { projectTitle = '' } = req.body
+  if (!projectTitle.trim()) {
+    return res.status(400).json({ message: 'Project name is required.' })
+  }
+  const project = repository.findClientProjectByTitle(req.user.id, projectTitle.trim())
+  if (!project) {
+    return res.status(404).json({ message: 'No matching project found. Enter the exact project title from your workspace.' })
+  }
+  res.json({ ok: true, project: { id: project.id, title: project.title, service: project.service } })
+})
+
+app.post('/api/testimonials', requireAuth, (req, res) => {
+  if (req.user.role !== 'client') {
+    return res.status(403).json({ message: 'Only clients can submit feedback.' })
+  }
+  const { projectTitle = '', name = '', biz = '', quote = '', tag = '', result = '' } = req.body
+  if (!projectTitle.trim() || !name.trim() || !quote.trim()) {
+    return res.status(400).json({ message: 'Project name, your name, and feedback are required.' })
+  }
+  const project = repository.findClientProjectByTitle(req.user.id, projectTitle.trim())
+  if (!project) {
+    return res.status(404).json({ message: 'No matching project found. Enter the exact project title from your workspace.' })
+  }
+  const initials = name.trim().split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()
+  const testimonial = repository.createTestimonial({
+    id: id('testi'),
+    userId: req.user.id,
+    projectId: project.id,
+    name: name.trim(),
+    biz: biz.trim(),
+    quote: quote.trim(),
+    tag: tag.trim() || project.service,
+    result: result.trim(),
+    initials,
+    approved: 1,
+    createdAt: now(),
+  })
+  res.status(201).json({ testimonial })
 })
 
 app.use((err, _req, res, next) => {
