@@ -337,6 +337,13 @@ function makeRepository(db) {
       files: statements.projectFiles.all(row.id).map(fileRow),
       status: row.status,
       messages: statements.projectMessages.all(row.id).map(messageRow),
+      servicePlan: row.service_plan,
+      paymentStatus: row.payment_status,
+      totalAmount: row.total_amount,
+      amountPaid: row.amount_paid,
+      projectState: row.project_state,
+      razorpayOrderId: row.razorpay_order_id,
+      razorpayPaymentId: row.razorpay_payment_id,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }
