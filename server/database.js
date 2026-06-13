@@ -12,6 +12,7 @@ export function createDatabase(dbPath = process.env.DATABASE_PATH || DEFAULT_DB_
   db.pragma('foreign_keys = ON')
   migrate(db)
   seedDefaultPortfolio(db)
+  fixPortfolioMediaPaths(db)
   return makeRepository(db)
 }
 
@@ -158,7 +159,7 @@ function seedDefaultPortfolio(db) {
       title: 'BATCH 2.0 – Cinematic Cut',
       service: 'Video Editing',
       description: 'Cinematic production with premium transitions and professional color grading.',
-      client: 'Real Media',
+      client: 'Buildbig',
       outcome: 'Viral reach across multiple platforms.',
       mediaUrl: '/src/assets/BATCH 2.0.mp4',
       mediaType: 'video',
@@ -169,7 +170,7 @@ function seedDefaultPortfolio(db) {
       title: 'Game Change – Official Music Video',
       service: 'Video Editing',
       description: 'Full music video production with cinematic visuals and professional editing.',
-      client: 'Real Media Productions',
+      client: 'Buildbig Productions',
       outcome: 'Official release content delivered.',
       mediaUrl: '/src/assets/GAME CHANGE OFFICIAL SONG (MUSIC VIDEO).mp4',
       mediaType: 'video',
@@ -180,11 +181,11 @@ function seedDefaultPortfolio(db) {
       title: 'Mine – Official Trailer',
       service: 'Video Editing',
       description: 'High-impact trailer cut with dramatic pacing, SFX, and visual storytelling.',
-      client: 'Real Media',
+      client: 'Buildbig',
       outcome: 'Theatrical trailer quality achieved.',
-      mediaUrl: '/src/assets/MINE OFFICIAI TRAILER .mp4',
+      mediaUrl: '/src/assets/MINE OFFICIAl TRAILER .mp4',
       mediaType: 'video',
-      mediaName: 'MINE OFFICIAI TRAILER .mp4',
+      mediaName: 'MINE OFFICIAl TRAILER .mp4',
     },
   ]
 
@@ -197,6 +198,17 @@ function seedDefaultPortfolio(db) {
     }))
   })
   seed()
+}
+
+function fixPortfolioMediaPaths(db) {
+  db.prepare(`
+    UPDATE portfolio_items
+    SET media_url = '/src/assets/MINE OFFICIAl TRAILER .mp4',
+        media_name = 'MINE OFFICIAl TRAILER .mp4',
+        updated_at = ?
+    WHERE id = 'portfolio_mine_trailer'
+      AND media_name = 'MINE OFFICIAI TRAILER .mp4'
+  `).run(now())
 }
 
 function makeRepository(db) {

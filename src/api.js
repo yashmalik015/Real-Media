@@ -42,6 +42,7 @@ async function request(path, options = {}) {
 export const api = {
   health: () => request('/api/health'),
   loginClient: (payload) => request('/api/auth/client', { method: 'POST', body: payload }),
+  loginGoogle: (payload) => request('/api/auth/google', { method: 'POST', body: payload }),
   loginTeam: (payload) => request('/api/auth/team', { method: 'POST', body: payload }),
   me: () => request('/api/me'),
   getPortfolio: () => request('/api/portfolio/public'),

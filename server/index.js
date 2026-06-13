@@ -1,5 +1,4 @@
 import crypto from 'node:crypto'
-import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import cors from 'cors'
@@ -9,10 +8,10 @@ import helmet from 'helmet'
 import multer from 'multer'
 import Razorpay from 'razorpay'
 import { createDatabase, id, now } from './database.js'
+import { uploadFile, uploadsDirectory } from './fileStorage.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
-const uploadsDir = process.env.UPLOADS_DIR || path.join(rootDir, 'uploads')
 const PORT = Number(process.env.API_PORT || 4000)
 const TEAM_ACCESS_ID = process.env.TEAM_ACCESS_ID || '1234567890'
 const MAX_UPLOAD_GB = Number(process.env.MAX_UPLOAD_GB || 3)
@@ -25,8 +24,6 @@ const razorpay = process.env.RAZORPAY_KEY_ID ? new Razorpay({
 
 const repository = createDatabase()
 const app = express()
-
-await fs.mkdir(uploadsDir, { recursive: true })
 
 app.disable('x-powered-by')
 app.use(helmet({ crossOriginResourcePolicy: false }))
@@ -41,24 +38,9 @@ app.use(rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 }))
-app.use('/uploads', express.static(uploadsDir, {
-  maxAge: '7d',
-  immutable: true,
-}))
-
-const storage = multer.diskStorage({
-  destination: async (_req, _file, cb) => {
-    await fs.mkdir(uploadsDir, { recursive: true })
-    cb(null, uploadsDir)
-  },
-  filename: (_req, file, cb) => {
-    const safeName = file.originalname.replace(/[^\w.\-() ]+/g, '_')
-    cb(null, `${Date.now()}-${crypto.randomBytes(5).toString('hex')}-${safeName}`)
-  },
-})
-
+app.use('/uploads', express.static(uploadsDirectory()))
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: MAX_UPLOAD_GB * 1024 * 1024 * 1024 },
 })
 
@@ -113,6 +95,12 @@ function serviceQuestions(service) {
       'What editing style should we follow: cinematic, fast reels, documentary, gaming, corporate, or music video?',
       'Do you need subtitles, voiceover, sound design, motion graphics, thumbnails, or color grading?',
     ],
+    'VFX': [
+      'What type of VFX do you need: compositing, CGI, motion tracking, or full scene build?',
+      'What is the source footage format and resolution?',
+      'Do you have reference films, shots, or mood boards for the look you want?',
+      'How many shots or scenes need VFX work?',
+    ],
     'Web Development': [
       'What pages do you need on the website?',
       'Do you need payments, bookings, forms, admin panel, or user login?',
@@ -154,15 +142,16 @@ function notifyTeam(project, clientName) {
   })
 }
 
-function filePayload(file, projectId) {
+async function filePayload(file, projectId) {
+  const uploaded = await uploadFile(file, `projects/${projectId}`)
   return {
     id: id('file'),
     projectId,
     originalName: file.originalname,
-    filename: file.filename,
+    filename: uploaded.filename,
     size: file.size,
     mimetype: file.mimetype,
-    url: `/uploads/${file.filename}`,
+    url: uploaded.url,
     uploadedAt: now(),
   }
 }
@@ -204,8 +193,33 @@ app.post('/api/auth/client', (req, res) => {
   res.json(createSessionResponse(user))
 })
 
+app.post('/api/auth/google', (req, res) => {
+  const { name = '', email = '', googleId = '' } = req.body
+  const cleanEmail = email.trim().toLowerCase()
+  if (!cleanEmail || !googleId.trim()) {
+    return res.status(400).json({ message: 'Google account email is required.' })
+  }
+
+  let user = repository.findClientByEmail(cleanEmail)
+  if (!user) {
+    user = repository.insertUser({
+      id: id('user'),
+      role: 'client',
+      name: name.trim() || cleanEmail,
+      email: cleanEmail,
+      passwordHash: null,
+      teamId: null,
+      teamCategory: null,
+      googleId: googleId.trim(),
+      createdAt: now(),
+    })
+  }
+
+  res.json(createSessionResponse(user))
+})
+
 app.post('/api/auth/team', (req, res) => {
-  const { teamId = '', name = 'Real Media Team' } = req.body
+  const { teamId = '', name = 'Buildbig Team' } = req.body
   if (!/^\d{10}$/.test(teamId) || teamId !== TEAM_ACCESS_ID) {
     return res.status(401).json({ message: 'Enter a valid 10 digit team ID.' })
   }
@@ -215,7 +229,7 @@ app.post('/api/auth/team', (req, res) => {
     user = repository.insertUser({
       id: id('team'),
       role: 'team',
-      name: name.trim() || 'Real Media Team',
+      name: name.trim() || 'Buildbig Team',
       email: null,
       passwordHash: null,
       teamId: TEAM_ACCESS_ID,
@@ -244,7 +258,7 @@ app.get('/api/portfolio/public', (_req, res) => {
   res.json({ portfolio: repository.portfolio() })
 })
 
-app.post('/api/portfolio', requireAuth, upload.single('media'), (req, res) => {
+app.post('/api/portfolio', requireAuth, upload.single('media'), async (req, res) => {
   if (req.user.role !== 'team') {
     return res.status(403).json({ message: 'Only team members can add portfolio work.' })
   }
@@ -255,6 +269,7 @@ app.post('/api/portfolio', requireAuth, upload.single('media'), (req, res) => {
   }
 
   const timestamp = now()
+  const uploaded = req.file ? await uploadFile(req.file, `portfolio/${service.trim() || 'general'}`) : null
   const portfolioItem = repository.createPortfolio({
     id: id('portfolio'),
     title: title.trim(),
@@ -262,7 +277,7 @@ app.post('/api/portfolio', requireAuth, upload.single('media'), (req, res) => {
     description: description.trim(),
     client: client.trim(),
     outcome: outcome.trim(),
-    mediaUrl: req.file ? `/uploads/${req.file.filename}` : '',
+    mediaUrl: uploaded?.url || '',
     mediaType: req.file?.mimetype.startsWith('video/') ? 'video' : 'image',
     mediaName: req.file?.originalname || '',
     createdBy: req.user.id,
@@ -285,7 +300,7 @@ app.delete('/api/portfolio/:id', requireAuth, (req, res) => {
   res.json({ ok: true, deletedId: req.params.id })
 })
 
-app.post('/api/projects', requireAuth, upload.array('files', 20), (req, res) => {
+app.post('/api/projects', requireAuth, upload.array('files', 20), async (req, res) => {
   if (req.user.role !== 'client') {
     return res.status(403).json({ message: 'Only clients can start projects.' })
   }
@@ -325,12 +340,12 @@ app.post('/api/projects', requireAuth, upload.array('files', 20), (req, res) => 
       razorpayOrderId: null,
       razorpayPaymentId: null
     },
-    (req.files || []).map((file) => filePayload(file, projectId)),
+    await Promise.all((req.files || []).map((file) => filePayload(file, projectId))),
     {
       id: id('msg'),
       projectId,
       senderId: 'system',
-      senderName: 'Real Media',
+      senderName: 'Buildbig',
       senderRole: 'system',
       text: amountNum > 0 ? 'Project brief received. Please complete the payment to begin.' : 'Project brief received. A project handler will review it and continue here.',
       createdAt: timestamp,
@@ -338,7 +353,7 @@ app.post('/api/projects', requireAuth, upload.array('files', 20), (req, res) => 
   )
 
   if (amountNum === 0) {
-    repository.notify(req.user.id, project.id, 'Project submitted', `${project.title} was sent to the Real Media team.`)
+    repository.notify(req.user.id, project.id, 'Project submitted', `${project.title} was sent to the Buildbig team.`)
     notifyTeam(project, req.user.name)
   }
 
@@ -404,7 +419,7 @@ app.post('/api/projects/:id/stop', requireAuth, (req, res) => {
   repository.addMessage(req.params.id, {
     id: id('msg'),
     senderId: 'system',
-    senderName: 'Real Media',
+    senderName: 'Buildbig',
     senderRole: 'system',
     text: `Project has been stopped by ${req.user.name}. All project files have been securely deleted.`,
     createdAt: now(),
@@ -422,7 +437,7 @@ app.post('/api/projects/:id/finish', requireAuth, (req, res) => {
   repository.addMessage(req.params.id, {
     id: id('msg'),
     senderId: 'system',
-    senderName: 'Real Media',
+    senderName: 'Buildbig',
     senderRole: 'system',
     text: `Project has been marked as finished by ${req.user.name}. All working files have been securely deleted.`,
     createdAt: now(),
@@ -454,7 +469,7 @@ app.post('/api/payment/create-order', requireAuth, async (req, res) => {
     })
     repository.setRazorpayOrderId(projectId, order.id)
     res.json(order)
-  } catch (e) {
+  } catch {
     res.status(500).json({ message: 'Failed to create payment order.' })
   }
 })
@@ -481,7 +496,7 @@ app.post('/api/payment/verify', requireAuth, (req, res) => {
   repository.addMessage(projectId, {
     id: id('msg'),
     senderId: 'system',
-    senderName: 'Real Media',
+    senderName: 'Buildbig',
     senderRole: 'system',
     text: `Payment of ₹${amount} received. The project is now active.`,
     createdAt: now(),
@@ -493,11 +508,11 @@ app.post('/api/payment/verify', requireAuth, (req, res) => {
   res.json({ success: true, project: updatedProject })
 })
 
-app.post('/api/projects/:id/files', requireAuth, upload.array('files', 20), (req, res) => {
+app.post('/api/projects/:id/files', requireAuth, upload.array('files', 20), async (req, res) => {
   const existingProject = repository.visibleProject(req.user, req.params.id)
   if (!existingProject) return res.status(404).json({ message: 'Project not found.' })
 
-  const files = (req.files || []).map((file) => filePayload(file, req.params.id))
+  const files = await Promise.all((req.files || []).map((file) => filePayload(file, req.params.id)))
   const project = repository.addProjectFiles(req.params.id, files)
   repository.notify(project.clientId, project.id, 'Footage uploaded', `${files.length} file(s) were added to ${project.title}.`)
 
@@ -570,8 +585,11 @@ app.use((err, _req, res, next) => {
   res.status(500).json({ message: 'Internal server error.' })
 })
 
-app.listen(PORT, () => {
-  console.log(`Real Media backend running on http://localhost:${PORT}`)
+const server = app.listen(PORT, () => {
+  console.log(`Buildbig backend running on http://localhost:${PORT}`)
   console.log(`SQLite database: ${process.env.DATABASE_PATH || path.resolve(rootDir, 'data', 'real-media.sqlite')}`)
   console.log(`Team login ID: ${TEAM_ACCESS_ID}`)
 })
+
+server.ref()
+setInterval(() => {}, 1 << 30)
