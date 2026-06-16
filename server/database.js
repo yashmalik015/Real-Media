@@ -117,6 +117,16 @@ function migrate(db) {
       created_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS team_chat_messages (
+      id TEXT PRIMARY KEY,
+      sender_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      sender_name TEXT NOT NULL,
+      text TEXT,
+      file_url TEXT,
+      file_name TEXT,
+      created_at TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
     CREATE INDEX IF NOT EXISTS idx_projects_client_id ON projects(client_id);
     CREATE INDEX IF NOT EXISTS idx_project_files_project_id ON project_files(project_id);
@@ -124,6 +134,7 @@ function migrate(db) {
     CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_portfolio_created_at ON portfolio_items(created_at);
     CREATE INDEX IF NOT EXISTS idx_testimonials_approved ON testimonials(approved, created_at);
+    CREATE INDEX IF NOT EXISTS idx_team_chat_created_at ON team_chat_messages(created_at);
   `)
 
   const testimonialCols = db.prepare('PRAGMA table_info(testimonials)').all().map((c) => c.name)
@@ -270,20 +281,21 @@ function makeRepository(db) {
       SELECT projects.*, users.name AS client_name
       FROM projects
       JOIN users ON users.id = projects.client_id
-      WHERE projects.client_id = ?
+      WHERE projects.client_id = ? AND projects.project_state = 'active'
       ORDER BY projects.updated_at DESC
     `),
     projectsByService: db.prepare(`
       SELECT projects.*, users.name AS client_name
       FROM projects
       JOIN users ON users.id = projects.client_id
-      WHERE projects.service = ?
+      WHERE projects.service = ? AND projects.project_state = 'active'
       ORDER BY projects.updated_at DESC
     `),
     allProjects: db.prepare(`
       SELECT projects.*, users.name AS client_name
       FROM projects
       JOIN users ON users.id = projects.client_id
+      WHERE projects.project_state = 'active'
       ORDER BY projects.updated_at DESC
     `),
     projectById: db.prepare(`
@@ -312,6 +324,13 @@ function makeRepository(db) {
     updateProjectState: db.prepare('UPDATE projects SET project_state = ?, updated_at = ? WHERE id = ?'),
     setRazorpayOrderId: db.prepare('UPDATE projects SET razorpay_order_id = ?, updated_at = ? WHERE id = ?'),
     deleteAllProjectFiles: db.prepare('DELETE FROM project_files WHERE project_id = ?'),
+    deleteProject: db.prepare('DELETE FROM projects WHERE id = ?'),
+    teamChatMessages: db.prepare('SELECT * FROM team_chat_messages ORDER BY created_at ASC'),
+    insertTeamChatMessage: db.prepare(`
+      INSERT INTO team_chat_messages (id, sender_id, sender_name, text, file_url, file_name, created_at)
+      VALUES (@id, @senderId, @senderName, @text, @fileUrl, @fileName, @createdAt)
+    `),
+    teamChatMessageById: db.prepare('SELECT * FROM team_chat_messages WHERE id = ?'),
   }
 
   function createSession(userId) {
@@ -483,6 +502,16 @@ function makeRepository(db) {
       t()
       return hydrateProject(statements.projectById.get(projectId))
     },
+    deleteProject: (projectId) => {
+      statements.deleteProject.run(projectId)
+    },
+    
+    // Team Chat
+    teamChatMessages: () => statements.teamChatMessages.all().map(teamChatRow),
+    addTeamChatMessage: (msg) => {
+      statements.insertTeamChatMessage.run(msg)
+      return teamChatRow(statements.teamChatMessageById.get(msg.id))
+    },
   }
 }
 
@@ -575,6 +604,18 @@ function notificationRow(row) {
     title: row.title,
     message: row.message,
     read: Boolean(row.read),
+    createdAt: row.created_at,
+  }
+}
+
+function teamChatRow(row) {
+  return {
+    id: row.id,
+    senderId: row.sender_id,
+    senderName: row.sender_name,
+    text: row.text,
+    fileUrl: row.file_url,
+    fileName: row.file_name,
     createdAt: row.created_at,
   }
 }

@@ -1,7 +1,7 @@
 import logoUrl from '../assets/assetweberlogo.png';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-export const COMPANY_NAME = 'AssetWeber';
+export const COMPANY_NAME = 'Assets Weber';
 export const NAV_LINKS = ["Services","Process","Pricing","Portfolio","Testimonials"];
 export const NAV_PAGE_MAP = {
   Services: ["services-list", "service"],
@@ -29,11 +29,11 @@ export const SERVICES = [
   {icon:"📈",title:"Marketing",desc:"Ad creatives, social media management, analytics strategy, and growth campaigns.",key:"marketing"},
 ];
 export const VIDEO_FILE_META = {
-  "BATCH 2.0.mp4": { title:"BATCH 2.0 – Cinematic Cut", client:"AssetWeber", desc:"Full cinematic production with premium transitions and color grading.", outcome:"Viral reach across multiple platforms" },
+  "BATCH 2.0.mp4": { title:"BATCH 2.0 – Cinematic Cut", client:"Assets Weber", desc:"Full cinematic production with premium transitions and color grading.", outcome:"Viral reach across multiple platforms" },
   "BRONZE TO HEROIC Journey Begins! _ Free Fire Ranked Push Series Day 1.mp4": { title:"Bronze to Heroic Journey", client:"Free Fire Gaming", desc:"Gaming highlight reel with dynamic editing, speed ramps, and motion graphics.", outcome:"10K+ views in first 48 hours" },
-  "CORECT DR SABRINA.mp4": { title:"Dr. Sabrina – Official", client:"AssetWeber", desc:"Professionally edited music video with color correction and effects.", outcome:"Premium brand content delivered" },
-  "GAME CHANGE OFFICIAL SONG (MUSIC VIDEO).mp4": { title:"Game Change – Music Video", client:"AssetWeber Productions", desc:"Full music video production with cinematic visuals and professional editing.", outcome:"Official release content" },
-  "MINE OFFICIAl TRAILER .mp4": { title:"Mine – Official Trailer", client:"AssetWeber", desc:"High-impact trailer cut with dramatic pacing, SFX, and visual storytelling.", outcome:"Theatrical trailer quality achieved" },
+  "CORECT DR SABRINA.mp4": { title:"Dr. Sabrina – Official", client:"Assets Weber", desc:"Professionally edited music video with color correction and effects.", outcome:"Premium brand content delivered" },
+  "GAME CHANGE OFFICIAL SONG (MUSIC VIDEO).mp4": { title:"Game Change – Music Video", client:"Assets Weber Productions", desc:"Full music video production with cinematic visuals and professional editing.", outcome:"Official release content" },
+  "MINE OFFICIAl TRAILER .mp4": { title:"Mine – Official Trailer", client:"Assets Weber", desc:"High-impact trailer cut with dramatic pacing, SFX, and visual storytelling.", outcome:"Theatrical trailer quality achieved" },
   "Tech and policy Sybercecurity project .mp4": { title:"Tech & Cybersecurity Project", client:"Corporate Client", desc:"Professional explainer video with motion graphics and clean editing.", outcome:"Corporate presentation delivered" },
   "I Moved at the WRONG Time in Roblox Squid Game… 😰.mp4": { title:"Roblox Squid Game Edit", client:"Gaming Client", desc:"Fast-paced gaming edit with retention-focused cuts.", outcome:"High engagement content" },
 };
@@ -44,11 +44,11 @@ export const VIDEO_ASSETS = Object.entries(videoAssetModules).map(([path, url], 
   return {
     id: `video-asset-${i}`,
     title: meta.title || `Short Video ${i + 1}`,
-    client: meta.client || "AssetWeber",
+    client: meta.client || "Assets Weber",
     service: "Video Editing",
     file,
     fileUrl: url,
-    desc: meta.desc || "Professional video editing by AssetWeber.",
+    desc: meta.desc || "Professional video editing by Assets Weber.",
     outcome: meta.outcome || "Premium content delivered",
   };
 });

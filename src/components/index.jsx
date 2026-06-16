@@ -554,8 +554,7 @@ export function MultiStepForm({onClose,onToast,user,onProjectCreated,prefillPlan
   const [data,setData] = useState({service:initialService,budget:prefillPlan?prefillPlan.price:"",timeline:"",name:user?.name||"",email:user?.email||"",phone:"",title:"",description:"",files:[]});
   const [submitting,setSubmitting] = useState(false);
   const up=(k,v)=>setData(d=>({...d,[k]:v}));
-  const BUDGET_OPTS=["Under ₹25,000","₹25,000 – ₹1L","₹1L – ₹5L","₹5L – ₹15L","₹15L+","Not sure yet"];
-  const TL_OPTS=["ASAP (Rush)","2-4 weeks","1-3 months","3-6 months","Flexible"];
+
   const submit=async()=>{
     if(!data.name||!data.email) return onToast("Please fill your name and email.");
     if(!data.service||!data.title||!data.description) return onToast("Please complete service, title, and description.");
@@ -602,7 +601,7 @@ export function MultiStepForm({onClose,onToast,user,onProjectCreated,prefillPlan
           <button onClick={onClose} style={{border:"1px solid var(--line2)",borderRadius:"50%",width:38,height:38,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
         </div>
         <div className="msf-step-label">
-          {["Service","Budget & Timeline","Project Details","Your Info"].map((l,i)=>(
+          {["Service","Select Plan","Project Details","Your Info"].map((l,i)=>(
             <span key={l} style={{color:i<=step?"rgba(255,255,255,.7)":"var(--muted)"}}>{l}</span>
           ))}
         </div>
@@ -625,17 +624,18 @@ export function MultiStepForm({onClose,onToast,user,onProjectCreated,prefillPlan
         )}
         {step===1&&(
           <div>
-            <p style={{color:"var(--muted)",marginBottom:14,fontSize:".92rem"}}>What's your approximate budget?</p>
+            <p style={{color:"var(--muted)",marginBottom:14,fontSize:".92rem"}}>Select a plan for {data.service}</p>
             <div className="budget-opts">
-              {BUDGET_OPTS.map(b=>(
-                <button key={b} className={`budget-opt ${data.budget===b?"sel":""}`} onClick={()=>up("budget",b)}>{b}</button>
+              {(PRICING_DATA[data.service] || PRICING_DATA[{"Web Dev":"Websites","App Dev":"Apps","Game Dev":"Games"}[data.service]] || []).map(p=>(
+                <button key={p.name} className={`budget-opt ${data.budget===p.price?"sel":""}`} onClick={()=>up("budget",p.price)} style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"12px"}}>
+                  <span style={{fontWeight:600}}>{p.name}</span>
+                  <span style={{fontSize:".85rem",marginTop:4}}>{p.price}</span>
+                </button>
               ))}
-            </div>
-            <p style={{color:"var(--muted)",marginTop:20,marginBottom:14,fontSize:".92rem"}}>Preferred timeline?</p>
-            <div className="est-options">
-              {TL_OPTS.map(t=>(
-                <button key={t} className={`est-opt ${data.timeline===t?"sel":""}`} onClick={()=>up("timeline",t)}>{t}</button>
-              ))}
+              <button className={`budget-opt ${data.budget==="Custom"?"sel":""}`} onClick={()=>up("budget","Custom")} style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"12px"}}>
+                <span style={{fontWeight:600}}>Custom Plan</span>
+                <span style={{fontSize:".85rem",marginTop:4}}>Let's discuss</span>
+              </button>
             </div>
           </div>
         )}
@@ -1052,6 +1052,9 @@ export function TeamWorkspace({user, onToast, onPortfolioChange}){
   const [portMedia, setPortMedia] = useState(null);
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
+  const teamFileInputRef = useRef(null);
+  const [teamMessages, setTeamMessages] = useState([]);
+  const [teamMsg, setTeamMsg] = useState("");
   const uploadFiles = async (e) => {
     if(!selClient || !e.target.files?.length) return;
     const formData = new FormData();
@@ -1092,14 +1095,46 @@ export function TeamWorkspace({user, onToast, onPortfolioChange}){
       void e;
     }
   }, []);
+  const loadTeamMessages = useCallback(async ()=>{
+    try {
+      const { messages } = await api.getTeamChatMessages();
+      setTeamMessages(messages);
+    } catch (e) {
+      void e;
+    }
+  }, []);
+  const sendTeam = async () => {
+    if(!teamMsg.trim()) return;
+    try {
+      await api.sendTeamChatMessage(teamMsg.trim());
+      setTeamMsg("");
+      loadTeamMessages();
+    } catch (e) {
+      onToast(e.message || "Could not send team message.");
+    }
+  };
+  const uploadTeamFiles = async (e) => {
+    if(!e.target.files?.length) return;
+    const formData = new FormData();
+    Array.from(e.target.files).forEach(f=>formData.append("files", f));
+    try {
+      await api.uploadTeamChatFiles(formData);
+      onToast("Files uploaded.");
+      loadTeamMessages();
+    } catch (err) {
+      onToast(err.message || "Upload failed.");
+    }
+    e.target.value = "";
+  };
   useEffect(()=>{
     queueMicrotask(() => {
       loadProjects();
       loadPortfolio();
       loadNotifications();
+      loadTeamMessages();
     });
-  }, [loadProjects, loadPortfolio, loadNotifications]);
-  useEffect(()=>{ bottomRef.current?.scrollIntoView({behavior:"smooth"}); },[selClient?.messages]);
+  }, [loadProjects, loadPortfolio, loadNotifications, loadTeamMessages]);
+  useEffect(()=>{ bottomRef.current?.scrollIntoView({behavior:"smooth"}); },[selClient?.messages, teamMessages, activeNav]);
   const filteredProjects = category==="All" ? projects : projects.filter(p=>p.service===category||p.service.includes(category.replace(" Development","").replace(" Editing","")));
   const send = async () => {
     if(!msg.trim()||!selClient) return;
@@ -1173,6 +1208,7 @@ export function TeamWorkspace({user, onToast, onPortfolioChange}){
           {[
             {id:"clients",icon:"👥",label:"Client List",badge:projects.length||null},
             {id:"portfolio",icon:"🎬",label:"Portfolio"},
+            {id:"teamchat",icon:"💬",label:"Team Chat Group"},
             {id:"notifications",icon:"🔔",label:"Notifications",badge:unreadCount||null},
           ].map(n=>(
             <button key={n.id} className={`snav-btn ${activeNav===n.id?"active":""}`} onClick={()=>setActiveNav(n.id)}>
@@ -1185,7 +1221,7 @@ export function TeamWorkspace({user, onToast, onPortfolioChange}){
       </aside>
       <div className="workspace-content">
         <div className="ws-header">
-          <div className="ws-title">{activeNav==="clients"?"Client Projects":activeNav==="portfolio"?"Portfolio Manager":"Notifications"}</div>
+          <div className="ws-title">{activeNav==="clients"?"Client Projects":activeNav==="portfolio"?"Portfolio Manager":activeNav==="teamchat"?"Team Chat Group":"Notifications"}</div>
           {activeNav==="portfolio"&&(
             <button className="btn-primary" style={{padding:"10px 20px",fontSize:".88rem"}} onClick={()=>setShowPortForm(v=>!v)}>
               {showPortForm?"Cancel":"+ Add Portfolio"}
@@ -1233,21 +1269,30 @@ export function TeamWorkspace({user, onToast, onPortfolioChange}){
                         {selClient?.projectState === 'active' && <button className="btn-ghost" style={{fontSize:".82rem",padding:"8px 14px",color:"#fca5a5"}} onClick={async () => {
                           if(!confirm("Are you sure you want to stop this project? This will delete all client files and stop chat access.")) return;
                           try {
-                            const { project } = await api.stopProject(selClient.id);
-                            setSelClient(project);
-                            setProjects(prev=>prev.map(x=>x.id===project.id?project:x));
+                            await api.stopProject(selClient.id);
+                            setProjects(prev=>prev.filter(x=>x.id!==selClient.id));
+                            setSelClient(null);
                             onToast("Project stopped.");
                           } catch(e) { onToast(e.message); }
                         }}>Stop</button>}
                         {selClient?.projectState === 'active' && <button className="btn-ghost" style={{fontSize:".82rem",padding:"8px 14px",color:"#86efac"}} onClick={async () => {
                           if(!confirm("Are you sure you want to finish this project? This will delete working files and stop chat access.")) return;
                           try {
-                            const { project } = await api.finishProject(selClient.id);
-                            setSelClient(project);
-                            setProjects(prev=>prev.map(x=>x.id===project.id?project:x));
+                            await api.finishProject(selClient.id);
+                            setProjects(prev=>prev.filter(x=>x.id!==selClient.id));
+                            setSelClient(null);
                             onToast("Project finished.");
                           } catch(e) { onToast(e.message); }
                         }}>Finish</button>}
+                        <button className="btn-ghost" style={{fontSize:".82rem",padding:"8px 14px",color:"#fca5a5"}} onClick={async () => {
+                          if(!confirm("Are you sure you want to completely delete this project? This will remove all files and cannot be undone.")) return;
+                          try {
+                            await api.deleteProject(selClient.id);
+                            setProjects(prev=>prev.filter(x=>x.id!==selClient.id));
+                            setSelClient(null);
+                            onToast("Project deleted.");
+                          } catch(e) { onToast(e.message); }
+                        }}>Delete</button>
                         <button className="btn-ghost" style={{fontSize:".82rem",padding:"8px 14px"}} onClick={()=>fileInputRef.current?.click()} disabled={selClient?.projectState !== 'active'}>Upload Files</button>
                         <input ref={fileInputRef} type="file" multiple style={{display:"none"}} onChange={uploadFiles}/>
                         <button className="btn-primary" style={{fontSize:".82rem",padding:"8px 14px"}} onClick={updateStatus} disabled={selClient?.projectState !== 'active'}>Update Status</button>
@@ -1341,6 +1386,36 @@ export function TeamWorkspace({user, onToast, onPortfolioChange}){
                 <div style={{color:"var(--muted)",fontSize:".76rem"}}>{new Date(n.createdAt).toLocaleString()}</div>
               </div>
             ))}
+          </div>
+        )}
+        {activeNav==="teamchat"&&(
+          <div className="chat-panel" style={{height: "calc(100vh - 120px)", maxWidth:680, margin: "0 auto", border: "1px solid var(--line)", borderRadius: 20}}>
+            <div className="chat-head">
+              <div>
+                <div style={{fontWeight:600,marginBottom:4}}>Team Chat Group</div>
+                <div style={{color:"var(--muted)",fontSize:".8rem"}}>Discuss projects internally with other team members.</div>
+              </div>
+              <button className="btn-ghost" style={{fontSize:".82rem",padding:"8px 14px"}} onClick={()=>teamFileInputRef.current?.click()}>Upload Files</button>
+              <input ref={teamFileInputRef} type="file" multiple style={{display:"none"}} onChange={uploadTeamFiles}/>
+            </div>
+            <div className="chat-body" style={{flex:1}}>
+              {teamMessages.map((m)=>(
+                <div key={m.id} className={`bubble ${m.senderId===user?.id?"team":"client"}`}>
+                  <small>{m.senderName||user?.name}</small>
+                  {m.text}
+                  {m.fileUrl && (
+                    <div style={{marginTop: 8}}>
+                      <a href={mediaUrl(m.fileUrl)} target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>{m.fileName}</a>
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div ref={bottomRef}/>
+            </div>
+            <div className="composer">
+              <input value={teamMsg} onChange={e=>setTeamMsg(e.target.value)} onKeyDown={e=>e.key==="Enter"&&sendTeam()} placeholder="Message team..."/>
+              <button className="btn-primary" style={{padding:"11px 20px",fontSize:".88rem"}} onClick={sendTeam}>Send</button>
+            </div>
           </div>
         )}
       </div>

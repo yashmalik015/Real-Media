@@ -64,6 +64,10 @@ export const api = {
   verifyPayment: (payload) => request('/api/payment/verify', { method: 'POST', body: payload }),
   stopProject: (projectId) => request(`/api/projects/${projectId}/stop`, { method: 'POST' }),
   finishProject: (projectId) => request(`/api/projects/${projectId}/finish`, { method: 'POST' }),
+  deleteProject: (id) => request(`/api/projects/${id}`, { method: 'DELETE' }),
+  getTeamChatMessages: () => request('/api/team-chat'),
+  sendTeamChatMessage: (text) => request('/api/team-chat', { method: 'POST', body: { text } }),
+  uploadTeamChatFiles: (formData) => request('/api/team-chat/files', { method: 'POST', body: formData }),
 }
 
 export function mediaUrl(url) {

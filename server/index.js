@@ -445,6 +445,15 @@ app.post('/api/projects/:id/finish', requireAuth, (req, res) => {
   res.json({ project: updatedProject })
 })
 
+app.delete('/api/projects/:id', requireAuth, (req, res) => {
+  if (req.user.role !== 'team') return res.status(403).json({ message: 'Only team can delete projects.' })
+  const project = repository.visibleProject(req.user, req.params.id)
+  if (!project) return res.status(404).json({ message: 'Project not found.' })
+
+  repository.deleteProject(req.params.id)
+  res.json({ ok: true, deletedId: req.params.id })
+})
+
 app.get('/api/payment/key', requireAuth, (req, res) => {
   res.json({ key: process.env.RAZORPAY_KEY_ID || null })
 })
@@ -574,6 +583,52 @@ app.post('/api/testimonials', requireAuth, (req, res) => {
     createdAt: now(),
   })
   res.status(201).json({ testimonial })
+})
+
+app.get('/api/team-chat', requireAuth, (req, res) => {
+  if (req.user.role !== 'team') {
+    return res.status(403).json({ message: 'Only team members can access team chat.' })
+  }
+  res.json({ messages: repository.teamChatMessages() })
+})
+
+app.post('/api/team-chat', requireAuth, (req, res) => {
+  if (req.user.role !== 'team') {
+    return res.status(403).json({ message: 'Only team members can post in team chat.' })
+  }
+  const { text = '' } = req.body
+  if (!text.trim()) {
+    return res.status(400).json({ message: 'Message text is required.' })
+  }
+  const message = repository.addTeamChatMessage({
+    id: id('tmsg'),
+    senderId: req.user.id,
+    senderName: req.user.name,
+    text: text.trim(),
+    fileUrl: null,
+    fileName: null,
+    createdAt: now(),
+  })
+  res.status(201).json({ message })
+})
+
+app.post('/api/team-chat/files', requireAuth, upload.array('files', 10), async (req, res) => {
+  if (req.user.role !== 'team') {
+    return res.status(403).json({ message: 'Only team members can upload files.' })
+  }
+  const files = await Promise.all((req.files || []).map(async (file) => {
+    const uploaded = await uploadFile(file, `team-chat/${req.user.id}`)
+    return repository.addTeamChatMessage({
+      id: id('tmsg'),
+      senderId: req.user.id,
+      senderName: req.user.name,
+      text: '',
+      fileUrl: uploaded.url,
+      fileName: file.originalname,
+      createdAt: now(),
+    })
+  }))
+  res.status(201).json({ messages: files })
 })
 
 app.use((err, _req, res, next) => {
