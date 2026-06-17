@@ -9,11 +9,16 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     strictPort: false,
+    middlewareMode: false,
+    fs: {
+      strict: false,
+    },
   },
   preview: {
     host: '0.0.0.0',
     port: 4173,
     strictPort: false,
   },
-  base: '/Real-Media/'
+  base: process.env.VITE_BASE_URL || '/',
+  appType: 'spa',
 })

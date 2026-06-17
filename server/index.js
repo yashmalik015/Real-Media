@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import cors from 'cors'
@@ -39,6 +40,17 @@ app.use(rateLimit({
   legacyHeaders: false,
 }))
 app.use('/uploads', express.static(uploadsDirectory()))
+
+const distDir = path.join(rootDir, 'dist')
+if (fs.existsSync(distDir)) {
+  app.use(express.static(distDir))
+  app.use((req, res, next) => {
+    if (req.method !== 'GET') return next()
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) return next()
+    res.sendFile(path.join(distDir, 'index.html'))
+  })
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_UPLOAD_GB * 1024 * 1024 * 1024 },
