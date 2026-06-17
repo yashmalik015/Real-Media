@@ -21,8 +21,22 @@ export const analyticsPromise = isSupported()
   .catch(() => null);
 
 export async function signInWithGoogle() {
-  const result = await signInWithPopup(firebaseAuth, googleProvider);
-  return result.user;
+  try {
+    // Check if popup is supported
+    if (!window.opener && !window.parent) {
+      console.warn("Popup may be blocked by browser");
+    }
+    
+    const result = await signInWithPopup(firebaseAuth, googleProvider);
+    return result.user;
+  } catch (error) {
+    console.error("Google Sign-In Error:", {
+      code: error.code,
+      message: error.message,
+      customData: error.customData,
+    });
+    throw error;
+  }
 }
 
 export function logoutFirebase() {

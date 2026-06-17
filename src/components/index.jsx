@@ -72,7 +72,21 @@ export function LoginPage({onLogin}){
       setToken(token);
       onLogin(user);
     } catch (e) {
-      setErr(e.message || "Google sign-in failed.");
+      let errorMsg = e.message || "Google sign-in failed.";
+      
+      // Firebase-specific error messages
+      if (e.code === "auth/popup-closed-by-user") {
+        errorMsg = "You closed the Google sign-in popup. Please try again.";
+      } else if (e.code === "auth/popup-blocked") {
+        errorMsg = "Google sign-in popup was blocked. Please allow popups in your browser settings and try again.";
+      } else if (e.code === "auth/unauthorized-domain") {
+        errorMsg = "This domain is not authorized for Google sign-in. Please contact support.";
+      } else if (e.code === "auth/operation-not-supported-in-this-environment") {
+        errorMsg = "Google sign-in is not supported in this browser/environment.";
+      }
+      
+      setErr(errorMsg);
+      console.error("Google login error:", e.code, e.message);
     } finally {
       setLoading(false);
     }
