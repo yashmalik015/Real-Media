@@ -72,6 +72,7 @@ function publicUser(user) {
   if (!user) return null
   const rest = { ...user }
   delete rest.passwordHash
+  delete rest.password_hash
   return rest
 }
 
@@ -236,13 +237,13 @@ app.post('/api/auth/team', (req, res) => {
     return res.status(401).json({ message: 'Enter a valid 10 digit team ID.' })
   }
 
-  let user = repository.findTeamById(TEAM_ACCESS_ID)
+  let user = repository.findUserByEmail(name.trim() + '@team.internal')
   if (!user) {
     user = repository.insertUser({
       id: id('team'),
       role: 'team',
       name: name.trim() || 'Buildbig Team',
-      email: null,
+      email: name.trim() + '@team.internal',
       passwordHash: null,
       teamId: TEAM_ACCESS_ID,
       teamCategory: null,

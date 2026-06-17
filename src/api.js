@@ -72,6 +72,8 @@ export const api = {
 
 export function mediaUrl(url) {
   if (!url) return ''
-  if (url.startsWith('http') || url.startsWith('/src/')) return url
+  if (url.startsWith('http')) return url
+  if (url.startsWith('/src/')) return url
+  if (url.startsWith('/uploads')) return `${API_BASE}${url}`
   return `${API_BASE}${url}`
 }

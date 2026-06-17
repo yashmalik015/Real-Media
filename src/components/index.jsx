@@ -42,16 +42,16 @@ export function LoginPage({onLogin}){
       if(tab==="team"){
         if(form.teamId !== TEAM_ID){ setErr("Invalid Team ID. Please check and try again."); return; }
         if(!form.name.trim()){ setErr("Please enter your name."); return; }
-        const { token, user } = await api.loginTeam({ teamId: form.teamId, name: form.name });
+        const { token, user } = await api.loginTeam({ teamId: form.teamId, name: form.name.trim() });
         setToken(token);
-        onLogin({ ...user, token });
+        onLogin(user);
         return;
       }
       if(!form.email || !form.password){ setErr("Email and password are required."); return; }
       if(mode==="register" && !form.name){ setErr("Name is required."); return; }
       const { token, user } = await api.loginClient({ mode, name: form.name, email: form.email, password: form.password });
       setToken(token);
-      onLogin({ ...user, token });
+      onLogin(user);
     } catch (e) {
       setErr(e.message || "Login failed.");
     } finally {
@@ -70,7 +70,7 @@ export function LoginPage({onLogin}){
         photoURL: googleUser.photoURL || "",
       });
       setToken(token);
-      onLogin({ ...user, token });
+      onLogin(user);
     } catch (e) {
       setErr(e.message || "Google sign-in failed.");
     } finally {
@@ -1436,6 +1436,13 @@ export function CtaBand({onStartProject}){
 }
 // ─── FOOTER ───────────────────────────────────────────────────────────────────
 export function Footer(){
+  const contactLinks = {
+    "Email Us": { href: "mailto:assetwebermail@gmail.com", label: "assetwebermail@gmail.com" },
+    "Instagram": { href: "https://instagram.com/assetsweber", label: "@assetsweber" },
+    "YouTube": { href: "https://youtube.com/@AssetsWeber", label: "@AssetsWeber" },
+    "WhatsApp": { href: "https://wa.me/919416085060", label: "+91 9416085060" },
+  };
+
   return(
     <footer className="footer">
       <div className="footer-inner">
@@ -1449,11 +1456,21 @@ export function Footer(){
           {[
             {title:"Services",links:SERVICE_OPTIONS},
             {title:"Company",links:["Portfolio","Process","Pricing","Testimonials"]},
-            {title:"Contact",links:["Start a Project","Instagram","WhatsApp","Email Us"]},
+            {title:"Contact",links:["Email Us","Instagram","YouTube","WhatsApp"]},
           ].map(col=>(
             <div className="footer-col" key={col.title}>
               <h5>{col.title}</h5>
-              {col.links.map(l=><a key={l} href="#" onClick={e=>{e.preventDefault();}}>{l}</a>)}
+              {col.links.map(l=>(
+                <a 
+                  key={l} 
+                  href={col.title === "Contact" ? contactLinks[l]?.href : "#"} 
+                  onClick={e=>{if(col.title !== "Contact") e.preventDefault();}}
+                  target={col.title === "Contact" && l !== "Email Us" ? "_blank" : undefined}
+                  rel={col.title === "Contact" && l !== "Email Us" ? "noopener noreferrer" : undefined}
+                >
+                  {col.title === "Contact" ? contactLinks[l]?.label : l}
+                </a>
+              ))}
             </div>
           ))}
         </div>

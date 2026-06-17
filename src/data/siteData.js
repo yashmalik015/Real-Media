@@ -86,6 +86,10 @@ export function resolvePortfolioMediaSrc(item) {
   if (item.file) return withAppBase(`/src/assets/${item.file}`);
   const url = item.mediaUrl || "";
   if (url.startsWith("http")) return url;
+  if (url.startsWith("/uploads")) {
+    const apiBase = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:4000' : '');
+    return apiBase + url;
+  }
   return withAppBase(url);
 }
 
