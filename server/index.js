@@ -23,7 +23,7 @@ const razorpay = process.env.RAZORPAY_KEY_ID ? new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 }) : null
 
-const repository = await createDatabase()
+let repository = null
 const app = express()
 
 app.disable('x-powered-by')
@@ -651,11 +651,30 @@ app.use((err, _req, res, next) => {
   res.status(500).json({ message: 'Internal server error.' })
 })
 
-const server = app.listen(PORT, () => {
-  console.log(`Buildbig backend running on http://localhost:${PORT}`)
-  console.log(`MongoDB database: ${process.env.MONGODB_DB || 'assetsweber'}`)
-  console.log(`Team login ID: ${TEAM_ACCESS_ID}`)
+async function startServer() {
+  try {
+    repository = await createDatabase()
+    const server = app.listen(PORT, () => {
+      console.log(`Buildbig backend running on http://localhost:${PORT}`)
+      console.log(`MongoDB database: ${process.env.MONGODB_DB || 'assetsweber'}`)
+      console.log(`Team login ID: ${TEAM_ACCESS_ID}`)
+    })
+
+    server.ref()
+    setInterval(() => {}, 1 << 30)
+  } catch (error) {
+    console.error('Failed to start server:', error)
+    process.exit(1)
+  }
+}
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Rejection:', reason)
 })
 
-server.ref()
-setInterval(() => {}, 1 << 30)
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error)
+  process.exit(1)
+})
+
+startServer()
