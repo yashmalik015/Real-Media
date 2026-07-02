@@ -37,7 +37,7 @@ export const VIDEO_FILE_META = {
   "Tech and policy Sybercecurity project .mp4": { title:"Tech & Cybersecurity Project", client:"Corporate Client", desc:"Professional explainer video with motion graphics and clean editing.", outcome:"Corporate presentation delivered" },
   "I Moved at the WRONG Time in Roblox Squid Game… 😰.mp4": { title:"Roblox Squid Game Edit", client:"Gaming Client", desc:"Fast-paced gaming edit with retention-focused cuts.", outcome:"High engagement content" },
 };
-const videoAssetModules = import.meta.glob('../assets/*.{mp4,MP4}', { eager: true, query: '?url', import: 'default' });
+const videoAssetModules = import.meta.glob('../assets/*.{mp4,MP4,mov,MOV,webm,WEBM}', { eager: true, query: '?url', import: 'default' });
 export const VIDEO_ASSETS = Object.entries(videoAssetModules).map(([path, url], i) => {
   const file = path.split('/').pop();
   const meta = VIDEO_FILE_META[file] || {};
@@ -69,7 +69,7 @@ function matchVideoAsset(item) {
 export function enrichVideoPortfolioItem(item) {
   if (item.fileUrl) return item;
   const match = matchVideoAsset(item);
-  return match ? { ...item, fileUrl: match.fileUrl, file: match.file } : item;
+  return match ? { ...item, fileUrl: match.fileUrl, file: match.file, mediaName: match.file } : item;
 }
 
 function withAppBase(path) {
@@ -80,16 +80,16 @@ function withAppBase(path) {
 }
 
 export function resolvePortfolioMediaSrc(item) {
+  if (!item) return '';
   if (item.fileUrl) return item.fileUrl;
   const match = matchVideoAsset(item);
   if (match) return match.fileUrl;
   if (item.file) return withAppBase(`/src/assets/${item.file}`);
-  const url = item.mediaUrl || "";
-  if (url.startsWith("http")) return url;
-  if (url.startsWith("/uploads")) {
-    const apiBase = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:4000' : '');
-    return apiBase + url;
-  }
+  const url = item.mediaUrl || '';
+  if (url.startsWith('http')) return url;
+  const apiBase = import.meta.env.VITE_API_URL
+    || (import.meta.env.DEV ? 'http://localhost:4000' : (typeof window !== 'undefined' ? window.location.origin : ''));
+  if (url.startsWith('/uploads')) return apiBase + url;
   return withAppBase(url);
 }
 

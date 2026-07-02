@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
-import { GoogleAuthProvider, getAuth, signInWithPopup, signOut } from "firebase/auth";
+import { GoogleAuthProvider, getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, signOut } from "firebase/auth";
 
 export const firebaseConfig = {
   apiKey: "AIzaSyBlyofRcdFSydK8rtW106dMZCAmEV7ugP4",
@@ -22,11 +22,6 @@ export const analyticsPromise = isSupported()
 
 export async function signInWithGoogle() {
   try {
-    // Check if popup is supported
-    if (!window.opener && !window.parent) {
-      console.warn("Popup may be blocked by browser");
-    }
-    
     const result = await signInWithPopup(firebaseAuth, googleProvider);
     return result.user;
   } catch (error) {
@@ -35,6 +30,27 @@ export async function signInWithGoogle() {
       message: error.message,
       customData: error.customData,
     });
+    if (
+      error.code === "auth/popup-blocked" ||
+      error.code === "auth/cancelled-popup-request" ||
+      error.code === "auth/operation-not-supported-in-this-environment"
+    ) {
+      await signInWithRedirect(firebaseAuth, googleProvider);
+      return null;
+    }
+    throw error;
+  }
+}
+
+export async function handleGoogleRedirectResult() {
+  try {
+    const result = await getRedirectResult(firebaseAuth);
+    return result?.user || null;
+  } catch (error) {
+    if (error.code === 'auth/no-redirect-result' || error.code === 'auth/network-request-failed') {
+      return null;
+    }
+    console.error('Google Redirect Result Error:', error);
     throw error;
   }
 }

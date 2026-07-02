@@ -21,9 +21,9 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN
 const razorpay = process.env.RAZORPAY_KEY_ID ? new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
-}) : null;
+}) : null
 
-const repository = createDatabase()
+const repository = await createDatabase()
 const app = express()
 
 app.disable('x-powered-by')
@@ -76,23 +76,23 @@ function publicUser(user) {
   return rest
 }
 
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   const token = req.headers.authorization?.replace(/^Bearer\s+/i, '')
   if (!token) return res.status(401).json({ message: 'Missing auth token.' })
 
-  const user = repository.findUserByToken(token)
+  const user = await repository.findUserByToken(token)
   if (!user) return res.status(401).json({ message: 'Invalid session.' })
 
   req.user = user
   next()
 }
 
-function createSessionResponse(user) {
-  const session = repository.createSession(user.id)
+async function createSessionResponse(user) {
+  const session = await repository.createSession(user.id)
   return { token: session.token, user: publicUser(user) }
 }
 
-function serviceQuestions(service) {
+async function serviceQuestions(service) {
   const base = [
     'What is the main goal of this project?',
     'Who is the target audience?',
@@ -149,10 +149,9 @@ function serviceQuestions(service) {
   return [...base, ...(byService[service] || [])]
 }
 
-function notifyTeam(project, clientName) {
-  repository.teamUsers().forEach((teamUser) => {
-    repository.notify(teamUser.id, project.id, 'New client project', `${clientName} submitted ${project.title}.`)
-  })
+async function notifyTeam(project, clientName) {
+  const teamUsers = await repository.teamUsers()
+  await Promise.all(teamUsers.map((teamUser) => repository.notify(teamUser.id, project.id, 'New client project', `${clientName} submitted ${project.title}.`)))
 }
 
 async function filePayload(file, projectId) {
@@ -172,23 +171,23 @@ async function filePayload(file, projectId) {
 app.get('/api/health', (_req, res) => {
   res.json({
     ok: true,
-    database: 'sqlite',
+    database: 'mongodb',
     uploadLimitGb: MAX_UPLOAD_GB,
     teamAccessIdLength: TEAM_ACCESS_ID.length,
   })
 })
 
-app.post('/api/auth/client', (req, res) => {
+app.post('/api/auth/client', async (req, res) => {
   const { mode = 'login', name = '', email = '', password = '' } = req.body
   const cleanEmail = email.trim().toLowerCase()
   if (!cleanEmail || !password || (mode === 'register' && !name.trim())) {
     return res.status(400).json({ message: 'Name, email, and password are required.' })
   }
 
-  let user = repository.findClientByEmail(cleanEmail)
+  let user = await repository.findClientByEmail(cleanEmail)
   if (mode === 'register') {
     if (user) return res.status(409).json({ message: 'Client account already exists. Please login.' })
-    user = repository.insertUser({
+    user = await repository.insertUser({
       id: id('user'),
       role: 'client',
       name: name.trim(),
@@ -203,19 +202,19 @@ app.post('/api/auth/client', (req, res) => {
     return res.status(401).json({ message: 'Invalid client login.' })
   }
 
-  res.json(createSessionResponse(user))
+  res.json(await createSessionResponse(user))
 })
 
-app.post('/api/auth/google', (req, res) => {
+app.post('/api/auth/google', async (req, res) => {
   const { name = '', email = '', googleId = '' } = req.body
   const cleanEmail = email.trim().toLowerCase()
   if (!cleanEmail || !googleId.trim()) {
     return res.status(400).json({ message: 'Google account email is required.' })
   }
 
-  let user = repository.findClientByEmail(cleanEmail)
+  let user = await repository.findClientByEmail(cleanEmail)
   if (!user) {
-    user = repository.insertUser({
+    user = await repository.insertUser({
       id: id('user'),
       role: 'client',
       name: name.trim() || cleanEmail,
@@ -228,18 +227,18 @@ app.post('/api/auth/google', (req, res) => {
     })
   }
 
-  res.json(createSessionResponse(user))
+  res.json(await createSessionResponse(user))
 })
 
-app.post('/api/auth/team', (req, res) => {
+app.post('/api/auth/team', async (req, res) => {
   const { teamId = '', name = 'Buildbig Team' } = req.body
   if (!/^\d{10}$/.test(teamId) || teamId !== TEAM_ACCESS_ID) {
     return res.status(401).json({ message: 'Enter a valid 10 digit team ID.' })
   }
 
-  let user = repository.findUserByEmail(name.trim() + '@team.internal')
+  let user = await repository.findUserByEmail(name.trim() + '@team.internal')
   if (!user) {
-    user = repository.insertUser({
+    user = await repository.insertUser({
       id: id('team'),
       role: 'team',
       name: name.trim() || 'Buildbig Team',
@@ -252,7 +251,7 @@ app.post('/api/auth/team', (req, res) => {
     })
   }
 
-  res.json(createSessionResponse(user))
+  res.json(await createSessionResponse(user))
 })
 
 app.get('/api/me', requireAuth, (req, res) => {
@@ -263,12 +262,12 @@ app.get('/api/questions/:service', requireAuth, (req, res) => {
   res.json({ questions: serviceQuestions(req.params.service) })
 })
 
-app.get('/api/portfolio', requireAuth, (_req, res) => {
-  res.json({ portfolio: repository.portfolio() })
+app.get('/api/portfolio', requireAuth, async (_req, res) => {
+  res.json({ portfolio: await repository.portfolio() })
 })
 
-app.get('/api/portfolio/public', (_req, res) => {
-  res.json({ portfolio: repository.portfolio() })
+app.get('/api/portfolio/public', async (_req, res) => {
+  res.json({ portfolio: await repository.portfolio() })
 })
 
 app.post('/api/portfolio', requireAuth, upload.single('media'), async (req, res) => {
@@ -283,7 +282,7 @@ app.post('/api/portfolio', requireAuth, upload.single('media'), async (req, res)
 
   const timestamp = now()
   const uploaded = req.file ? await uploadFile(req.file, `portfolio/${service.trim() || 'general'}`) : null
-  const portfolioItem = repository.createPortfolio({
+  const portfolioItem = await repository.createPortfolio({
     id: id('portfolio'),
     title: title.trim(),
     service: service.trim(),
@@ -301,15 +300,15 @@ app.post('/api/portfolio', requireAuth, upload.single('media'), async (req, res)
   res.status(201).json({ portfolioItem })
 })
 
-app.delete('/api/portfolio/:id', requireAuth, (req, res) => {
+app.delete('/api/portfolio/:id', requireAuth, async (req, res) => {
   if (req.user.role !== 'team') {
     return res.status(403).json({ message: 'Only team members can delete portfolio work.' })
   }
 
-  const portfolioItem = repository.portfolioById(req.params.id)
+  const portfolioItem = await repository.portfolioById(req.params.id)
   if (!portfolioItem) return res.status(404).json({ message: 'Portfolio item not found.' })
 
-  repository.deletePortfolio(req.params.id)
+  await repository.deletePortfolio(req.params.id)
   res.json({ ok: true, deletedId: req.params.id })
 })
 
@@ -333,8 +332,8 @@ app.post('/api/projects', requireAuth, upload.array('files', 20), async (req, re
   const timestamp = now()
   const projectId = id('project')
   const amountNum = Number(totalAmount) || 0
-  
-  const project = repository.createProject(
+
+  const project = await repository.createProject(
     {
       id: projectId,
       clientId: req.user.id,
@@ -351,7 +350,7 @@ app.post('/api/projects', requireAuth, upload.array('files', 20), async (req, re
       amountPaid: 0,
       projectState: 'active',
       razorpayOrderId: null,
-      razorpayPaymentId: null
+      razorpayPaymentId: null,
     },
     await Promise.all((req.files || []).map((file) => filePayload(file, projectId))),
     {
@@ -366,31 +365,31 @@ app.post('/api/projects', requireAuth, upload.array('files', 20), async (req, re
   )
 
   if (amountNum === 0) {
-    repository.notify(req.user.id, project.id, 'Project submitted', `${project.title} was sent to the Buildbig team.`)
-    notifyTeam(project, req.user.name)
+    await repository.notify(req.user.id, project.id, 'Project submitted', `${project.title} was sent to the Buildbig team.`)
+    await notifyTeam(project, req.user.name)
   }
 
   res.status(201).json({ project })
 })
 
-app.get('/api/projects', requireAuth, (req, res) => {
-  res.json({ projects: repository.visibleProjects(req.user) })
+app.get('/api/projects', requireAuth, async (req, res) => {
+  res.json({ projects: await repository.visibleProjects(req.user) })
 })
 
-app.get('/api/projects/:id', requireAuth, (req, res) => {
-  const project = repository.visibleProject(req.user, req.params.id)
+app.get('/api/projects/:id', requireAuth, async (req, res) => {
+  const project = await repository.visibleProject(req.user, req.params.id)
   if (!project) return res.status(404).json({ message: 'Project not found.' })
   res.json({ project })
 })
 
-app.post('/api/projects/:id/messages', requireAuth, (req, res) => {
+app.post('/api/projects/:id/messages', requireAuth, async (req, res) => {
   const { text = '' } = req.body
   if (!text.trim()) return res.status(400).json({ message: 'Message is required.' })
 
-  const existingProject = repository.visibleProject(req.user, req.params.id)
+  const existingProject = await repository.visibleProject(req.user, req.params.id)
   if (!existingProject) return res.status(404).json({ message: 'Project not found.' })
 
-  const project = repository.addMessage(req.params.id, {
+  const project = await repository.addMessage(req.params.id, {
     id: id('msg'),
     senderId: req.user.id,
     senderName: req.user.name,
@@ -400,36 +399,35 @@ app.post('/api/projects/:id/messages', requireAuth, (req, res) => {
   })
 
   if (req.user.role === 'client') {
-    repository.teamUsers().forEach((teamUser) => {
-      repository.notify(teamUser.id, project.id, 'Client message', `${req.user.name}: ${text.trim()}`)
-    })
+    const teamUsers = await repository.teamUsers()
+    await Promise.all(teamUsers.map((teamUser) => repository.notify(teamUser.id, project.id, 'Client message', `${req.user.name}: ${text.trim()}`)))
   } else {
-    repository.notify(project.clientId, project.id, 'Handler message', `${req.user.name}: ${text.trim()}`)
+    await repository.notify(project.clientId, project.id, 'Handler message', `${req.user.name}: ${text.trim()}`)
   }
 
   res.status(201).json({ message: project.messages.at(-1), project })
 })
 
-app.patch('/api/projects/:id/status', requireAuth, (req, res) => {
+app.patch('/api/projects/:id/status', requireAuth, async (req, res) => {
   if (req.user.role !== 'team') return res.status(403).json({ message: 'Only team can update status.' })
   const { status = '' } = req.body
   if (!status.trim()) return res.status(400).json({ message: 'Status is required.' })
 
-  const existingProject = repository.visibleProject(req.user, req.params.id)
+  const existingProject = await repository.visibleProject(req.user, req.params.id)
   if (!existingProject) return res.status(404).json({ message: 'Project not found.' })
 
-  const project = repository.updateProjectStatus(req.params.id, status.trim())
-  repository.notify(project.clientId, project.id, 'Project status updated', `${project.title}: ${project.status}`)
+  const project = await repository.updateProjectStatus(req.params.id, status.trim())
+  await repository.notify(project.clientId, project.id, 'Project status updated', `${project.title}: ${project.status}`)
   res.json({ project })
 })
 
-app.post('/api/projects/:id/stop', requireAuth, (req, res) => {
-  const project = repository.visibleProject(req.user, req.params.id)
+app.post('/api/projects/:id/stop', requireAuth, async (req, res) => {
+  const project = await repository.visibleProject(req.user, req.params.id)
   if (!project) return res.status(404).json({ message: 'Project not found.' })
   if (project.projectState !== 'active') return res.status(400).json({ message: 'Project is already stopped or finished.' })
 
-  const updatedProject = repository.updateProjectState(req.params.id, 'stopped')
-  repository.addMessage(req.params.id, {
+  const updatedProject = await repository.updateProjectState(req.params.id, 'stopped')
+  await repository.addMessage(req.params.id, {
     id: id('msg'),
     senderId: 'system',
     senderName: 'Buildbig',
@@ -440,14 +438,14 @@ app.post('/api/projects/:id/stop', requireAuth, (req, res) => {
   res.json({ project: updatedProject })
 })
 
-app.post('/api/projects/:id/finish', requireAuth, (req, res) => {
+app.post('/api/projects/:id/finish', requireAuth, async (req, res) => {
   if (req.user.role !== 'team') return res.status(403).json({ message: 'Only team can finish projects.' })
-  const project = repository.visibleProject(req.user, req.params.id)
+  const project = await repository.visibleProject(req.user, req.params.id)
   if (!project) return res.status(404).json({ message: 'Project not found.' })
   if (project.projectState !== 'active') return res.status(400).json({ message: 'Project is already stopped or finished.' })
 
-  const updatedProject = repository.updateProjectState(req.params.id, 'finished')
-  repository.addMessage(req.params.id, {
+  const updatedProject = await repository.updateProjectState(req.params.id, 'finished')
+  await repository.addMessage(req.params.id, {
     id: id('msg'),
     senderId: 'system',
     senderName: 'Buildbig',
@@ -458,12 +456,12 @@ app.post('/api/projects/:id/finish', requireAuth, (req, res) => {
   res.json({ project: updatedProject })
 })
 
-app.delete('/api/projects/:id', requireAuth, (req, res) => {
+app.delete('/api/projects/:id', requireAuth, async (req, res) => {
   if (req.user.role !== 'team') return res.status(403).json({ message: 'Only team can delete projects.' })
-  const project = repository.visibleProject(req.user, req.params.id)
+  const project = await repository.visibleProject(req.user, req.params.id)
   if (!project) return res.status(404).json({ message: 'Project not found.' })
 
-  repository.deleteProject(req.params.id)
+  await repository.deleteProject(req.params.id)
   res.json({ ok: true, deletedId: req.params.id })
 })
 
@@ -473,13 +471,12 @@ app.get('/api/payment/key', requireAuth, (req, res) => {
 
 app.post('/api/payment/create-order', requireAuth, async (req, res) => {
   const { projectId, amount } = req.body
-  const project = repository.visibleProject(req.user, projectId)
+  const project = await repository.visibleProject(req.user, projectId)
   if (!project) return res.status(404).json({ message: 'Project not found.' })
-  
+
   if (!razorpay) {
-    // Mock Razorpay response
     const mockOrderId = `order_mock_${Date.now()}`
-    repository.setRazorpayOrderId(projectId, mockOrderId)
+    await repository.setRazorpayOrderId(projectId, mockOrderId)
     return res.json({ id: mockOrderId, amount: amount * 100, currency: 'INR' })
   }
 
@@ -489,20 +486,20 @@ app.post('/api/payment/create-order', requireAuth, async (req, res) => {
       currency: 'INR',
       receipt: `receipt_${projectId}`,
     })
-    repository.setRazorpayOrderId(projectId, order.id)
+    await repository.setRazorpayOrderId(projectId, order.id)
     res.json(order)
   } catch {
     res.status(500).json({ message: 'Failed to create payment order.' })
   }
 })
 
-app.post('/api/payment/verify', requireAuth, (req, res) => {
+app.post('/api/payment/verify', requireAuth, async (req, res) => {
   const { projectId, razorpay_payment_id, razorpay_order_id, razorpay_signature, amount } = req.body
-  const project = repository.visibleProject(req.user, projectId)
+  const project = await repository.visibleProject(req.user, projectId)
   if (!project) return res.status(404).json({ message: 'Project not found.' })
 
   if (razorpay) {
-    const body = razorpay_order_id + "|" + razorpay_payment_id
+    const body = razorpay_order_id + '|' + razorpay_payment_id
     const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).update(body.toString()).digest('hex')
     if (expectedSignature !== razorpay_signature) {
       return res.status(400).json({ message: 'Invalid payment signature.' })
@@ -511,11 +508,11 @@ app.post('/api/payment/verify', requireAuth, (req, res) => {
 
   const newAmountPaid = project.amountPaid + amount
   const newStatus = newAmountPaid >= project.totalAmount ? 'fully_paid' : 'half_paid'
-  
-  const updatedProject = repository.updateProjectPayment(projectId, newStatus, amount, razorpay_payment_id || `mock_pay_${Date.now()}`)
-  repository.updateProjectStatus(projectId, 'Payment Received - Active')
-  
-  repository.addMessage(projectId, {
+
+  const updatedProject = await repository.updateProjectPayment(projectId, newStatus, amount, razorpay_payment_id || `mock_pay_${Date.now()}`)
+  await repository.updateProjectStatus(projectId, 'Payment Received - Active')
+
+  await repository.addMessage(projectId, {
     id: id('msg'),
     senderId: 'system',
     senderName: 'Buildbig',
@@ -523,38 +520,38 @@ app.post('/api/payment/verify', requireAuth, (req, res) => {
     text: `Payment of ₹${amount} received. The project is now active.`,
     createdAt: now(),
   })
-  
-  repository.notify(req.user.id, projectId, 'Payment Successful', `Payment of ₹${amount} for ${project.title} was successful.`)
-  notifyTeam(updatedProject, req.user.name)
+
+  await repository.notify(req.user.id, projectId, 'Payment Successful', `Payment of ₹${amount} for ${project.title} was successful.`)
+  await notifyTeam(updatedProject, req.user.name)
 
   res.json({ success: true, project: updatedProject })
 })
 
 app.post('/api/projects/:id/files', requireAuth, upload.array('files', 20), async (req, res) => {
-  const existingProject = repository.visibleProject(req.user, req.params.id)
+  const existingProject = await repository.visibleProject(req.user, req.params.id)
   if (!existingProject) return res.status(404).json({ message: 'Project not found.' })
 
   const files = await Promise.all((req.files || []).map((file) => filePayload(file, req.params.id)))
-  const project = repository.addProjectFiles(req.params.id, files)
-  repository.notify(project.clientId, project.id, 'Footage uploaded', `${files.length} file(s) were added to ${project.title}.`)
+  const project = await repository.addProjectFiles(req.params.id, files)
+  await repository.notify(project.clientId, project.id, 'Footage uploaded', `${files.length} file(s) were added to ${project.title}.`)
 
   res.status(201).json({ files: project.files, project })
 })
 
-app.get('/api/notifications', requireAuth, (req, res) => {
-  res.json({ notifications: repository.notificationsForUser(req.user.id) })
+app.get('/api/notifications', requireAuth, async (req, res) => {
+  res.json({ notifications: await repository.notificationsForUser(req.user.id) })
 })
 
-app.patch('/api/notifications/read', requireAuth, (req, res) => {
-  repository.markNotificationsRead(req.user.id)
+app.patch('/api/notifications/read', requireAuth, async (req, res) => {
+  await repository.markNotificationsRead(req.user.id)
   res.json({ ok: true })
 })
 
-app.get('/api/testimonials', (_req, res) => {
-  res.json({ testimonials: repository.approvedTestimonials() })
+app.get('/api/testimonials', async (_req, res) => {
+  res.json({ testimonials: await repository.approvedTestimonials() })
 })
 
-app.post('/api/testimonials/verify', requireAuth, (req, res) => {
+app.post('/api/testimonials/verify', requireAuth, async (req, res) => {
   if (req.user.role !== 'client') {
     return res.status(403).json({ message: 'Only clients can submit project feedback.' })
   }
@@ -562,14 +559,15 @@ app.post('/api/testimonials/verify', requireAuth, (req, res) => {
   if (!projectTitle.trim()) {
     return res.status(400).json({ message: 'Project name is required.' })
   }
-  const project = repository.findClientProjectByTitle(req.user.id, projectTitle.trim())
+
+  const project = await repository.findClientProjectByTitle(req.user.id, projectTitle.trim())
   if (!project) {
     return res.status(404).json({ message: 'No matching project found. Enter the exact project title from your workspace.' })
   }
   res.json({ ok: true, project: { id: project.id, title: project.title, service: project.service } })
 })
 
-app.post('/api/testimonials', requireAuth, (req, res) => {
+app.post('/api/testimonials', requireAuth, async (req, res) => {
   if (req.user.role !== 'client') {
     return res.status(403).json({ message: 'Only clients can submit feedback.' })
   }
@@ -577,12 +575,12 @@ app.post('/api/testimonials', requireAuth, (req, res) => {
   if (!projectTitle.trim() || !name.trim() || !quote.trim()) {
     return res.status(400).json({ message: 'Project name, your name, and feedback are required.' })
   }
-  const project = repository.findClientProjectByTitle(req.user.id, projectTitle.trim())
+  const project = await repository.findClientProjectByTitle(req.user.id, projectTitle.trim())
   if (!project) {
     return res.status(404).json({ message: 'No matching project found. Enter the exact project title from your workspace.' })
   }
   const initials = name.trim().split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()
-  const testimonial = repository.createTestimonial({
+  const testimonial = await repository.createTestimonial({
     id: id('testi'),
     userId: req.user.id,
     projectId: project.id,
@@ -598,14 +596,14 @@ app.post('/api/testimonials', requireAuth, (req, res) => {
   res.status(201).json({ testimonial })
 })
 
-app.get('/api/team-chat', requireAuth, (req, res) => {
+app.get('/api/team-chat', requireAuth, async (req, res) => {
   if (req.user.role !== 'team') {
     return res.status(403).json({ message: 'Only team members can access team chat.' })
   }
-  res.json({ messages: repository.teamChatMessages() })
+  res.json({ messages: await repository.teamChatMessages() })
 })
 
-app.post('/api/team-chat', requireAuth, (req, res) => {
+app.post('/api/team-chat', requireAuth, async (req, res) => {
   if (req.user.role !== 'team') {
     return res.status(403).json({ message: 'Only team members can post in team chat.' })
   }
@@ -613,7 +611,7 @@ app.post('/api/team-chat', requireAuth, (req, res) => {
   if (!text.trim()) {
     return res.status(400).json({ message: 'Message text is required.' })
   }
-  const message = repository.addTeamChatMessage({
+  const message = await repository.addTeamChatMessage({
     id: id('tmsg'),
     senderId: req.user.id,
     senderName: req.user.name,
@@ -629,7 +627,7 @@ app.post('/api/team-chat/files', requireAuth, upload.array('files', 10), async (
   if (req.user.role !== 'team') {
     return res.status(403).json({ message: 'Only team members can upload files.' })
   }
-  const files = await Promise.all((req.files || []).map(async (file) => {
+  const messages = await Promise.all((req.files || []).map(async (file) => {
     const uploaded = await uploadFile(file, `team-chat/${req.user.id}`)
     return repository.addTeamChatMessage({
       id: id('tmsg'),
@@ -641,7 +639,7 @@ app.post('/api/team-chat/files', requireAuth, upload.array('files', 10), async (
       createdAt: now(),
     })
   }))
-  res.status(201).json({ messages: files })
+  res.status(201).json({ messages })
 })
 
 app.use((err, _req, res, next) => {
@@ -655,7 +653,7 @@ app.use((err, _req, res, next) => {
 
 const server = app.listen(PORT, () => {
   console.log(`Buildbig backend running on http://localhost:${PORT}`)
-  console.log(`SQLite database: ${process.env.DATABASE_PATH || path.resolve(rootDir, 'data', 'real-media.sqlite')}`)
+  console.log(`MongoDB database: ${process.env.MONGODB_DB || 'assetsweber'}`)
   console.log(`Team login ID: ${TEAM_ACCESS_ID}`)
 })
 

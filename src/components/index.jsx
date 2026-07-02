@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { api, mediaUrl, setToken, getToken } from "../api.js";
-import { signInWithGoogle } from "../services/firebase.js";
+import { signInWithGoogle, handleGoogleRedirectResult } from "../services/firebase.js";
 import {
   LOGO_URL, TEAM_ID, SERVICE_MAP, SERVICES, VIDEO_ASSETS, PROCESS_STEPS, WHY_US, INDUSTRIES,
   PRICING_CATEGORIES, PRICING_DATA, ESTIMATOR_CONFIG, ESTIMATE_MAP, COMPLEXITY_MULT, TIMELINE_MULT,
@@ -36,6 +36,26 @@ export function LoginPage({onLogin}){
   useEffect(()=>{
     api.health().then(()=>setServerOk(true)).catch(()=>setServerOk(false));
   }, []);
+
+  useEffect(() => {
+    async function processRedirect() {
+      try {
+        const googleUser = await handleGoogleRedirectResult();
+        if (!googleUser) return;
+        const { token, user } = await api.loginGoogle({
+          name: googleUser.displayName || googleUser.email || 'Google User',
+          email: googleUser.email,
+          googleId: googleUser.uid,
+          photoURL: googleUser.photoURL || '',
+        });
+        setToken(token);
+        onLogin(user);
+      } catch (e) {
+        console.error('Google redirect login failed:', e);
+      }
+    }
+    processRedirect();
+  }, [onLogin]);
   const submit = async () => {
     setErr("");
     setLoading(true);
@@ -66,6 +86,10 @@ export function LoginPage({onLogin}){
     setLoading(true);
     try {
       const googleUser = await signInWithGoogle();
+      if (!googleUser) {
+        // Redirect-based login is in progress or popup fallback activated.
+        return;
+      }
       const { token, user } = await api.loginGoogle({
         name: googleUser.displayName || googleUser.email || "Google User",
         email: googleUser.email,
@@ -79,11 +103,11 @@ export function LoginPage({onLogin}){
       let errorMsg = e.message || "Google sign-in failed.";
 
       if (e.code === "auth/popup-closed-by-user") {
-        errorMsg = "You closed the Google sign-in popup. Please try again.";
+        errorMsg = "The Google sign-in popup was closed before completing. This can also happen if popups are blocked. Please allow popups for this site and try again.";
       } else if (e.code === "auth/cancelled-popup-request") {
-        errorMsg = "Google sign-in was cancelled because another popup was already open. Please try again.";
+        errorMsg = "Google sign-in was cancelled because another popup was already open. Please close any other sign-in windows and try again.";
       } else if (e.code === "auth/popup-blocked") {
-        errorMsg = "Google sign-in popup was blocked. Please allow popups in your browser settings and try again.";
+        errorMsg = "Google sign-in popup was blocked. Please allow popups in your browser settings for this site and try again.";
       } else if (e.code === "auth/unauthorized-domain") {
         errorMsg = "This domain is not authorized for Google sign-in. Please add the domain in Firebase Auth settings.";
       } else if (e.code === "auth/operation-not-supported-in-this-environment") {
@@ -247,6 +271,7 @@ export function ServiceDetailPage({service, onBack, onStartProject, portfolioIte
 }
 export function VideoPortfolioCard({item, onStartProject, onDelete, isTeam}){
   const [modalOpen, setModalOpen] = useState(false);
+  const [videoError, setVideoError] = useState(false);
   const videoRef = useRef(null);
   const src = resolvePortfolioMediaSrc(item);
   const isVideo = item.file || item.fileUrl || item.mediaType === "video" || (item.mediaUrl && /\.(mp4|webm|mov)/i.test(item.mediaUrl));
@@ -257,7 +282,7 @@ export function VideoPortfolioCard({item, onStartProject, onDelete, isTeam}){
         <div className="port-media" style={{height:240,cursor:isVideo?"pointer":"default"}} 
              onClick={isVideo?()=>setModalOpen(true):undefined}
         >
-          {isVideo ? (
+          {isVideo && !videoError ? (
           <video
             ref={videoRef}
             src={src}
@@ -266,8 +291,11 @@ export function VideoPortfolioCard({item, onStartProject, onDelete, isTeam}){
             playsInline
             autoPlay
             muted
+            preload="metadata"
+            onCanPlay={() => videoRef.current?.play().catch(() => {})}
+            onError={() => setVideoError(true)}
           />
-          ) : src ? (
+          ) : (!isVideo && src) ? (
             <img src={src} alt={item.title} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
           ) : (
             <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"3rem",background:"linear-gradient(135deg,rgba(229,57,53,.15),rgba(0,0,0,.8))"}}>🎬</div>
@@ -300,12 +328,22 @@ export function VideoPortfolioCard({item, onStartProject, onDelete, isTeam}){
             <button onClick={(e)=>{e.stopPropagation();setModalOpen(false)}} style={{background:"transparent",border:"none",color:"#fff",fontSize:"2rem",cursor:"pointer",padding:"0 10px"}}>✕</button>
           </div>
           <div style={{maxWidth:"100%",maxHeight:"80vh",width:"100%",display:"flex",justifyContent:"center"}} onClick={e=>e.stopPropagation()}>
-            <video
-              src={src}
-              style={{maxWidth:"100%",maxHeight:"80vh",borderRadius:8,outline:"none"}}
-              controls
-              autoPlay
-            />
+            {videoError ? (
+              <div style={{color:"#fff",padding:24,background:"rgba(255,255,255,0.05)",borderRadius:12,textAlign:"center"}}>
+                Video preview failed to load. Please try again later.
+              </div>
+            ) : (
+              <video
+                src={src}
+                style={{maxWidth:"100%",maxHeight:"80vh",borderRadius:8,outline:"none"}}
+                controls
+                autoPlay
+                muted
+                playsInline
+                preload="metadata"
+                onError={() => setVideoError(true)}
+              />
+            )}
           </div>
           <div style={{marginTop:20,textAlign:"center",maxWidth:800}} onClick={e=>e.stopPropagation()}>
             <h3 style={{fontSize:"1.5rem",marginBottom:8,color:"#fff"}}>{item.title}</h3>

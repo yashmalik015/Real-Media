@@ -1,4 +1,5 @@
-const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:4000' : '')
+const API_BASE = import.meta.env.VITE_API_URL
+  || (import.meta.env.DEV ? 'http://localhost:4000' : (typeof window !== 'undefined' ? window.location.origin : ''))
 
 const TOKEN_KEY = 'realmedia_token'
 
@@ -73,7 +74,9 @@ export const api = {
 export function mediaUrl(url) {
   if (!url) return ''
   if (url.startsWith('http')) return url
-  if (url.startsWith('/src/')) return url
+  if (url.startsWith('/src/')) {
+    return typeof window !== 'undefined' ? `${window.location.origin}${url}` : url
+  }
   if (url.startsWith('/uploads')) return `${API_BASE}${url}`
   return `${API_BASE}${url}`
 }
