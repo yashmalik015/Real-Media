@@ -13,7 +13,7 @@ import { uploadFile, uploadsDirectory } from './fileStorage.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
-const PORT = Number(process.env.API_PORT || 4000)
+const PORT = Number(process.env.PORT || process.env.API_PORT || 4000)
 const TEAM_ACCESS_ID = process.env.TEAM_ACCESS_ID || '1234567890'
 const MAX_UPLOAD_GB = Number(process.env.MAX_UPLOAD_GB || 3)
 const CORS_ORIGIN = process.env.CORS_ORIGIN
