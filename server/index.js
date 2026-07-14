@@ -17,6 +17,7 @@ const PORT = Number(process.env.PORT || process.env.API_PORT || 4000)
 const TEAM_ACCESS_ID = process.env.TEAM_ACCESS_ID || '1234567890'
 const MAX_UPLOAD_GB = Number(process.env.MAX_UPLOAD_GB || 3)
 const CORS_ORIGIN = process.env.CORS_ORIGIN
+const FRONTEND_ONLY = (process.env.FRONTEND_ONLY === 'true' || process.env.FRONTEND_ONLY === '1')
 
 const razorpay = process.env.RAZORPAY_KEY_ID ? new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -45,6 +46,7 @@ app.use('/uploads', express.static(uploadsDirectory()))
 // If the database is not available, return 503 for API routes except health.
 app.use('/api', (req, res, next) => {
   if (req.path === '/health') return next()
+  if (FRONTEND_ONLY) return res.status(404).json({ message: 'API disabled (frontend-only deployment).' })
   if (!dbAvailable || !repository) return res.status(503).json({ message: 'Service Unavailable: database not connected.' })
   next()
 })
@@ -661,9 +663,15 @@ app.use((err, _req, res, next) => {
 
 async function startServer() {
   try {
-    repository = await createDatabase()
-    dbAvailable = true
-    console.log('Database connected')
+    if (!FRONTEND_ONLY) {
+      repository = await createDatabase()
+      dbAvailable = true
+      console.log('Database connected')
+    } else {
+      console.log('FRONTEND_ONLY set — skipping database connection')
+      repository = null
+      dbAvailable = false
+    }
   } catch (error) {
     console.error('Failed to connect to database:', error)
     repository = null
