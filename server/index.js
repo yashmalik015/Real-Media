@@ -43,6 +43,10 @@ app.use(rateLimit({
 }))
 app.use('/uploads', express.static(uploadsDirectory()))
 
+// Serve source assets (e.g., seeded portfolio media paths like /src/assets/...) so
+// built frontend can reference them the same way as in development.
+app.use('/src', express.static(path.join(rootDir, 'src')))
+
 // If the database is not available, return 503 for API routes except health.
 app.use('/api', (req, res, next) => {
   if (req.path === '/health') return next()
