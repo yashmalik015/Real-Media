@@ -39,26 +39,22 @@ export const VIDEO_FILE_META = {
   "Tech and policy Sybercecurity project .mp4": { title:"Tech & Cybersecurity Project", client:"Corporate Client", desc:"Professional explainer video with motion graphics and clean editing.", outcome:"Corporate presentation delivered" },
   "I Moved at the WRONG Time in Roblox Squid Game… 😰.mp4": { title:"Roblox Squid Game Edit", client:"Gaming Client", desc:"Fast-paced gaming edit with retention-focused cuts.", outcome:"High engagement content" },
 };
-const videoAssetModules = import.meta.glob('../assets/*.{mp4,MP4,mov,MOV,webm,WEBM}', { eager: true, query: '?url', import: 'default' });
-export const VIDEO_ASSETS = Object.entries(videoAssetModules).map(([path, url], i) => {
-  const file = path.split('/').pop();
-  const meta = VIDEO_FILE_META[file] || {};
-  return {
-    id: `video-asset-${i}`,
-    title: meta.title || `Short Video ${i + 1}`,
-    client: meta.client || "Assets Weber",
-    service: "Video Editing",
-    file,
-    fileUrl: url,
-    desc: meta.desc || "Professional video editing by Assets Weber.",
-    outcome: meta.outcome || "Premium content delivered",
-  };
-});
+export const VIDEO_ASSETS = Object.entries(VIDEO_FILE_META).map(([file, meta], i) => ({
+  id: `video-asset-${i}`,
+  title: meta.title || `Short Video ${i + 1}`,
+  client: meta.client || "Assets Weber",
+  service: "Video Editing",
+  file,
+  fileUrl: withAppBase(`/assets/${encodeURIComponent(file)}`),
+  desc: meta.desc || "Professional video editing by Assets Weber.",
+  outcome: meta.outcome || "Premium content delivered",
+}));
 function matchVideoAsset(item) {
   if (!item) return null;
   const fileName = item.file || item.mediaName || item.mediaUrl?.split("/").pop();
   if (fileName) {
-    const byFile = VIDEO_ASSETS.find((a) => a.file === fileName);
+    const normalized = decodeURIComponent(fileName);
+    const byFile = VIDEO_ASSETS.find((a) => a.file === normalized);
     if (byFile) return byFile;
   }
   if (item.title) {
@@ -86,9 +82,9 @@ export function resolvePortfolioMediaSrc(item) {
   if (item.fileUrl) return item.fileUrl;
   const match = matchVideoAsset(item);
   if (match) return match.fileUrl;
-  if (item.file) return withAppBase(`/src/assets/${item.file}`);
+  if (item.file) return withAppBase(`/assets/${encodeURIComponent(item.file)}`);
   const url = item.mediaUrl || '';
-  if (url.startsWith('http')) return url;
+  if (url.startsWith('http') || url.startsWith('blob:') || url.startsWith('data:')) return url;
   const apiBase = import.meta.env.VITE_API_URL
     || (import.meta.env.DEV ? 'http://localhost:4000' : (typeof window !== 'undefined' ? window.location.origin : ''));
   if (url.startsWith('/uploads')) return apiBase + url;
