@@ -32,6 +32,9 @@ button:active, a:active { transform: scale(0.96) !important; transition: transfo
 .nav-link{padding:8px 14px;border-radius:999px;color:var(--muted2);font-size:.88rem;transition:color .2s,background .2s}
 .nav-link:hover{color:#fff;background:rgba(255,255,255,.06)}
 .nav-link.active{color:#fff}
+.nav-actions{display:flex;align-items:center;gap:12px}
+.nav-login{padding:10px 16px;border-radius:999px;border:1px solid var(--line2);color:#fff;font-size:.9rem;background:rgba(255,255,255,.03);transition:background .2s,border-color .2s,transform .2s}
+.nav-login:hover{background:rgba(255,255,255,.07);border-color:rgba(229,57,53,.45);transform:translateY(-1px)}
 .nav-cta{position:relative;overflow:hidden;border:1px solid rgba(229,57,53,.55);border-radius:999px;padding:10px 22px;background:linear-gradient(135deg,var(--red),var(--red-dark));font-weight:600;font-size:.9rem;box-shadow:0 8px 28px rgba(229,57,53,.22);transition:transform .2s,box-shadow .2s}
 .nav-cta::after{content:'';position:absolute;top:0;left:-100%;width:50%;height:100%;background:linear-gradient(to right,transparent,rgba(255,255,255,0.3),transparent);transform:skewX(-25deg);animation:btnShine 3s infinite}
 @keyframes btnShine { 0%{left:-100%} 15%{left:200%} 100%{left:200%} }
@@ -371,6 +374,60 @@ button:active, a:active { transform: scale(0.96) !important; transition: transfo
 .drop-zone:hover{border-color:rgba(229,57,53,.6);background:rgba(229,57,53,.04)}
 /* ── FEEDBACK FORM ── */
 .feedback-form{border:1px solid var(--line2);border-radius:22px;padding:28px;background:rgba(10,10,12,.8)}
+/* ── NEW LEARNING / FREELANCER SECTIONS ── */
+.skills-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:42px}
+.skill-card{border:1px solid var(--line);border-radius:22px;padding:24px;background:linear-gradient(145deg,rgba(16,16,20,.92),rgba(4,4,4,.98));transition:transform .25s,border-color .25s,box-shadow .25s}
+.skill-card:hover{transform:translateY(-6px);border-color:rgba(229,57,53,.45);box-shadow:0 24px 60px rgba(0,0,0,.34)}
+.skill-card-icon{width:48px;height:48px;border-radius:14px;background:rgba(229,57,53,.14);border:1px solid rgba(229,57,53,.22);display:flex;align-items:center;justify-content:center;font-size:1.35rem;margin-bottom:16px}
+.skill-card-top h3{font-family:'Bebas Neue',sans-serif;font-size:1.35rem;letter-spacing:.06em;margin-bottom:8px}
+.skill-card-top p{color:var(--muted);font-size:.9rem;line-height:1.7}
+.skill-card-meta{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 20px}
+.skill-card-meta span{background:rgba(255,255,255,.06);border:1px solid var(--line2);border-radius:999px;padding:6px 10px;font-size:.75rem;color:var(--muted2)}
+.skill-card-cta{width:100%;justify-content:center}
+.journey-list{display:grid;gap:14px;margin-top:40px}
+.journey-step{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:18px;padding:20px 22px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.03)}
+.journey-index{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:rgba(229,57,53,.14);border:1px solid rgba(229,57,53,.26);font-family:'Bebas Neue',sans-serif;color:var(--red)}
+.journey-step h3{font-family:'Bebas Neue',sans-serif;letter-spacing:.06em;font-size:1.15rem;margin-bottom:6px}
+.journey-step p{color:var(--muted);font-size:.9rem;line-height:1.6}
+.journey-arrow{font-size:1.2rem;color:var(--red)}
+.dashboard-preview{margin-top:40px}
+.dashboard-card{border:1px solid var(--line2);border-radius:28px;padding:24px;background:linear-gradient(145deg,rgba(14,14,16,.95),rgba(6,6,8,.98));box-shadow:0 24px 80px rgba(0,0,0,.35)}
+.dashboard-card-head,.dashboard-footer,.profile-card-main,.profile-meta,.profile-actions{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.dashboard-label{color:var(--muted);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px}
+.dashboard-card-head h3,.dashboard-panel h4,.profile-name{font-family:'Bebas Neue',sans-serif;letter-spacing:.06em;font-size:1.3rem}
+.dashboard-pill{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(229,57,53,.28);background:rgba(229,57,53,.12);border-radius:999px;padding:8px 12px;font-size:.78rem;color:#ffd8d8}
+.dashboard-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0}
+.dashboard-metric,.dashboard-panel,.profile-meta>div,.community-card{border:1px solid var(--line);border-radius:16px;padding:14px 16px;background:rgba(255,255,255,.03)}
+.dashboard-metric span,.community-card span,.profile-meta span{display:block;color:var(--muted);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.dashboard-metric strong,.community-card strong,.profile-meta strong{font-size:1.1rem}
+.dashboard-panels{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:16px 0}
+.dashboard-footer{padding-top:16px;border-top:1px solid var(--line);margin-top:18px;color:var(--muted2)}
+.category-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:40px}
+.category-card{border:1px solid var(--line);border-radius:22px;padding:24px;background:rgba(255,255,255,.03)}
+.category-card h3{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;letter-spacing:.06em;margin-bottom:16px}
+.category-card ul{display:grid;gap:8px;list-style:none}
+.category-card li{color:var(--muted2);font-size:.9rem}
+.project-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:40px}
+.project-card{border:1px solid var(--line);border-radius:22px;padding:20px;background:linear-gradient(145deg,rgba(16,16,20,.92),rgba(4,4,4,.98));transition:transform .25s,border-color .25s,box-shadow .25s;display:flex;flex-direction:column;gap:14px}
+.project-card:hover{transform:translateY(-4px);border-color:rgba(229,57,53,.38);box-shadow:0 20px 44px rgba(0,0,0,.28)}
+.project-top{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.project-badge{display:inline-flex;align-items:center;border:1px solid rgba(229,57,53,.22);background:rgba(229,57,53,.08);border-radius:999px;padding:6px 10px;font-size:.72rem;color:var(--muted2)}
+.project-card h3{font-family:'Bebas Neue',sans-serif;letter-spacing:.06em;font-size:1.2rem}
+.project-card p{color:var(--muted);font-size:.9rem;line-height:1.6}
+.project-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:auto;color:var(--muted2);font-size:.88rem}
+.project-footer .btn-ghost{padding:10px 16px}
+.journey-flow{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:40px}
+.flow-node{border:1px solid var(--line);border-radius:20px;padding:20px;background:rgba(255,255,255,.03)}
+.flow-node h3{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.06em;margin-bottom:8px}
+.flow-node p{color:var(--muted);font-size:.9rem;line-height:1.6}
+.profile-card{border:1px solid var(--line2);border-radius:26px;padding:24px;background:linear-gradient(145deg,rgba(14,14,16,.95),rgba(6,6,8,.98));margin-top:40px}
+.profile-avatar{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--red),var(--red-dark));font-family:'Bebas Neue',sans-serif;font-size:1.3rem}
+.profile-role{color:var(--muted);margin:6px 0 10px}
+.profile-badges{display:flex;gap:8px;flex-wrap:wrap}
+.profile-skills{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 22px}
+.profile-skills span{border:1px solid var(--line2);border-radius:999px;padding:8px 12px;background:rgba(255,255,255,.04);font-size:.8rem;color:var(--muted2)}
+.community-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:40px}
+.community-card{text-align:center}
 /* ── RESPONSIVE ── */
 @media(max-width:1080px){
   .hero-inner{grid-template-columns:1fr;gap:40px}
@@ -388,8 +445,12 @@ button:active, a:active { transform: scale(0.96) !important; transition: transfo
 }
 @media(max-width:700px){
   .nav-links{display:none}
-  .services-grid,.pricing-grid,.portfolio-grid,.testimonials-grid,.industries-grid,.service-portfolio-grid{grid-template-columns:1fr}
+  .nav-actions{gap:8px}
+  .nav-login{padding:9px 12px;font-size:.82rem}
+  .nav-cta{padding:9px 14px;font-size:.82rem}
+  .services-grid,.pricing-grid,.portfolio-grid,.testimonials-grid,.industries-grid,.service-portfolio-grid,.skills-grid,.project-grid,.journey-flow,.community-grid{grid-template-columns:1fr}
   .process-steps{grid-template-columns:1fr 1fr}
+  .dashboard-stats,.dashboard-panels,.category-grid{grid-template-columns:1fr}
   .why-grid,.cs-grid,.cs-results-row,.msf-grid,.svc-select,.budget-opts{grid-template-columns:1fr}
   .section{padding:64px 18px}
   .hero-inner{padding:48px 18px}

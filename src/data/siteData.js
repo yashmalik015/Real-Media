@@ -2,12 +2,14 @@ import logoUrl from '../assets/assetweberlogo.png';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 export const COMPANY_NAME = 'Assets Weber';
-export const NAV_LINKS = ["Services","Process","Pricing","Portfolio","Testimonials"];
+export const NAV_LINKS = ["Services","Process","Pricing","Portfolio","Learning","Projects","Testimonials"];
 export const NAV_PAGE_MAP = {
   Services: ["services-list", "service"],
   Process: ["process"],
   Pricing: ["pricing"],
   Portfolio: ["portfolio"],
+  Learning: ["learning"],
+  Projects: ["projects"],
   Testimonials: ["testimonials"],
 };
 export const LOGO_URL = logoUrl;

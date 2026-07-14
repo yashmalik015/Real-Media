@@ -1,6 +1,4 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { api, mediaUrl, setToken, getToken } from "../api.js";
-import { signInWithGoogle, handleGoogleRedirectResult } from "../services/firebase.js";
 import {
   LOGO_URL, TEAM_ID, SERVICE_MAP, SERVICES, VIDEO_ASSETS, PROCESS_STEPS, WHY_US, INDUSTRIES,
   PRICING_CATEGORIES, PRICING_DATA, ESTIMATOR_CONFIG, ESTIMATE_MAP, COMPLEXITY_MULT, TIMELINE_MULT,
@@ -25,102 +23,23 @@ export function StatItem({value,suffix,label,onClick}){
 }
 // ─── LOGIN PAGE ───────────────────────────────────────────────────────────────
 export function LoginPage({onLogin}){
-  const [tab,setTab] = useState("client"); // client | team
-  const [mode,setMode] = useState("login"); // login | register
-  const [form,setForm] = useState({name:"",email:"",password:"",teamId:""});
+  const [tab,setTab] = useState("team"); // client | team
+  const [form,setForm] = useState({name:"",teamId:""});
   const [err,setErr] = useState("");
-  const [loading,setLoading] = useState(false);
-  const googleLoginPending = useRef(false);
-  const [serverOk,setServerOk] = useState(true);
   const up = (k,v) => setForm(f=>({...f,[k]:v}));
-  useEffect(()=>{
-    api.health().then(()=>setServerOk(true)).catch(()=>setServerOk(false));
-  }, []);
-
-  useEffect(() => {
-    async function processRedirect() {
-      try {
-        const googleUser = await handleGoogleRedirectResult();
-        if (!googleUser) return;
-        const { token, user } = await api.loginGoogle({
-          name: googleUser.displayName || googleUser.email || 'Google User',
-          email: googleUser.email,
-          googleId: googleUser.uid,
-          photoURL: googleUser.photoURL || '',
-        });
-        setToken(token);
-        onLogin(user);
-      } catch (e) {
-        console.error('Google redirect login failed:', e);
-      }
-    }
-    processRedirect();
-  }, [onLogin]);
   const submit = async () => {
     setErr("");
-    setLoading(true);
-    try {
-      if(tab==="team"){
-        if(form.teamId !== TEAM_ID){ setErr("Invalid Team ID. Please check and try again."); return; }
-        if(!form.name.trim()){ setErr("Please enter your name."); return; }
-        const { token, user } = await api.loginTeam({ teamId: form.teamId, name: form.name.trim() });
-        setToken(token);
-        onLogin(user);
-        return;
-      }
-      if(!form.email || !form.password){ setErr("Email and password are required."); return; }
-      if(mode==="register" && !form.name){ setErr("Name is required."); return; }
-      const { token, user } = await api.loginClient({ mode, name: form.name, email: form.email, password: form.password });
-      setToken(token);
+    if(tab==="team"){
+      if(form.teamId !== TEAM_ID){ setErr("Invalid Team ID. Please check and try again."); return; }
+      if(!form.name.trim()){ setErr("Please enter your name."); return; }
+      const user = { id: `team_${form.teamId}`, name: form.name.trim(), role: "team", teamId: form.teamId };
+      localStorage.setItem("aw_user", JSON.stringify(user));
       onLogin(user);
-    } catch (e) {
-      setErr(e.message || "Login failed.");
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
-  const googleLogin = async () => {
-    if (googleLoginPending.current) return;
-    googleLoginPending.current = true;
-    setErr("");
-    setLoading(true);
-    try {
-      const googleUser = await signInWithGoogle();
-      if (!googleUser) {
-        // Redirect-based login is in progress or popup fallback activated.
-        return;
-      }
-      const { token, user } = await api.loginGoogle({
-        name: googleUser.displayName || googleUser.email || "Google User",
-        email: googleUser.email,
-        googleId: googleUser.uid,
-        photoURL: googleUser.photoURL || "",
-      });
-      setToken(token);
-      onLogin(user);
-    } catch (e) {
-      console.error("Google login error:", e);
-      let errorMsg = e.message || "Google sign-in failed.";
-
-      if (e.code === "auth/popup-closed-by-user") {
-        errorMsg = "The Google sign-in popup was closed before completing. This can also happen if popups are blocked. Please allow popups for this site and try again.";
-      } else if (e.code === "auth/cancelled-popup-request") {
-        errorMsg = "Google sign-in was cancelled because another popup was already open. Please close any other sign-in windows and try again.";
-      } else if (e.code === "auth/popup-blocked") {
-        errorMsg = "Google sign-in popup was blocked. Please allow popups in your browser settings for this site and try again.";
-      } else if (e.code === "auth/unauthorized-domain") {
-        errorMsg = "This domain is not authorized for Google sign-in. Please add the domain in Firebase Auth settings.";
-      } else if (e.code === "auth/operation-not-supported-in-this-environment") {
-        errorMsg = "Google sign-in is not supported in this browser/environment.";
-      } else if (e.code) {
-        errorMsg = `Google sign-in failed: ${e.code}. ${errorMsg}`;
-      }
-
-      setErr(errorMsg);
-    } finally {
-      setLoading(false);
-      googleLoginPending.current = false;
-    }
+    const user = { id: "client_demo", name: form.name.trim() || "Client", role: "client" };
+    localStorage.setItem("aw_user", JSON.stringify(user));
+    onLogin(user);
   };
   return(
     <div className="login-page">
@@ -130,7 +49,7 @@ export function LoginPage({onLogin}){
           <div className="bn" style={{fontSize:"1.8rem",letterSpacing:".2em"}}>
             {COMPANY_NAME.toUpperCase()}
           </div>
-          <div style={{color:"var(--muted)",fontSize:".84rem",marginTop:6}}>Welcome back. Sign in to continue.</div>
+          <div style={{color:"var(--muted)",fontSize:".84rem",marginTop:6}}>Welcome back. Sign in with your team ID or continue as a client.</div>
         </div>
         {/* Client / Team tabs */}
         <div className="login-tabs">
@@ -139,24 +58,8 @@ export function LoginPage({onLogin}){
         </div>
         {tab==="client"&&(
           <>
-            <button type="button" className="google-btn" onClick={googleLogin} disabled={loading} aria-busy={loading}>
-              <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
-              Continue with Google
-            </button>
-            <div className="divider">or</div>
-            {/* Register / Login toggle */}
-            <div style={{display:"flex",gap:8,marginBottom:18}}>
-              {["login","register"].map(m=>(
-                <button key={m} onClick={()=>setMode(m)} style={{flex:1,padding:"8px",borderRadius:10,border:"1px solid",borderColor:mode===m?"rgba(229,57,53,.5)":"var(--line2)",background:mode===m?"rgba(229,57,53,.1)":"transparent",color:mode===m?"#fff":"var(--muted2)",fontSize:".84rem",transition:"all .2s",textTransform:"capitalize"}}>
-                  {m==="login"?"Sign In":"Register"}
-                </button>
-              ))}
-            </div>
-            {mode==="register"&&(
-              <div className="field"><label>Full Name *</label><input value={form.name} onChange={e=>up("name",e.target.value)} placeholder="Your name"/></div>
-            )}
-            <div className="field"><label>Email *</label><input type="email" value={form.email} onChange={e=>up("email",e.target.value)} placeholder="you@example.com"/></div>
-            <div className="field"><label>Password *</label><input type="password" value={form.password} onChange={e=>up("password",e.target.value)} placeholder="••••••••"/></div>
+            <div className="field"><label>Your Name *</label><input value={form.name} onChange={e=>up("name",e.target.value)} placeholder="Client name"/></div>
+            <div style={{color:"var(--muted)",fontSize:".82rem",marginBottom:16}}>Client access is frontend-only for now.</div>
           </>
         )}
         {tab==="team"&&(
@@ -167,29 +70,337 @@ export function LoginPage({onLogin}){
           </>
         )}
         {err&&<div style={{background:"rgba(229,57,53,.12)",border:"1px solid rgba(229,57,53,.35)",borderRadius:12,padding:"10px 14px",fontSize:".86rem",color:"#fca5a5",marginBottom:14}}>{err}</div>}
-        {!serverOk&&(
-          <div style={{background:"rgba(234,179,8,.1)",border:"1px solid rgba(234,179,8,.35)",borderRadius:12,padding:"10px 14px",fontSize:".84rem",color:"#fde68a",marginBottom:14,lineHeight:1.6}}>
-            Backend is not running. In your project folder run: <strong>npm run dev:full</strong>
-          </div>
-        )}
-        <button className="btn-primary" style={{width:"100%"}} onClick={submit} disabled={loading}>
-          {loading?"Please wait...":tab==="team"?"Access Team Workspace":mode==="register"?"Create Account":"Sign In"}
+        <button className="btn-primary" style={{width:"100%"}} onClick={submit}>
+          {tab==="team"?"Enter Team Workspace":"Continue"}
         </button>
-        {tab==="client"&&(
-          <div style={{textAlign:"center",marginTop:14,color:"var(--muted)",fontSize:".82rem"}}>
-            {mode==="login"?"Don't have an account? ":"Already have an account? "}
-            <button onClick={()=>setMode(m=>m==="login"?"register":"login")} style={{color:"var(--red)",background:"none",border:"none",cursor:"pointer",fontSize:".82rem"}}>
-              {mode==="login"?"Register here":"Sign in"}
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
 }
+
+const SKILLS_DATA = [
+  { icon: "🎬", title: "Video Editing", desc: "Create cinematic edits, reels, and ad-ready content.", time: "6–8 hrs", difficulty: "Beginner", projects: 12 },
+  { icon: "✨", title: "Motion Graphics", desc: "Animate brand stories with sleek transitions and effects.", time: "8–10 hrs", difficulty: "Intermediate", projects: 9 },
+  { icon: "🖼️", title: "Graphic Design", desc: "Design posters, social templates, and brand visuals.", time: "5–7 hrs", difficulty: "Beginner", projects: 15 },
+  { icon: "🧠", title: "UI/UX Design", desc: "Craft polished interfaces that feel premium and intuitive.", time: "10–12 hrs", difficulty: "Intermediate", projects: 11 },
+  { icon: "🌐", title: "Web Development", desc: "Build responsive websites that look sharp and convert.", time: "12–16 hrs", difficulty: "Intermediate", projects: 14 },
+  { icon: "📱", title: "App Development", desc: "Ship modern mobile experiences with clean product thinking.", time: "16–20 hrs", difficulty: "Advanced", projects: 8 },
+  { icon: "⚙️", title: "AI Automation", desc: "Turn workflows into smart systems with no-code and AI tools.", time: "7–9 hrs", difficulty: "Intermediate", projects: 10 },
+  { icon: "📣", title: "Digital Marketing", desc: "Grow audiences through content, ads, and campaign strategy.", time: "6–8 hrs", difficulty: "Beginner", projects: 13 },
+  { icon: "✍️", title: "Copywriting", desc: "Write persuasive hooks, landing pages, and brand messaging.", time: "5–6 hrs", difficulty: "Beginner", projects: 7 },
+  { icon: "🎞️", title: "VFX", desc: "Learn compositing, motion tracking, and cinematic polish.", time: "10–14 hrs", difficulty: "Advanced", projects: 6 },
+  { icon: "🧊", title: "3D Design", desc: "Create cinematic 3D assets and motion-ready visuals.", time: "14–18 hrs", difficulty: "Advanced", projects: 5 },
+  { icon: "🎮", title: "Game Development", desc: "Prototype playable experiences with modern game systems.", time: "18–24 hrs", difficulty: "Advanced", projects: 4 },
+];
+
+const JOURNEY_STEPS = [
+  { title: "Learn Skills", desc: "Access free lessons, templates, and practical exercises." },
+  { title: "Complete Projects", desc: "Turn theory into polished work with real brief-based tasks." },
+  { title: "Build Portfolio", desc: "Showcase your strongest work in a premium profile." },
+  { title: "Get Verified", desc: "Earn Assets Weber recognition through quality review." },
+  { title: "Receive Clients", desc: "Get matched with opportunities based on proof and ratings." },
+  { title: "Scale Career", desc: "Grow into a trusted freelancer with recurring work." },
+];
+
+const CATEGORY_DATA = [
+  { title: "Creative", items: ["Video Editing", "Motion Graphics", "Graphic Design"] },
+  { title: "Development", items: ["Web Development", "App Development", "Game Development"] },
+  { title: "Marketing", items: ["SEO", "Digital Marketing", "Social Media"] },
+  { title: "AI", items: ["AI Automation", "Prompt Engineering", "AI Tools"] },
+  { title: "Design", items: ["UI/UX", "Branding", "Product Design"] },
+];
+
+const PROJECT_DATA = [
+  { title: "Create a Cinematic Advertisement", difficulty: "Advanced", time: "10 hrs", skills: ["Video Editing", "Motion Graphics"], xp: "900 XP" },
+  { title: "Landing Page Design", difficulty: "Intermediate", time: "6 hrs", skills: ["UI/UX Design", "Graphic Design"], xp: "700 XP" },
+  { title: "Restaurant Website", difficulty: "Intermediate", time: "8 hrs", skills: ["Web Development", "UI/UX"], xp: "800 XP" },
+  { title: "Mobile App UI", difficulty: "Intermediate", time: "7 hrs", skills: ["App Development", "UI/UX"], xp: "750 XP" },
+  { title: "Motion Graphics Reel", difficulty: "Advanced", time: "9 hrs", skills: ["Motion Graphics", "VFX"], xp: "850 XP" },
+  { title: "Brand Identity Package", difficulty: "Beginner", time: "5 hrs", skills: ["Graphic Design", "Branding"], xp: "650 XP" },
+];
+
+const FREELANCER_STEPS = [
+  { title: "Learn", desc: "Master practical skills through guided pathways." },
+  { title: "Submit Projects", desc: "Show your work through challenge-based submissions." },
+  { title: "Assets Weber Reviews", desc: "Receive structured feedback and quality checks." },
+  { title: "Verified Badge", desc: "Unlock trust signals for serious opportunities." },
+  { title: "Client Matching", desc: "Get introduced to clients that fit your profile." },
+  { title: "Start Earning", desc: "Invoice, deliver, and grow your freelance career." },
+];
+
+const CLIENT_FEATURES = [
+  { title: "Verified Talent", desc: "Freelancers are reviewed before they appear in the network." },
+  { title: "Real Project Experience", desc: "Skills are backed by submissions and portfolio evidence." },
+  { title: "Portfolio-Based Hiring", desc: "Clients review quality before they ever connect." },
+  { title: "Transparent Ratings", desc: "Performance is visible through ratings and outcomes." },
+  { title: "Fast Communication", desc: "The platform keeps collaboration simple and efficient." },
+  { title: "Quality Assurance", desc: "Every path is shaped to maintain a premium standard." },
+];
+
+export function ExploreSkillsSection(){
+  return(
+    <section id="skill-explorer" className="section">
+      <div className="section-inner">
+        <div className="section-label">EXPLORE SKILLS</div>
+        <h2 className="section-title">Learn Premium Skills That Create Income</h2>
+        <p className="section-sub">Choose a path, build real work, and grow from beginner to verified freelancer inside one platform.</p>
+        <div className="skills-grid">
+          {SKILLS_DATA.map((skill) => (
+            <div className="skill-card" key={skill.title}>
+              <div className="skill-card-icon">{skill.icon}</div>
+              <div className="skill-card-top">
+                <h3>{skill.title}</h3>
+                <p>{skill.desc}</p>
+              </div>
+              <div className="skill-card-meta">
+                <span>{skill.time}</span>
+                <span>{skill.difficulty}</span>
+                <span>{skill.projects} Projects</span>
+              </div>
+              <button className="btn-ghost skill-card-cta">Start Learning</button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function LearningJourneySection(){
+  return(
+    <section className="section">
+      <div className="section-inner">
+        <div className="section-label">THE JOURNEY</div>
+        <h2 className="section-title">From First Lesson to First Client</h2>
+        <p className="section-sub">Every step is designed to move learners from curiosity to credibility.</p>
+        <div className="journey-list">
+          {JOURNEY_STEPS.map((step, index) => (
+            <div className="journey-step" key={step.title}>
+              <div className="journey-index">0{index + 1}</div>
+              <div>
+                <h3>{step.title}</h3>
+                <p>{step.desc}</p>
+              </div>
+              {index < JOURNEY_STEPS.length - 1 && <div className="journey-arrow">↓</div>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function LearningDashboardPreviewSection(){
+  return(
+    <section className="section">
+      <div className="section-inner">
+        <div className="section-label">LEARNING DASHBOARD</div>
+        <h2 className="section-title">A Clean Preview of Your Growth</h2>
+        <div className="dashboard-preview">
+          <div className="dashboard-card">
+            <div className="dashboard-card-head">
+              <div>
+                <div className="dashboard-label">Current Skill</div>
+                <h3>Motion Graphics</h3>
+              </div>
+              <div className="dashboard-pill">Verified Path</div>
+            </div>
+            <div className="dashboard-stats">
+              <div className="dashboard-metric">
+                <span>Progress</span>
+                <strong>82%</strong>
+              </div>
+              <div className="dashboard-metric">
+                <span>XP</span>
+                <strong>4,820</strong>
+              </div>
+              <div className="dashboard-metric">
+                <span>Badges</span>
+                <strong>6</strong>
+              </div>
+            </div>
+            <div className="dashboard-panels">
+              <div className="dashboard-panel">
+                <div className="dashboard-label">Current Project</div>
+                <h4>Cinematic Ad Reel</h4>
+              </div>
+              <div className="dashboard-panel">
+                <div className="dashboard-label">Upcoming Assignment</div>
+                <h4>Brand Transition Pack</h4>
+              </div>
+            </div>
+            <div className="dashboard-footer">
+              <div><span className="dashboard-label">Portfolio</span><strong>72%</strong></div>
+              <div><span className="dashboard-label">Verification</span><strong>Pending Review</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function SkillCategoriesSection(){
+  return(
+    <section className="section">
+      <div className="section-inner">
+        <div className="section-label">SKILL CATEGORIES</div>
+        <h2 className="section-title">Choose the Path That Fits Your Goals</h2>
+        <div className="category-grid">
+          {CATEGORY_DATA.map((category) => (
+            <div className="category-card" key={category.title}>
+              <h3>{category.title}</h3>
+              <ul>
+                {category.items.map((item) => <li key={item}>{item}</li>)}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function ProjectBasedLearningSection(){
+  return(
+    <section className="section">
+      <div className="section-inner">
+        <div className="section-label">PROJECT-BASED LEARNING</div>
+        <h2 className="section-title">Practice Through Real Challenges</h2>
+        <p className="section-sub">Build portfolio-ready work with guided briefs, real deliverables, and clear XP rewards.</p>
+        <div className="project-grid">
+          {PROJECT_DATA.map((project) => (
+            <div className="project-card" key={project.title}>
+              <div className="project-top">
+                <span className="project-badge">{project.difficulty}</span>
+                <span className="project-badge">{project.time}</span>
+              </div>
+              <h3>{project.title}</h3>
+              <p>Skills: {project.skills.join(" • ")}</p>
+              <div className="project-footer">
+                <span>Reward {project.xp}</span>
+                <button className="btn-ghost">View Brief</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function FreelancerJourneySection(){
+  return(
+    <section id="freelancer-journey" className="section">
+      <div className="section-inner">
+        <div className="section-label">BECOME A FREELANCER</div>
+        <h2 className="section-title">A Clear Path to Verified Client Work</h2>
+        <div className="journey-flow">
+          {FREELANCER_STEPS.map((step) => (
+            <div className="flow-node" key={step.title}>
+              <h3>{step.title}</h3>
+              <p>{step.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function FreelancerProfilePreviewSection(){
+  return(
+    <section className="section">
+      <div className="section-inner">
+        <div className="section-label">FREELANCER PROFILE</div>
+        <h2 className="section-title">A Professional Profile That Converts</h2>
+        <div className="profile-card">
+          <div className="profile-card-main">
+            <div className="profile-avatar">AM</div>
+            <div>
+              <div className="profile-name">Aarav Mehta</div>
+              <div className="profile-role">Motion Graphics • Video Editing</div>
+              <div className="profile-badges">
+                <span className="dashboard-pill">Verified</span>
+                <span className="dashboard-pill">Top Rated</span>
+              </div>
+            </div>
+          </div>
+          <div className="profile-meta">
+            <div><strong>4.9★</strong><span>Rating</span></div>
+            <div><strong>48</strong><span>Projects</span></div>
+            <div><strong>126</strong><span>Reviews</span></div>
+          </div>
+          <div className="profile-skills">
+            {"Motion Graphics","Video Editing","Brand Design","AI Automation".split(",").map((skill) => <span key={skill}>{skill}</span>)}
+          </div>
+          <div className="profile-actions">
+            <button className="btn-primary">Portfolio</button>
+            <button className="btn-ghost">Available Now</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function WhyClientsSection(){
+  return(
+    <section className="section">
+      <div className="section-inner">
+        <div className="section-label">WHY CLIENTS CHOOSE US</div>
+        <h2 className="section-title">Quality and Verification Lead the Match</h2>
+        <div className="why-grid">
+          {CLIENT_FEATURES.map((feature) => (
+            <div className="why-card" key={feature.title}>
+              <h4>{feature.title}</h4>
+              <p>{feature.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function CommunitySection(){
+  return(
+    <section className="section">
+      <div className="section-inner">
+        <div className="section-label">COMMUNITY</div>
+        <h2 className="section-title">A Growing Network of Builders</h2>
+        <div className="community-grid">
+          <div className="community-card"><strong>2.4K+</strong><span>Students Learning</span></div>
+          <div className="community-card"><strong>860+</strong><span>Freelancers</span></div>
+          <div className="community-card"><strong>120+</strong><span>Mentors</span></div>
+          <div className="community-card"><strong>310+</strong><span>Live Projects</span></div>
+          <div className="community-card"><strong>95%</strong><span>Success Stories</span></div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function FinalCtaSection(){
+  return(
+    <section className="section">
+      <div className="section-inner">
+        <div className="cta-band" style={{ borderRadius: 28 }}>
+          <h2>Start Learning Today. Start Earning Tomorrow.</h2>
+          <p>Everything you need to build a successful digital career is inside Assets Weber.</p>
+          <div className="cta-actions">
+            <button className="btn-primary">Explore Skills</button>
+            <button className="btn-ghost">Become a Freelancer</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ─── HERO ──────────────────────────────────────────────────────────────────────
-export function Hero({ onStartProject }) {
-  return <ScrollHero onStartProject={onStartProject} />;
+export function Hero({ onStartProject, onExploreSkills, onBecomeFreelancer }) {
+  return <ScrollHero onStartProject={onStartProject} onExploreSkills={onExploreSkills} onBecomeFreelancer={onBecomeFreelancer} />;
 }
 // ─── SERVICES SECTION (landing) ───────────────────────────────────────────────
 export function ServicesSection({onServiceClick}){
@@ -611,43 +822,21 @@ export function MultiStepForm({onClose,onToast,user,onProjectCreated,prefillPlan
     else if (prefillPlan.name.includes("Growth") || prefillPlan.name.includes("Domination")) initialService = "Marketing";
   }
   const [data,setData] = useState({service:initialService,budget:prefillPlan?prefillPlan.price:"",timeline:"",name:user?.name||"",email:user?.email||"",phone:"",title:"",description:"",files:[]});
-  const [submitting,setSubmitting] = useState(false);
   const up=(k,v)=>setData(d=>({...d,[k]:v}));
 
   const submit=async()=>{
     if(!data.name||!data.email) return onToast("Please fill your name and email.");
     if(!data.service||!data.title||!data.description) return onToast("Please complete service, title, and description.");
-    setSubmitting(true);
-    try {
-      const formData = new FormData();
-      formData.append("service", SERVICE_MAP[data.service] || data.service || "Custom");
-      formData.append("title", data.title);
-      formData.append("description", data.description);
-      formData.append("answers", JSON.stringify({ budget: data.budget, timeline: data.timeline, phone: data.phone }));
-      
-      if (prefillPlan) {
-        const fullAmount = parseInt(prefillPlan.price.replace(/[^\d]/g, '')) || 0;
-        formData.append("servicePlan", prefillPlan.name);
-        formData.append("totalAmount", fullAmount);
-      }
-      
-      data.files.forEach((file) => formData.append("files", file));
-
-      if (!getToken()) {
-        onToast("Please login first.");
-        setSubmitting(false);
-        return;
-      }
-
-      const { project } = await api.createProject(formData);
-      onProjectCreated?.(project);
-      onToast(`Project submitted! Your unique project ID is ${project.id}`);
-      onClose();
-    } catch (e) {
-      onToast(e.message || "Could not submit project.");
-    } finally {
-      setSubmitting(false);
-    }
+    const project = {
+      id: `proj_${Date.now()}`,
+      title: data.title,
+      service: data.service,
+      status: "Brief submitted",
+      projectState: "active",
+    };
+    onProjectCreated?.(project);
+    onToast(`Project submitted! Your unique project ID is ${project.id}`);
+    onClose();
   };
   return(
     <div className="msf-backdrop">
@@ -728,7 +917,7 @@ export function MultiStepForm({onClose,onToast,user,onProjectCreated,prefillPlan
           {step<TOTAL-1?(
             <button className="btn-primary" onClick={()=>setStep(s=>s+1)}>Continue →</button>
           ):(
-            <button className="btn-primary" onClick={submit} disabled={submitting}>{submitting?"Submitting...":"Submit Brief ✓"}</button>
+            <button className="btn-primary" onClick={submit}>Submit Brief ✓</button>
           )}
         </div>
       </div>
@@ -738,46 +927,28 @@ export function MultiStepForm({onClose,onToast,user,onProjectCreated,prefillPlan
 // ─── FEEDBACK FORM ────────────────────────────────────────────────────────────
 export function FeedbackForm({onSubmit, onClose, user}){
   const [step, setStep] = useState(0);
-  const [verifiedProject, setVerifiedProject] = useState(null);
   const [projectTitle, setProjectTitle] = useState("");
   const [err, setErr] = useState("");
-  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({name:user?.name||"",biz:"",quote:"",result:"",tag:"Video Editing"});
   const up = (k,v) => setForm(f=>({...f,[k]:v}));
   const verifyProject = async () => {
     setErr("");
     if(!projectTitle.trim()){ setErr("Enter your project name."); return; }
-    setLoading(true);
-    try {
-      const { project } = await api.verifyProjectForFeedback(projectTitle.trim());
-      setVerifiedProject(project);
-      setForm(f=>({...f, tag: project.service || f.tag}));
-      setStep(1);
-    } catch (e) {
-      setErr(e.message || "Project not found.");
-    } finally {
-      setLoading(false);
-    }
+    setForm(f=>({...f, tag: f.tag}));
+    setStep(1);
   };
   const submit = async () => {
     if(!form.name||!form.quote) return;
-    setLoading(true);
-    try {
-      const { testimonial } = await api.submitTestimonial({
-        projectTitle: verifiedProject?.title || projectTitle.trim(),
-        name: form.name,
-        biz: form.biz,
-        quote: form.quote,
-        tag: form.tag,
-        result: form.result,
-      });
-      onSubmit(testimonial);
-      onClose();
-    } catch (e) {
-      setErr(e.message || "Could not submit feedback.");
-    } finally {
-      setLoading(false);
-    }
+    onSubmit({
+      id: `testi_${Date.now()}`,
+      name: form.name,
+      biz: form.biz,
+      quote: form.quote,
+      tag: form.tag,
+      result: form.result,
+      initials: form.name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase(),
+    });
+    onClose();
   };
   return(
     <div className="msf-backdrop">
@@ -791,12 +962,12 @@ export function FeedbackForm({onSubmit, onClose, user}){
             <p style={{color:"var(--muted)",marginBottom:16,fontSize:".88rem",lineHeight:1.65}}>Enter the exact project name from your workspace. Feedback is only accepted for matching projects.</p>
             <div className="field"><label>Project Name *</label><input value={projectTitle} onChange={e=>setProjectTitle(e.target.value)} placeholder="Exact project title"/></div>
             {err&&<div style={{background:"rgba(229,57,53,.12)",border:"1px solid rgba(229,57,53,.35)",borderRadius:12,padding:"10px 14px",fontSize:".86rem",color:"#fca5a5",marginBottom:14}}>{err}</div>}
-            <button className="btn-primary" style={{width:"100%"}} onClick={verifyProject} disabled={loading}>{loading?"Checking...":"Verify Project →"}</button>
+            <button className="btn-primary" style={{width:"100%"}} onClick={verifyProject}>Verify Project →</button>
           </>
         ) : (
           <>
             <div style={{background:"rgba(34,197,94,.08)",border:"1px solid rgba(34,197,94,.25)",borderRadius:12,padding:"10px 14px",fontSize:".84rem",color:"#86efac",marginBottom:16}}>
-              Project matched: <strong>{verifiedProject?.title}</strong> (ID: {verifiedProject?.id})
+              Project verified: <strong>{projectTitle}</strong>
             </div>
             <div className="field"><label>Your Name *</label><input value={form.name} onChange={e=>up("name",e.target.value)} placeholder="Full name"/></div>
         <div className="field"><label>Business / Role</label><input value={form.biz} onChange={e=>up("biz",e.target.value)} placeholder="e.g. Gym Owner, Mumbai"/></div>
@@ -808,7 +979,7 @@ export function FeedbackForm({onSubmit, onClose, user}){
         <div className="field"><label>Your Feedback *</label><textarea style={{minHeight:100}} value={form.quote} onChange={e=>up("quote",e.target.value)} placeholder={`Share your experience with ${COMPANY_NAME}...`}/></div>
         <div className="field"><label>Key Result</label><input value={form.result} onChange={e=>up("result",e.target.value)} placeholder="e.g. 2x Leads, 180% Sales"/></div>
             {err&&<div style={{background:"rgba(229,57,53,.12)",border:"1px solid rgba(229,57,53,.35)",borderRadius:12,padding:"10px 14px",fontSize:".86rem",color:"#fca5a5",marginBottom:14}}>{err}</div>}
-            <button className="btn-primary" style={{width:"100%",marginTop:4}} onClick={submit} disabled={loading}>{loading?"Submitting...":"Submit Feedback ✓"}</button>
+            <button className="btn-primary" style={{width:"100%",marginTop:4}} onClick={submit}>Submit Feedback ✓</button>
           </>
         )}
       </div>

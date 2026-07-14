@@ -65,7 +65,7 @@ function setPopEl(el, p) {
   el.style.transform = `translateY(${y}px) scale(${scale}) rotateX(${rotX}deg)`;
 }
 
-export function ScrollHero({ onStartProject }) {
+export function ScrollHero({ onStartProject, onExploreSkills, onBecomeFreelancer }) {
   const sectionRef = useRef(null);
   const canvasRef = useRef(null);
   const scrollHintRef = useRef(null);
@@ -322,21 +322,26 @@ export function ScrollHero({ onStartProject }) {
 
           <div className="hero-inner scroll-hero-overlay">
             <div className="scroll-hero-left">
-              <span className="hero-label">DIGITAL GROWTH AGENCY</span>
+              <span className="hero-label">LEARN • BUILD • EARN</span>
               <h1 className="hero-title">
-                WE BUILD<br />
-                <span className="red-w" data-text="BRANDS">
-                  BRANDS
+                LEARN.<br />
+                <span className="red-w" data-text="BUILD">
+                  BUILD
                 </span>
                 <br />
-                THAT GO GLOBAL.
+                EARN.
               </h1>
               <p className="hero-copy">
-                {COMPANY_NAME} is a full-service digital agency helping Indian businesses build international-level
-                brands through video editing, VFX, development, and strategy.
+                Master high-income digital skills for free, build real projects, become verified, and start earning from real clients — all within {COMPANY_NAME}.
               </p>
               <div className="hero-actions">
-                <button className="btn-primary" onClick={onStartProject}>
+                <button className="btn-primary" onClick={onExploreSkills}>
+                  Explore Skills
+                </button>
+                <button className="btn-ghost" onClick={onBecomeFreelancer}>
+                  Become a Freelancer
+                </button>
+                <button className="btn-ghost" onClick={onStartProject}>
                   Start Your Project
                 </button>
               </div>
