@@ -24,6 +24,7 @@ const razorpay = process.env.RAZORPAY_KEY_ID ? new Razorpay({
 }) : null
 
 let repository = null
+let dbAvailable = false
 const app = express()
 
 app.disable('x-powered-by')
@@ -40,6 +41,13 @@ app.use(rateLimit({
   legacyHeaders: false,
 }))
 app.use('/uploads', express.static(uploadsDirectory()))
+
+// If the database is not available, return 503 for API routes except health.
+app.use('/api', (req, res, next) => {
+  if (req.path === '/health') return next()
+  if (!dbAvailable || !repository) return res.status(503).json({ message: 'Service Unavailable: database not connected.' })
+  next()
+})
 
 const distDir = path.join(rootDir, 'dist')
 if (fs.existsSync(distDir)) {
@@ -654,18 +662,23 @@ app.use((err, _req, res, next) => {
 async function startServer() {
   try {
     repository = await createDatabase()
-    const server = app.listen(PORT, () => {
-      console.log(`Buildbig backend running on http://localhost:${PORT}`)
-      console.log(`MongoDB database: ${process.env.MONGODB_DB || 'assetsweber'}`)
-      console.log(`Team login ID: ${TEAM_ACCESS_ID}`)
-    })
-
-    server.ref()
-    setInterval(() => {}, 1 << 30)
+    dbAvailable = true
+    console.log('Database connected')
   } catch (error) {
-    console.error('Failed to start server:', error)
-    process.exit(1)
+    console.error('Failed to connect to database:', error)
+    repository = null
+    dbAvailable = false
   }
+
+  const server = app.listen(PORT, () => {
+    console.log(`Buildbig backend running on http://localhost:${PORT}`)
+    console.log(`MongoDB database: ${process.env.MONGODB_DB || 'assetsweber'}`)
+    console.log(`Team login ID: ${TEAM_ACCESS_ID}`)
+    if (!dbAvailable) console.warn('Warning: database not connected — API endpoints will return 503.')
+  })
+
+  server.ref()
+  setInterval(() => {}, 1 << 30)
 }
 
 process.on('unhandledRejection', (reason) => {
