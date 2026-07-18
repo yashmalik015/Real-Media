@@ -233,18 +233,12 @@ export function ScrollHero({ onStartProject, onExploreSkills, onBecomeFreelancer
           ? Math.min(1, Math.max(0, (81 - rect.top) / scrollableHeight))
           : 0;
 
-        let video = 1;
-        let localProgress = progress;
-        let frameIndex = 0;
+        const video = progress < 0.5 ? 1 : 2;
+        const frameIndex = progress < 0.5
+          ? Math.round((progress / 0.5) * (VIDEO1_COUNT - 1))
+          : Math.round(((progress - 0.5) / 0.5) * (VIDEO2_COUNT - 1));
 
-        if (progress < 0.5) {
-          video = 1;
-          localProgress = progress / 0.5;
-          frameIndex = Math.round(localProgress * (VIDEO1_COUNT - 1));
-        } else {
-          video = 2;
-          localProgress = (progress - 0.5) / 0.5;
-          frameIndex = Math.round(localProgress * (VIDEO2_COUNT - 1));
+        if (progress >= 0.5) {
           updateUI(progress);
         }
 

@@ -2,7 +2,7 @@ import logoUrl from '../assets/assetweberlogo.png';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 export const COMPANY_NAME = 'Assets Weber';
-export const NAV_LINKS = ["Services","Process","Pricing","Portfolio","Learning","Projects","Testimonials"];
+export const NAV_LINKS = ["Home","Services","Portfolio","Learning","Process","Testimonials","Contact"];
 export const NAV_PAGE_MAP = {
   Services: ["services-list", "service"],
   Process: ["process"],
@@ -15,20 +15,22 @@ export const NAV_PAGE_MAP = {
 export const LOGO_URL = logoUrl;
 export const TEAM_ID = "1234567890";
 export const SERVICE_MAP = {
+  "Web Development": "Web Development",
+  "Mobile Apps": "Mobile Apps",
+  "AI Solutions": "AI Solutions",
   "Video Editing": "Video Editing",
-  "VFX": "VFX",
-  "Web Dev": "Web Development",
-  "App Dev": "App Development",
-  "Game Dev": "Game Development",
-  "Marketing": "Marketing",
+  "Content Creation": "Content Creation",
+  "Branding": "Branding",
+  "Automation": "Automation",
 };
 export const SERVICES = [
-  {icon:"🎬",title:"Video Editing",desc:"High-retention editing, reels, cinematic cuts, and motion graphics crafted for maximum engagement.",key:"video"},
-  {icon:"✨",title:"VFX",desc:"Hollywood-grade visual effects — compositing, CGI, motion tracking, and cinematic enhancements for film, ads, and content.",key:"vfx"},
-  {icon:"🌐",title:"Web Development",desc:"Modern responsive websites that convert visitors into clients. From landing pages to full business sites.",key:"web"},
-  {icon:"📱",title:"App Development",desc:"iOS and Android apps with beautiful UX, real-time systems, and scalable backends.",key:"app"},
-  {icon:"🎮",title:"Game Development",desc:"Promotional games, 2D/3D titles, and cross-platform gaming experiences.",key:"game"},
-  {icon:"📈",title:"Marketing",desc:"Ad creatives, social media management, analytics strategy, and growth campaigns.",key:"marketing"},
+  {icon:"🌐",title:"Web Development",desc:"Production-ready websites, landing pages, portals, and scalable business web applications built for performance and conversion.",details:["Fast, premium front-end delivery with scalable structure.","Built for business operations, leads, and long-term maintainability.","Landing pages, websites, portals, and custom internal tools."]},
+  {icon:"📱",title:"Mobile Apps",desc:"iOS and Android apps with a clean UX, practical architecture, and reliable delivery for startups and businesses.",details:["MVPs, client apps, internal apps, and utility tools.","Cross-platform delivery with a focus on usability and speed.","Built to support future backend and product expansion."]},
+  {icon:"🤖",title:"AI Solutions",desc:"Automations, assistants, and workflow tools that reduce manual work and help teams move faster.",details:["Workflow automation and AI-assisted operations.","Lead handling, data processing, and internal productivity tools.","Simple, scalable AI utilities without unnecessary complexity."]},
+  {icon:"🎬",title:"Video Editing",desc:"Cinematic edits, reels, ads, trailers, and brand films shaped for premium visual identity and retention.",details:["Dynamic cuts, color work, and sound-aware pacing.","Short-form and long-form content for brands and creators.","Consistent quality across campaign and social formats."]},
+  {icon:"✍️",title:"Content Creation",desc:"Scripts, captions, social content, and campaign assets designed to keep your brand active and consistent.",details:["Content planning, scripts, and social-first deliverables.","Campaign assets that support growth and visibility.","Structured output for ongoing agency retainer work."]},
+  {icon:"🎨",title:"Branding",desc:"Identity systems, visual direction, and brand assets that make businesses look established and memorable.",details:["Logo direction, brand kits, and visual guidelines.","Clean, premium identity systems built for consistency.","Designed to support web, content, and marketing use cases."]},
+  {icon:"⚙️",title:"Automation",desc:"Simple automation systems for lead flow, operations, and recurring business tasks.",details:["Notifications, follow-ups, and internal workflow support.","Less manual work, fewer repetitive mistakes.","Built to help small teams operate like larger ones."]},
 ];
 export const VIDEO_FILE_META = {
   "BATCH 2.0.mp4": { title:"BATCH 2.0 – Cinematic Cut", client:"Assets Weber", desc:"Full cinematic production with premium transitions and color grading.", outcome:"Viral reach across multiple platforms" },
@@ -183,8 +185,8 @@ export const ESTIMATE_MAP = {
 };
 export const COMPLEXITY_MULT = {"Simple / MVP":1,"Standard":1.5,"Advanced":2.2,"Enterprise / Custom":3.5};
 export const TIMELINE_MULT = {"Rush (1-2 weeks)":1.5,"Standard (4-6 weeks)":1,"Extended (2-3 months)":0.85,"Flexible":0.9};
-export const TEAM_CATEGORIES = ["All","Video Editing","VFX","Web Development","App Development","Game Development","Marketing"];
-export const SERVICE_OPTIONS = ["Video Editing","VFX","Web Development","App Development","Game Development","Marketing"];
+export const TEAM_CATEGORIES = ["All","Web Development","Mobile Apps","AI Solutions","Video Editing","Content Creation","Branding","Automation"];
+export const SERVICE_OPTIONS = ["Web Development","Mobile Apps","AI Solutions","Video Editing","Content Creation","Branding","Automation"];
 // Demo data for workspace
 export const DEMO_PROJECTS = [
   {id:"1",title:"Brand Growth Content Plan",service:"Marketing",clientId:"c1",clientName:"Arjun Mehta",status:"In production",messages:[{id:"1",role:"system",text:"Project created and handler assigned."},{id:"2",role:"team",name:"Rahul (Handler)",text:"Hey! Got your brief. Let's start with the first batch of 8 reels."},{id:"3",role:"client",name:"Arjun Mehta",text:"Sounds great, excited to get started!"}],timeline:[{label:"Brief Submitted",done:true},{label:"Handler Assigned",done:true},{label:"Content Plan Shared",done:true},{label:"First Batch Production",active:true},{label:"Review & Delivery",done:false}]},

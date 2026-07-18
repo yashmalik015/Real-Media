@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
-  LOGO_URL, TEAM_ID, SERVICE_MAP, SERVICES, VIDEO_ASSETS, PROCESS_STEPS, WHY_US, INDUSTRIES,
+  LOGO_URL, TEAM_ID, SERVICES, VIDEO_ASSETS, PROCESS_STEPS, WHY_US, INDUSTRIES,
   PRICING_CATEGORIES, PRICING_DATA, ESTIMATOR_CONFIG, ESTIMATE_MAP, COMPLEXITY_MULT, TIMELINE_MULT,
   TEAM_CATEGORIES, TESTIMONIALS_STATIC, mergePortfolioForService, mergeAllPortfolio, isDeletablePortfolioItem,
   resolvePortfolioMediaSrc, COMPANY_NAME, SERVICE_OPTIONS
 } from "../data/siteData.js";
 import { formatIndian, useCountUp } from "../utils/format.js";
 import { ScrollHero } from "./ScrollHero.jsx";
+import { api, mediaUrl } from "../api.js";
 
 // ─── COMPONENTS ───────────────────────────────────────────────────────────────
 export function Toast({msg,show}){
@@ -332,7 +333,9 @@ export function FreelancerProfilePreviewSection(){
             <div><strong>126</strong><span>Reviews</span></div>
           </div>
           <div className="profile-skills">
-            {"Motion Graphics","Video Editing","Brand Design","AI Automation".split(",").map((skill) => <span key={skill}>{skill}</span>)}
+            {["Motion Graphics","Video Editing","Brand Design","AI Automation"].map((skill) => (
+              <span key={skill}>{skill}</span>
+            ))}
           </div>
           <div className="profile-actions">
             <button className="btn-primary">Portfolio</button>

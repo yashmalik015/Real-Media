@@ -343,12 +343,20 @@ button:active, a:active { transform: scale(0.96) !important; transition: transfo
 .tl-title{font-size:.9rem;font-weight:500;margin-bottom:3px}
 .tl-date{font-size:.78rem;color:var(--muted)}
 /* ── LOGIN ── */
-.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 20% 30%,rgba(229,57,53,.18) 0%,transparent 50%),radial-gradient(ellipse at 80% 70%,rgba(229,57,53,.1) 0%,transparent 45%),#010101;position:relative;overflow:hidden}
-.login-page::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(229,57,53,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(229,57,53,.03) 1px,transparent 1px);background-size:60px 60px}
+.site-shell{min-height:100vh;transition:filter .22s ease,transform .22s ease}
+.site-shell--blurred{filter:blur(12px) saturate(.85);transform:scale(.985);pointer-events:none;user-select:none}
+.login-page{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(18px);overflow:auto;padding:24px}
+.login-page::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(229,57,53,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(229,57,53,.03) 1px,transparent 1px);background-size:60px 60px;pointer-events:none}
 .login-card{position:relative;z-index:1;width:min(440px,92vw);background:linear-gradient(145deg,rgba(14,14,16,.98),rgba(4,4,6,.99));border:1px solid rgba(255,255,255,.1);border-radius:28px;padding:40px;box-shadow:0 0 100px rgba(229,57,53,.12)}
+.login-card--wide{width:min(560px,94vw);padding:34px 34px 30px;border-color:rgba(229,57,53,.22);box-shadow:0 0 120px rgba(229,57,53,.18)}
+.login-close{position:absolute;top:18px;right:18px;width:40px;height:40px;border-radius:50%;border:1px solid var(--line2);background:rgba(255,255,255,.04);color:#fff;display:grid;place-items:center}
+.login-hero{display:grid;justify-items:center;text-align:center;margin-bottom:22px}
+.login-logo{width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 0 18px rgba(229,57,53,.55));margin-bottom:12px}
+.login-title{font-size:2rem;letter-spacing:.28em}
+.login-copy{color:var(--muted);font-size:.92rem;line-height:1.75;max-width:440px;margin-top:10px}
 .login-tabs{display:flex;gap:4px;background:rgba(255,255,255,.05);border-radius:14px;padding:4px;margin-bottom:28px}
-.login-tab{flex:1;padding:10px;border-radius:10px;font-size:.88rem;color:var(--muted2);transition:all .2s;font-weight:500}
-.login-tab.active{background:var(--red);color:#fff}
+.login-tab{flex:1;padding:12px;border-radius:12px;font-size:.82rem;color:var(--muted2);transition:all .2s;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.login-tab.active{background:linear-gradient(135deg,var(--red),var(--red-dark));color:#fff;box-shadow:0 10px 24px rgba(229,57,53,.22)}
 .google-btn{width:100%;border:1px solid var(--line2);border-radius:14px;padding:13px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:.92rem;color:var(--muted2);transition:all .2s;margin-bottom:18px}
 .google-btn:hover{border-color:rgba(229,57,53,.5);color:#fff;background:rgba(229,57,53,.06)}
 .divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:var(--muted);font-size:.8rem}
@@ -426,6 +434,54 @@ button:active, a:active { transform: scale(0.96) !important; transition: transfo
 .profile-badges{display:flex;gap:8px;flex-wrap:wrap}
 .profile-skills{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 22px}
 .profile-skills span{border:1px solid var(--line2);border-radius:999px;padding:8px 12px;background:rgba(255,255,255,.04);font-size:.8rem;color:var(--muted2)}
+.learning-shell{background:radial-gradient(ellipse at top,rgba(229,57,53,.16) 0%,transparent 38%),#030303}
+.learning-shell-inner{max-width:1500px}
+.learning-topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.learning-user-chip{display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--line2);border-radius:999px;background:rgba(255,255,255,.03);color:var(--muted2);font-size:.88rem}
+.learning-user-dot{width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 14px rgba(229,57,53,.55)}
+.learning-hero-strip{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;margin-top:28px;padding:22px 24px;border:1px solid rgba(229,57,53,.18);border-radius:26px;background:linear-gradient(135deg,rgba(229,57,53,.08),rgba(255,255,255,.03));box-shadow:0 18px 45px rgba(0,0,0,.28)}
+.learning-hero-strip h2{font-family:'Bebas Neue',sans-serif;font-size:2.3rem;letter-spacing:.06em;margin-top:4px}
+.learning-hero-stats{display:grid;grid-template-columns:repeat(3,minmax(92px,1fr));gap:12px}
+.learning-hero-stat{min-width:92px;padding:14px 16px;border:1px solid var(--line);border-radius:18px;background:rgba(0,0,0,.24)}
+.learning-hero-stat span{display:block;color:var(--muted);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;margin-bottom:6px}
+.learning-hero-stat strong{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.05em}
+.learning-dashboard{display:grid;grid-template-columns:360px minmax(0,1fr);gap:20px;margin-top:42px;align-items:start}
+.learning-sidebar{position:sticky;top:106px;align-self:start;border:1px solid var(--line);border-radius:28px;background:linear-gradient(145deg,rgba(14,14,16,.96),rgba(4,4,6,.98));padding:20px;box-shadow:0 24px 60px rgba(0,0,0,.34);max-height:calc(100vh - 150px);overflow:auto}
+.learning-sidebar-head{padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+.learning-sidebar-head h3{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.08em;margin-top:4px}
+.learning-courses{display:flex;flex-direction:column;gap:12px}
+.learning-course{border:1px solid var(--line);border-radius:22px;padding:18px;text-align:left;background:rgba(255,255,255,.03);transition:all .2s}
+.learning-course.active{border-color:rgba(229,57,53,.55);background:linear-gradient(145deg,rgba(229,57,53,.14),rgba(255,255,255,.03));box-shadow:0 16px 30px rgba(229,57,53,.1)}
+.learning-course span{display:block;color:var(--muted);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px}
+.learning-course strong{display:block;font-family:'Bebas Neue',sans-serif;letter-spacing:.06em;font-size:1.45rem;margin-bottom:8px}
+.learning-course p{color:var(--muted);font-size:.84rem;line-height:1.6}
+.learning-course-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.learning-course-foot span{font-size:.72rem;color:var(--muted2);letter-spacing:.08em;text-transform:none;margin:0}
+.learning-main{display:grid;gap:20px}
+.learning-player{border:1px solid var(--line2);border-radius:32px;background:linear-gradient(145deg,rgba(14,14,16,.98),rgba(4,4,6,.98));overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.42)}
+.learning-gate{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;border:1px solid rgba(229,57,53,.24);border-radius:22px;padding:20px 22px;background:linear-gradient(135deg,rgba(229,57,53,.1),rgba(255,255,255,.03));margin:26px 0 0}
+.learning-gate h3{font-family:'Bebas Neue',sans-serif;letter-spacing:.06em;font-size:1.6rem;margin:4px 0 6px}
+.learning-gate p{color:var(--muted);max-width:620px;line-height:1.65}
+.learning-courses{display:flex;flex-direction:column;gap:12px}
+.learning-video-shell{aspect-ratio:16/9;background:#050505;border-bottom:1px solid var(--line)}
+.learning-video{width:100%;height:100%;object-fit:cover}
+.learning-video-empty{min-height:100%;display:grid;place-items:center;color:var(--muted);padding:24px;text-align:center}
+.learning-video-empty-icon{width:72px;height:72px;border-radius:50%;border:1px solid rgba(229,57,53,.24);display:grid;place-items:center;font-size:1.8rem;color:var(--red);margin:0 auto 14px;background:rgba(229,57,53,.08)}
+.learning-player-body{padding:28px}
+.learning-player-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.learning-player-body h3{font-family:'Bebas Neue',sans-serif;font-size:2.3rem;letter-spacing:.05em;margin:6px 0 10px}
+.learning-player-body p{color:var(--muted);line-height:1.75}
+.learning-meta-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:18px 0}
+.learning-meta-grid div{border:1px solid var(--line);border-radius:16px;padding:14px;background:rgba(255,255,255,.03)}
+.learning-meta-grid span{display:block;color:var(--muted);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px}
+.learning-meta-grid strong{font-size:.98rem}
+.learning-actions{display:flex;gap:12px;flex-wrap:wrap}
+.learning-detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.learning-detail-card{border:1px solid var(--line);border-radius:22px;padding:20px;background:rgba(255,255,255,.03)}
+.learning-detail-card--wide{grid-column:1/-1}
+.learning-detail-card p{color:var(--muted);line-height:1.7;margin-top:8px}
+.learning-notes{border:1px solid rgba(229,57,53,.18);border-radius:18px;padding:16px;background:rgba(229,57,53,.06);color:var(--muted2);line-height:1.7;margin-top:14px}
+.learning-empty{border:1px dashed var(--line2);border-radius:20px;padding:42px;text-align:center;color:var(--muted)}
 .community-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:40px}
 .community-card{text-align:center}
 /* ── RESPONSIVE ── */
@@ -442,6 +498,12 @@ button:active, a:active { transform: scale(0.96) !important; transition: transfo
   .workspace{grid-template-columns:1fr}
   .sidebar{position:relative;height:auto}
   .ws-grid{grid-template-columns:1fr}
+  .learning-dashboard{grid-template-columns:1fr}
+  .learning-sidebar{position:relative;top:auto;max-height:none}
+  .learning-hero-strip{flex-direction:column;align-items:flex-start}
+  .learning-hero-stats{width:100%;grid-template-columns:repeat(3,1fr)}
+  .learning-detail-grid{grid-template-columns:1fr}
+  .learning-detail-card--wide{grid-column:auto}
 }
 @media(max-width:700px){
   .nav-links{display:none}
@@ -452,6 +514,8 @@ button:active, a:active { transform: scale(0.96) !important; transition: transfo
   .process-steps{grid-template-columns:1fr 1fr}
   .dashboard-stats,.dashboard-panels,.category-grid{grid-template-columns:1fr}
   .why-grid,.cs-grid,.cs-results-row,.msf-grid,.svc-select,.budget-opts{grid-template-columns:1fr}
+  .learning-topbar,.learning-player-head,.learning-gate{align-items:flex-start}
+  .learning-hero-stats{grid-template-columns:1fr}
   .section{padding:64px 18px}
   .hero-inner{padding:48px 18px}
   .footer-top{grid-template-columns:1fr}
