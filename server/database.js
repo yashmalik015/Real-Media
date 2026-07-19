@@ -266,6 +266,12 @@ function makeRepository(client, collections) {
       await portfolioItems.insertOne(payload)
       return portfolioRow(await portfolioItems.findOne({ id: item.id }))
     },
+    addPortfolioFull: async (item) => {
+      const payload = portfolioToDb(item)
+      payload._id = payload.id
+      await portfolioItems.insertOne(payload)
+      return portfolioRow(await portfolioItems.findOne({ id: item.id }))
+    },
     updatePortfolioExtended: async (portfolioId, data) => {
       const set = portfolioToDb(data)
       delete set.id

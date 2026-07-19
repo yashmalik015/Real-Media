@@ -956,7 +956,7 @@ function TeamDashboard({ user, onBack, showToast }) {
       const fd = new FormData();
       Object.entries(portForm).forEach(([k, v]) => fd.append(k, v));
       if (portMedia) fd.append("media", portMedia);
-      await api.addPortfolioFull(fd);
+      await api.addPortfolio(fd);
       setPortForm({ title: "", service: "Video Editing", description: "", client: "", outcome: "" });
       setPortMedia(null);
       await load();

@@ -49,6 +49,7 @@ export const api = {
   me: () => request('/api/me'),
   getPortfolio: () => request('/api/portfolio/public'),
   addPortfolio: (formData) => request('/api/portfolio', { method: 'POST', body: formData }),
+  addPortfolioFull: (formData) => request('/api/portfolio/full', { method: 'POST', body: formData }),
   deletePortfolio: (id) => request(`/api/portfolio/${id}`, { method: 'DELETE' }),
   getProjects: () => request('/api/projects'),
   getProject: (id) => request(`/api/projects/${id}`),
