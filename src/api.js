@@ -42,9 +42,10 @@ async function request(path, options = {}) {
 
 export const api = {
   health: () => request('/api/health'),
-  loginClient: (payload) => request('/api/auth/client', { method: 'POST', body: payload }),
-  loginGoogle: (payload) => request('/api/auth/google', { method: 'POST', body: payload }),
-  loginTeam: (payload) => request('/api/auth/team', { method: 'POST', body: payload }),
+  loginLearner: (payload) => request('/api/auth/learner', { method: 'POST', body: payload }),
+  loginGoogleLearner: (payload) => request('/api/auth/learner/google', { method: 'POST', body: payload }),
+  loginTeamV2: (payload) => request('/api/auth/team/login', { method: 'POST', body: payload }),
+  logout: () => request('/api/auth/logout', { method: 'POST' }),
   me: () => request('/api/me'),
   getPortfolio: () => request('/api/portfolio/public'),
   addPortfolio: (formData) => request('/api/portfolio', { method: 'POST', body: formData }),

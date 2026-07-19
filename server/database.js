@@ -1,13 +1,27 @@
 import crypto from 'node:crypto'
-import { MongoClient } from 'mongodb'
+import { MongoClient, GridFSBucket } from 'mongodb'
+import { createV2Collections } from './v2Repository.js'
+import { MongoMemoryServer } from 'mongodb-memory-server'
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://yashmalik015_db_user:VPyE0KcI35EXtfH1@cluster0.dqhp8cg.mongodb.net/?appName=Cluster0&compressors=zlib'
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://yashmalik015_db_user:VPyE0KcI35EXtfH1@cluster0.dqhp8cg.mongodb.net/assetsweber?retryWrites=true&w=majority&appName=Cluster0'
 const MONGODB_DB = process.env.MONGODB_DB || 'assetsweber'
 
 export async function createDatabase() {
-  const client = new MongoClient(MONGODB_URI)
+  let activeUri = MONGODB_URI
+  try {
+    const testClient = new MongoClient(activeUri, { serverSelectionTimeoutMS: 3000 })
+    await testClient.connect()
+    await testClient.close()
+  } catch (err) {
+    console.warn(`Original MongoDB connection failed (${err.message}), falling back to mongodb-memory-server for local dev...`)
+    const mongod = await MongoMemoryServer.create()
+    activeUri = mongod.getUri()
+  }
+
+  const client = new MongoClient(activeUri)
   await client.connect()
   const db = client.db(MONGODB_DB)
+  const bucket = new GridFSBucket(db, { bucketName: 'uploads' })
 
   const users = db.collection('users')
   const sessions = db.collection('sessions')
@@ -38,17 +52,24 @@ export async function createDatabase() {
 
   await seedDefaultPortfolio(portfolioItems)
 
-  return makeRepository(client, {
-    users,
-    sessions,
-    projects,
-    projectFiles,
-    projectMessages,
-    notifications,
-    portfolioItems,
-    testimonials,
-    teamChatMessages,
-  })
+  const v2 = await createV2Collections(db)
+
+  return {
+    ...makeRepository(client, {
+      users,
+      sessions,
+      projects,
+      projectFiles,
+      projectMessages,
+      notifications,
+      portfolioItems,
+      testimonials,
+      teamChatMessages,
+    }),
+    v2,
+    db,
+    bucket,
+  }
 }
 
 export function id(prefix) {
@@ -77,7 +98,7 @@ async function seedDefaultPortfolio(portfolioItems) {
       description: 'Cinematic production with premium transitions and professional color grading.',
       client: 'Buildbig',
       outcome: 'Viral reach across multiple platforms.',
-      media_url: '/src/assets/BATCH 2.0.mp4',
+      media_url: '/assets/BATCH 2.0.mp4',
       media_type: 'video',
       media_name: 'BATCH 2.0.mp4',
       created_by: null,
@@ -92,7 +113,7 @@ async function seedDefaultPortfolio(portfolioItems) {
       description: 'Full music video production with cinematic visuals and professional editing.',
       client: 'Buildbig Productions',
       outcome: 'Official release content delivered.',
-      media_url: '/src/assets/GAME CHANGE OFFICIAL SONG (MUSIC VIDEO).mp4',
+      media_url: '/assets/GAME CHANGE OFFICIAL SONG (MUSIC VIDEO).mp4',
       media_type: 'video',
       media_name: 'GAME CHANGE OFFICIAL SONG (MUSIC VIDEO).mp4',
       created_by: null,
@@ -107,7 +128,7 @@ async function seedDefaultPortfolio(portfolioItems) {
       description: 'High-impact trailer cut with dramatic pacing, SFX, and visual storytelling.',
       client: 'Buildbig',
       outcome: 'Theatrical trailer quality achieved.',
-      media_url: '/src/assets/MINE OFFICIAl TRAILER .mp4',
+      media_url: '/assets/MINE OFFICIAl TRAILER .mp4',
       media_type: 'video',
       media_name: 'MINE OFFICIAl TRAILER .mp4',
       created_by: null,
@@ -216,7 +237,7 @@ function makeRepository(client, collections) {
     markNotificationsRead: async (userId) => {
       await notifications.updateMany({ user_id: userId }, { $set: { read: true } })
     },
-    portfolio: async () => (await portfolioItems.find().sort({ created_at: -1 }).toArray()).map(portfolioRow),
+    portfolio: async () => (await portfolioItems.find().sort({ sort_order: 1, created_at: -1 }).toArray()).map(portfolioRow),
     portfolioByService: async (service) => (await portfolioItems.find({ service }).sort({ created_at: -1 }).toArray()).map(portfolioRow),
     portfolioById: async (portfolioId) => portfolioRow(await portfolioItems.findOne({ id: portfolioId })),
     createPortfolio: async (item) => {
@@ -238,6 +259,20 @@ function makeRepository(client, collections) {
     deletePortfolio: async (portfolioId) => {
       await portfolioItems.deleteOne({ id: portfolioId })
     },
+    createPortfolioExtended: async (item) => {
+      const payload = portfolioToDb(item)
+      payload._id = payload.id
+      await portfolioItems.insertOne(payload)
+      return portfolioRow(await portfolioItems.findOne({ id: item.id }))
+    },
+    updatePortfolioExtended: async (portfolioId, data) => {
+      const set = portfolioToDb(data)
+      delete set.id
+      delete set._id
+      set.updated_at = data.updatedAt || now()
+      await portfolioItems.updateOne({ id: portfolioId }, { $set: set })
+      return portfolioRow(await portfolioItems.findOne({ id: portfolioId }))
+    },
     approvedTestimonials: async () => (await testimonials.find({ approved: true }).sort({ created_at: -1 }).toArray()).map(testimonialRow),
     allTestimonials: async () => (await testimonials.find().sort({ created_at: -1 }).toArray()).map(testimonialRow),
     createTestimonial: async (item) => {
@@ -257,6 +292,19 @@ function makeRepository(client, collections) {
     },
     deleteTestimonial: async (testimonialId) => {
       await testimonials.deleteOne({ id: testimonialId })
+    },
+    updateTestimonial: async (testimonialId, data) => {
+      const set = {}
+      if (data.name !== undefined) set.name = data.name
+      if (data.biz !== undefined) set.biz = data.biz
+      if (data.quote !== undefined) set.quote = data.quote
+      if (data.tag !== undefined) set.tag = data.tag
+      if (data.result !== undefined) set.result = data.result
+      if (data.photo !== undefined) set.photo = data.photo
+      if (data.rating !== undefined) set.rating = data.rating
+      set.updated_at = now()
+      await testimonials.updateOne({ id: testimonialId }, { $set: set })
+      return testimonialRow(await testimonials.findOne({ id: testimonialId }))
     },
     visibleProjects: async (user) => {
       const query = { project_state: 'active' }
@@ -375,6 +423,33 @@ function userRow(doc) {
   }
 }
 
+function portfolioToDb(item) {
+  return {
+    id: item.id,
+    title: item.title,
+    service: item.service,
+    description: item.description,
+    client: item.client || '',
+    outcome: item.outcome || '',
+    category: item.category || '',
+    media_url: item.mediaUrl || item.media_url || '',
+    media_type: item.mediaType || item.media_type || 'image',
+    media_name: item.mediaName || item.media_name || '',
+    thumbnail: item.thumbnail || '',
+    gallery_images: item.galleryImages || item.gallery_images || [],
+    video_url: item.videoUrl || item.video_url || '',
+    technologies: item.technologies || [],
+    completion_date: item.completionDate || item.completion_date || '',
+    tags: item.tags || [],
+    cta: item.cta || '',
+    featured: Boolean(item.featured),
+    sort_order: item.sortOrder ?? item.sort_order ?? 0,
+    created_by: item.createdBy || item.created_by || null,
+    created_at: item.createdAt || item.created_at || now(),
+    updated_at: item.updatedAt || item.updated_at || now(),
+  }
+}
+
 function portfolioRow(doc) {
   if (!doc) return null
   return {
@@ -384,9 +459,19 @@ function portfolioRow(doc) {
     description: doc.description,
     client: doc.client || '',
     outcome: doc.outcome || '',
+    category: doc.category || '',
     mediaUrl: doc.media_url || doc.mediaUrl || '',
     mediaType: doc.media_type || doc.mediaType || 'image',
     mediaName: doc.media_name || doc.mediaName || '',
+    thumbnail: doc.thumbnail || '',
+    galleryImages: doc.gallery_images || doc.galleryImages || [],
+    videoUrl: doc.video_url || doc.videoUrl || '',
+    technologies: doc.technologies || [],
+    completionDate: doc.completion_date || doc.completionDate || '',
+    tags: doc.tags || [],
+    cta: doc.cta || '',
+    featured: Boolean(doc.featured),
+    sortOrder: doc.sort_order ?? doc.sortOrder ?? 0,
     createdBy: doc.created_by || doc.createdBy || '',
     createdAt: doc.created_at || doc.createdAt || null,
     updatedAt: doc.updated_at || doc.updatedAt || null,
@@ -400,10 +485,15 @@ function testimonialRow(doc) {
     userId: doc.user_id || doc.userId || null,
     projectId: doc.project_id || doc.projectId || null,
     name: doc.name,
-    biz: doc.biz || '',
-    quote: doc.quote,
+    biz: doc.biz || doc.company || '',
+    company: doc.biz || doc.company || '',
+    quote: doc.quote || doc.review || '',
+    review: doc.quote || doc.review || '',
     tag: doc.tag || '',
     result: doc.result || '',
+    rating: doc.rating || 5,
+    photo: doc.photo || doc.image || '',
+    image: doc.photo || doc.image || '',
     initials: doc.initials || (doc.name ? doc.name.slice(0, 2).toUpperCase() : ''),
     approved: Boolean(doc.approved),
     createdAt: doc.created_at || doc.createdAt || null,

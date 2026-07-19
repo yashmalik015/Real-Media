@@ -10,11 +10,13 @@ import multer from 'multer'
 import Razorpay from 'razorpay'
 import { createDatabase, id, now } from './database.js'
 import { uploadFile, uploadsDirectory } from './fileStorage.js'
+import { registerV2Routes } from './v2Routes.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
 const PORT = Number(process.env.PORT || process.env.API_PORT || 4000)
 const TEAM_ACCESS_ID = process.env.TEAM_ACCESS_ID || '1234567890'
+const TEAM_ACCESS_PASSWORD = process.env.TEAM_ACCESS_PASSWORD || 'admin123'
 const MAX_UPLOAD_GB = Number(process.env.MAX_UPLOAD_GB || 3)
 const CORS_ORIGIN = process.env.CORS_ORIGIN
 const FRONTEND_ONLY = (process.env.FRONTEND_ONLY === 'true' || process.env.FRONTEND_ONLY === '1')
@@ -42,6 +44,8 @@ app.use(rateLimit({
   legacyHeaders: false,
 }))
 app.use('/uploads', express.static(uploadsDirectory()))
+
+app.use('/assets', express.static(path.join(rootDir, 'public', 'assets')))
 
 // Serve source assets (e.g., seeded portfolio media paths like /src/assets/...) so
 // built frontend can reference them the same way as in development.
@@ -183,9 +187,16 @@ async function filePayload(file, projectId) {
 }
 
 app.get('/api/health', (_req, res) => {
+  if (!dbAvailable) {
+    return res.status(503).json({
+      ok: false,
+      database: 'disconnected',
+      message: 'Service Unavailable: database not connected.'
+    })
+  }
   res.json({
     ok: true,
-    database: 'mongodb',
+    database: 'connected',
     uploadLimitGb: MAX_UPLOAD_GB,
     teamAccessIdLength: TEAM_ACCESS_ID.length,
   })
@@ -670,7 +681,22 @@ async function startServer() {
     if (!FRONTEND_ONLY) {
       repository = await createDatabase()
       dbAvailable = true
-      console.log('Database connected')
+      console.log('✓ Mongo connected')
+      console.log('✓ Database selected')
+      console.log('✓ Repository initialized')
+      console.log('✓ dbAvailable=true')
+      registerV2Routes(app, {
+        repository,
+        v2: repository.v2,
+        upload,
+        requireAuth,
+        hashPassword,
+        verifyPassword,
+        createSessionResponse,
+        uploadFile,
+        TEAM_ACCESS_ID,
+        TEAM_ACCESS_PASSWORD
+      })
     } else {
       console.log('FRONTEND_ONLY set — skipping database connection')
       repository = null
@@ -678,6 +704,7 @@ async function startServer() {
     }
   } catch (error) {
     console.error('Failed to connect to database:', error)
+    console.error('Exact failure reason:', error.message)
     repository = null
     dbAvailable = false
   }
