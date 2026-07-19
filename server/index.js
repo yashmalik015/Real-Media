@@ -28,7 +28,9 @@ const razorpay = process.env.RAZORPAY_KEY_ID ? new Razorpay({
 
 let repository = null
 let dbAvailable = false
+let dbError = null
 const app = express()
+app.set('trust proxy', 1)
 
 app.disable('x-powered-by')
 app.use(helmet({ crossOriginResourcePolicy: false }))
@@ -191,15 +193,10 @@ app.get('/api/health', (_req, res) => {
     return res.status(503).json({
       ok: false,
       database: 'disconnected',
-      message: 'Service Unavailable: database not connected.'
+      error: dbError ? String(dbError.message || dbError) : 'MongoDB connection unavailable.',
     })
   }
-  res.json({
-    ok: true,
-    database: 'connected',
-    uploadLimitGb: MAX_UPLOAD_GB,
-    teamAccessIdLength: TEAM_ACCESS_ID.length,
-  })
+  res.json({ ok: true })
 })
 
 app.post('/api/auth/client', async (req, res) => {
@@ -681,10 +678,9 @@ async function startServer() {
     if (!FRONTEND_ONLY) {
       repository = await createDatabase()
       dbAvailable = true
-      console.log('✓ Mongo connected')
-      console.log('✓ Database selected')
+      dbError = null
+      console.log('✓ MongoDB Connected')
       console.log('✓ Repository initialized')
-      console.log('✓ dbAvailable=true')
       registerV2Routes(app, {
         repository,
         v2: repository.v2,
@@ -695,29 +691,28 @@ async function startServer() {
         createSessionResponse,
         uploadFile,
         TEAM_ACCESS_ID,
-        TEAM_ACCESS_PASSWORD
+        TEAM_ACCESS_PASSWORD,
       })
     } else {
       console.log('FRONTEND_ONLY set — skipping database connection')
       repository = null
       dbAvailable = false
+      dbError = null
     }
   } catch (error) {
-    console.error('Failed to connect to database:', error)
-    console.error('Exact failure reason:', error.message)
+    console.error('Failed to connect to database:')
+    console.error(error)
     repository = null
     dbAvailable = false
+    dbError = error
   }
 
-  const server = app.listen(PORT, () => {
+  app.listen(PORT, () => {
     console.log(`Buildbig backend running on http://localhost:${PORT}`)
     console.log(`MongoDB database: ${process.env.MONGODB_DB || 'assetsweber'}`)
     console.log(`Team login ID: ${TEAM_ACCESS_ID}`)
     if (!dbAvailable) console.warn('Warning: database not connected — API endpoints will return 503.')
   })
-
-  server.ref()
-  setInterval(() => {}, 1 << 30)
 }
 
 process.on('unhandledRejection', (reason) => {

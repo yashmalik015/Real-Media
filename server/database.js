@@ -1,25 +1,26 @@
 import crypto from 'node:crypto'
 import { MongoClient, GridFSBucket } from 'mongodb'
 import { createV2Collections } from './v2Repository.js'
-import { MongoMemoryServer } from 'mongodb-memory-server'
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://yashmalik015_db_user:VPyE0KcI35EXtfH1@cluster0.dqhp8cg.mongodb.net/assetsweber?retryWrites=true&w=majority&appName=Cluster0'
 const MONGODB_DB = process.env.MONGODB_DB || 'assetsweber'
 
 export async function createDatabase() {
-  let activeUri = MONGODB_URI
+  const client = new MongoClient(MONGODB_URI, {
+    serverSelectionTimeoutMS: 10000,
+    connectTimeoutMS: 10000,
+    socketTimeoutMS: 10000,
+    retryWrites: true,
+  })
+
   try {
-    const testClient = new MongoClient(activeUri, { serverSelectionTimeoutMS: 3000 })
-    await testClient.connect()
-    await testClient.close()
-  } catch (err) {
-    console.warn(`Original MongoDB connection failed (${err.message}), falling back to mongodb-memory-server for local dev...`)
-    const mongod = await MongoMemoryServer.create()
-    activeUri = mongod.getUri()
+    await client.connect()
+  } catch (error) {
+    console.error('MongoDB Connection Failed:')
+    console.error(error)
+    throw error
   }
 
-  const client = new MongoClient(activeUri)
-  await client.connect()
   const db = client.db(MONGODB_DB)
   const bucket = new GridFSBucket(db, { bucketName: 'uploads' })
 
