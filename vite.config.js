@@ -13,6 +13,18 @@ export default defineConfig({
     fs: {
       strict: false,
     },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/uploads': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   preview: {
     host: '127.0.0.1',

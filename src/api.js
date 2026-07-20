@@ -1,5 +1,7 @@
+// In dev, Vite proxy forwards /api → http://localhost:4000, so use relative paths (empty base).
+// In production, use VITE_API_URL if set, otherwise same-origin.
 const API_BASE = import.meta.env.VITE_API_URL
-  || (import.meta.env.DEV ? 'http://localhost:4000' : (typeof window !== 'undefined' ? window.location.origin : ''))
+  || (import.meta.env.DEV ? '' : (typeof window !== 'undefined' ? window.location.origin : ''))
 
 const TOKEN_KEY = 'realmedia_token'
 
@@ -33,9 +35,14 @@ async function request(path, options = {}) {
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
     if (res.status === 502 || res.status === 503) {
-      throw new Error('Backend server is not running. Start it with: npm run dev:full')
+      throw new Error(data.message || 'Backend server is not running. Start it with: npm run dev:full')
     }
-    throw new Error(data.message || 'Request failed.')
+    // Always surface the real backend message
+    const msg = data.message || data.error || `Server error ${res.status}`
+    const err = new Error(msg)
+    err.status = res.status
+    err.data = data
+    throw err
   }
   return data
 }
@@ -71,14 +78,65 @@ export const api = {
   getTeamChatMessages: () => request('/api/team-chat'),
   sendTeamChatMessage: (text) => request('/api/team-chat', { method: 'POST', body: { text } }),
   uploadTeamChatFiles: (formData) => request('/api/team-chat/files', { method: 'POST', body: formData }),
+
+  // ── Missing V2 and Admin Methods ──
+  submitInquiry: (payload) => request('/api/inquiries', { method: 'POST', body: payload }),
+  getInquiries: () => request('/api/inquiries'),
+  updateInquiry: (id, status) => request(`/api/inquiries/${id}`, { method: 'PATCH', body: { status } }),
+  deleteInquiry: (id) => request(`/api/inquiries/${id}`, { method: 'DELETE' }),
+
+  getLearnerProfile: () => request('/api/learner/profile'),
+  updateLearnerProfile: (payload) => request('/api/learner/profile', { method: 'PUT', body: payload }),
+  uploadProfilePhoto: (formData) => request('/api/learner/profile/photo', { method: 'POST', body: formData }),
+  uploadResume: (formData) => request('/api/learner/profile/resume', { method: 'POST', body: formData }),
+
+  getCourses: () => request('/api/courses'),
+  searchCourses: (q) => request(`/api/courses/search?q=${encodeURIComponent(q)}`),
+  getAllCourses: () => request('/api/courses/all'),
+  getCourse: (id) => request(`/api/courses/${id}`),
+  createCourse: (payload) => request('/api/courses', { method: 'POST', body: payload }),
+  updateCourse: (id, payload) => request(`/api/courses/${id}`, { method: 'PUT', body: payload }),
+  deleteCourse: (id) => request(`/api/courses/${id}`, { method: 'DELETE' }),
+  uploadCourseThumbnail: (id, formData) => request(`/api/courses/${id}/thumbnail`, { method: 'POST', body: formData }),
+  uploadLessonVideo: (courseId, lessonId, formData) => request(`/api/courses/${courseId}/lessons/${lessonId}/video`, { method: 'POST', body: formData }),
+  uploadLessonThumbnail: (courseId, lessonId, formData) => request(`/api/courses/${courseId}/lessons/${lessonId}/thumbnail`, { method: 'POST', body: formData }),
+
+  getSettings: () => request('/api/settings'),
+  updateSettings: (payload) => request('/api/settings', { method: 'PUT', body: payload }),
+
+  getLessonComments: (lessonId) => request(`/api/lessons/${lessonId}/comments`),
+  addComment: (lessonId, text, courseId) => request(`/api/lessons/${lessonId}/comments`, { method: 'POST', body: { text, courseId } }),
+  deleteComment: (id) => request(`/api/comments/${id}`, { method: 'DELETE' }),
+  likeComment: (id) => request(`/api/comments/${id}/like`, { method: 'POST' }),
+
+  trackProgress: (courseId, lessonId) => request('/api/learning/progress', { method: 'POST', body: { courseId, lessonId } }),
+  getProgress: () => request('/api/learning/progress'),
+
+  getLessonLiked: (lessonId) => request(`/api/lessons/${lessonId}/like`),
+  likeLesson: (lessonId) => request(`/api/lessons/${lessonId}/like`, { method: 'POST' }),
+
+  getAnalytics: () => request('/api/analytics'),
+
+  getPublicPortfolio: () => request('/api/portfolio/public'),
+  getAllTestimonials: () => request('/api/testimonials/all'),
+  addTestimonialManage: (formData) => request('/api/testimonials/manage', { method: 'POST', body: formData }),
+  updateTestimonial: (id, formData) => request(`/api/testimonials/${id}`, { method: 'PUT', body: formData }),
+  deleteTestimonialManage: (id) => request(`/api/testimonials/manage/${id}`, { method: 'DELETE' }),
+
+  // ── Pricing CRUD ──
+  getPricing: () => request('/api/pricing'),
+  createPricing: (payload) => request('/api/pricing', { method: 'POST', body: payload }),
+  updatePricing: (id, payload) => request(`/api/pricing/${id}`, { method: 'PUT', body: payload }),
+  deletePricing: (id) => request(`/api/pricing/${id}`, { method: 'DELETE' }),
 }
 
 export function mediaUrl(url) {
   if (!url) return ''
   if (url.startsWith('http')) return url
-  if (url.startsWith('/src/')) {
-    return typeof window !== 'undefined' ? `${window.location.origin}${url}` : url
+  let cleanUrl = url
+  if (cleanUrl.startsWith('/src/assets/')) {
+    cleanUrl = cleanUrl.replace(/^\/src\/assets\//, '/assets/')
   }
-  if (url.startsWith('/uploads')) return `${API_BASE}${url}`
-  return `${API_BASE}${url}`
+  if (cleanUrl.startsWith('/uploads')) return `${API_BASE}${cleanUrl}`
+  return `${API_BASE}${cleanUrl}`
 }

@@ -157,7 +157,7 @@ export function ScrollHero({ onStartProject, onExploreSkills, onBecomeFreelancer
       if (!img) return;
 
       const cw = window.innerWidth;
-      const ch = window.innerHeight - 81;
+      const ch = window.innerHeight - 80;
       const imgRatio = img.naturalWidth / img.naturalHeight;
       const canvasRatio = cw / ch;
 
@@ -204,9 +204,9 @@ export function ScrollHero({ onStartProject, onExploreSkills, onBecomeFreelancer
     const resizeCanvas = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = window.innerWidth * dpr;
-      canvas.height = (window.innerHeight - 81) * dpr;
+      canvas.height = (window.innerHeight - 80) * dpr;
       canvas.style.width = window.innerWidth + "px";
-      canvas.style.height = window.innerHeight - 81 + "px";
+      canvas.style.height = window.innerHeight - 80 + "px";
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       if (currentFrameRef.current >= 0) {
         const frames =
@@ -226,11 +226,11 @@ export function ScrollHero({ onStartProject, onExploreSkills, onBecomeFreelancer
           return;
         }
 
-        const viewportH = window.innerHeight - 81;
+          const viewportH = window.innerHeight - 80;
         const rect = section.getBoundingClientRect();
         const scrollableHeight = section.offsetHeight - viewportH;
         const progress = scrollableHeight > 0
-          ? Math.min(1, Math.max(0, (81 - rect.top) / scrollableHeight))
+          ? Math.min(1, Math.max(0, (80 - rect.top) / scrollableHeight))
           : 0;
 
         const video = progress < 0.5 ? 1 : 2;

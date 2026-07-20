@@ -1,5 +1,5 @@
 import { id, now } from './database.js'
-import { courseToDb } from './v2Repository.js'
+import { courseToDb } from './database.js'
 
 export function registerV2Routes(app, { repository, v2, upload, requireAuth, hashPassword, verifyPassword, createSessionResponse, uploadFile, TEAM_ACCESS_ID, TEAM_ACCESS_PASSWORD }) {
 
@@ -67,31 +67,61 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
   })
 
   app.post('/api/auth/team/login', async (req, res) => {
-    const { teamId = '', password = '', name = 'Assets Weber Team' } = req.body
-    if (!/^\d{10}$/.test(teamId) || teamId !== TEAM_ACCESS_ID) {
-      return res.status(401).json({ message: 'Invalid Team ID.' })
-    }
-    if (password !== TEAM_ACCESS_PASSWORD) {
-      return res.status(401).json({ message: 'Invalid Team password.' })
-    }
+    try {
+      console.log('[auth/team/login] incoming body:', JSON.stringify(req.body))
+      const { teamId = '', password = '' } = req.body
 
-    let user = await repository.findTeamById(TEAM_ACCESS_ID)
-    if (!user) {
-      user = await repository.insertUser({
-        id: id('team'),
-        role: 'team',
-        name: name.trim() || 'Assets Weber Team',
-        email: 'team@assetsweber.internal',
-        passwordHash: hashPassword(TEAM_ACCESS_PASSWORD),
-        teamId: TEAM_ACCESS_ID,
-        teamCategory: null,
-        googleId: null,
-        createdAt: now(),
+      // Validate teamId format and value
+      const teamIdOk = /^\d{10}$/.test(teamId) && teamId === TEAM_ACCESS_ID
+      const passwordOk = password === TEAM_ACCESS_PASSWORD
+      console.log(`[auth/team/login] teamId="${teamId}" teamIdOk=${teamIdOk} passwordOk=${passwordOk}`)
+
+      if (!teamIdOk) {
+        console.log('[auth/team/login] rejected: invalid team ID')
+        return res.status(401).json({ success: false, message: 'Invalid Team ID. Must be exactly the 10-digit team ID.' })
+      }
+      if (!passwordOk) {
+        console.log('[auth/team/login] rejected: wrong password')
+        return res.status(401).json({ success: false, message: 'Invalid Team password.' })
+      }
+
+      // Look up or create the team user
+      let user = await repository.findTeamUser(TEAM_ACCESS_ID)
+      console.log('[auth/team/login] findTeamUser result:', user ? `found id=${user.id}` : 'not found — will create')
+
+      if (!user) {
+        user = await repository.ensureTeamUser({
+          id: id('team'),
+          role: 'team',
+          name: 'Assets Weber Team',
+          email: 'team@assetsweber.internal',
+          passwordHash: hashPassword(TEAM_ACCESS_PASSWORD),
+          teamId: TEAM_ACCESS_ID,
+          teamCategory: null,
+          googleId: null,
+          createdAt: now(),
+        })
+        console.log('[auth/team/login] ensureTeamUser result:', user ? `created id=${user.id}` : 'FAILED to create')
+      }
+
+      if (!user) {
+        console.error('[auth/team/login] ERROR: could not find or create team user')
+        return res.status(500).json({ success: false, message: 'Team account could not be found or created.' })
+      }
+
+      const sessionResult = await createSessionResponse(user)
+      console.log('[auth/team/login] session created, token length:', sessionResult.token?.length)
+      res.json({ success: true, ...sessionResult })
+    } catch (err) {
+      console.error('[auth/team/login] EXCEPTION:', err.message, err.stack)
+      res.status(500).json({
+        success: false,
+        message: err.message,
+        stack: process.env.NODE_ENV === 'production' ? undefined : err.stack,
       })
     }
-
-    res.json(await createSessionResponse(user))
   })
+
 
   app.post('/api/auth/logout', requireAuth, async (req, res) => {
     const token = req.headers.authorization?.replace(/^Bearer\s+/i, '')
@@ -139,7 +169,7 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
       v2.getLearnerProfile(req.user.id),
       v2.learnerProjects(req.user.id),
       v2.getProgress(req.user.id),
-      v2.publishedCourses(),
+      v2.getCourses({ published: true }),
     ])
     const completedCourses = progress.filter((p) => {
       const course = courses.find((c) => c.id === p.courseId)
@@ -199,7 +229,7 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
 
   // ── Courses ──
   app.get('/api/courses', async (_req, res) => {
-    res.json({ courses: await v2.publishedCourses() })
+    res.json({ courses: await v2.getCourses({ published: true }) })
   })
 
   app.get('/api/courses/search', async (req, res) => {
@@ -209,7 +239,7 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
 
   app.get('/api/courses/all', requireAuth, async (req, res) => {
     if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
-    res.json({ courses: await v2.allCourses() })
+    res.json({ courses: await v2.getCourses() })
   })
 
   app.get('/api/courses/:id', async (req, res) => {
@@ -300,7 +330,7 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
   // ── Teachers ──
   app.get('/api/teachers', async (_req, res) => {
     const teachers = await v2.allTeachers()
-    const courses = await v2.publishedCourses()
+    const courses = await v2.getCourses({ published: true })
     const enriched = teachers.map((t) => ({
       ...t,
       courses: courses.filter((c) => c.teacherId === t.id || c.teacherName === t.name),
@@ -314,7 +344,7 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
   app.get('/api/teachers/:id', async (req, res) => {
     const teacher = await v2.teacherById(req.params.id)
     if (!teacher) return res.status(404).json({ message: 'Teacher not found.' })
-    const courses = (await v2.publishedCourses()).filter((c) => c.teacherId === teacher.id)
+    const courses = (await v2.getCourses({ published: true })).filter((c) => c.teacherId === teacher.id)
     const packages = await v2.mentorshipPackages(teacher.id)
     res.json({ teacher: { ...teacher, courses, mentorshipPackages: packages } })
   })
@@ -477,7 +507,7 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
       updates.galleryImages = [...(existing.galleryImages || []), ...gallery.map((g) => g.url)]
     }
 
-    await repository.updatePortfolioExtended(req.params.id, updates)
+    await repository.updatePortfolioFull(req.params.id, updates)
     res.json({ portfolioItem: await repository.portfolioById(req.params.id) })
   })
 
@@ -485,7 +515,7 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
     if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
     const { order = [] } = req.body
     await Promise.all(order.map((itemId, index) =>
-      repository.updatePortfolioExtended(itemId, { sortOrder: index }),
+      repository.updatePortfolioFull(itemId, { sortOrder: index }),
     ))
     res.json({ portfolio: await repository.portfolio() })
   })
@@ -514,7 +544,7 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
       ? await Promise.all(req.files.gallery.map((f) => uploadFile(f, 'portfolio/gallery')))
       : []
 
-    const portfolioItem = await repository.createPortfolioExtended({
+    const portfolioItem = await repository.addPortfolioFull({
       id: id('portfolio'),
       title: title.trim(),
       service: service.trim(),
@@ -590,12 +620,52 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
     res.json({ ok: true })
   })
 
+  // ── Pricing CRUD Routes ──
+  app.get('/api/pricing', async (_req, res) => {
+    try {
+      res.json({ pricing: await repository.getPricing() })
+    } catch (err) {
+      res.status(500).json({ message: err.message })
+    }
+  })
+
+  app.post('/api/pricing', requireAuth, async (req, res) => {
+    if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
+    try {
+      const item = await repository.createPricing(req.body)
+      res.status(201).json({ pricingItem: item })
+    } catch (err) {
+      res.status(500).json({ message: err.message })
+    }
+  })
+
+  app.put('/api/pricing/:id', requireAuth, async (req, res) => {
+    if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
+    try {
+      const item = await repository.updatePricing(req.params.id, req.body)
+      if (!item) return res.status(404).json({ message: 'Pricing not found.' })
+      res.json({ pricingItem: item })
+    } catch (err) {
+      res.status(500).json({ message: err.message })
+    }
+  })
+
+  app.delete('/api/pricing/:id', requireAuth, async (req, res) => {
+    if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
+    try {
+      await repository.deletePricing(req.params.id)
+      res.json({ ok: true })
+    } catch (err) {
+      res.status(500).json({ message: err.message })
+    }
+  })
+
   // ── Analytics ──
   app.get('/api/analytics', requireAuth, async (req, res) => {
     if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
     const [portfolio, courses, inquiries, testimonials, teachers] = await Promise.all([
       repository.portfolio(),
-      v2.allCourses(),
+      v2.getCourses(),
       v2.allInquiries(),
       repository.allTestimonials(),
       v2.allTeachers(),

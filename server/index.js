@@ -28,14 +28,30 @@ const razorpay = process.env.RAZORPAY_KEY_ID ? new Razorpay({
 
 let repository = null
 let dbAvailable = false
-let dbError = null
 const app = express()
-app.set('trust proxy', 1)
 
 app.disable('x-powered-by')
 app.use(helmet({ crossOriginResourcePolicy: false }))
+// Explicitly list allowed origins so credentials:true works correctly.
+// Browser spec forbids credentials with a wildcard origin.
+const ALLOWED_ORIGINS = CORS_ORIGIN
+  ? CORS_ORIGIN.split(',').map((o) => o.trim())
+  : [
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'http://localhost:4173',
+      'http://127.0.0.1:4173',
+      'http://localhost:4000',
+      'http://127.0.0.1:4000',
+    ]
+
 app.use(cors({
-  origin: CORS_ORIGIN ? CORS_ORIGIN.split(',').map((origin) => origin.trim()) : true,
+  origin: (origin, cb) => {
+    // Allow requests with no origin (curl, Postman, same-origin via Vite proxy)
+    if (!origin) return cb(null, true)
+    if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true)
+    return cb(new Error(`CORS: origin '${origin}' not allowed`))
+  },
   credentials: true,
 }))
 app.use(express.json({ limit: '2mb' }))
@@ -48,10 +64,6 @@ app.use(rateLimit({
 app.use('/uploads', express.static(uploadsDirectory()))
 
 app.use('/assets', express.static(path.join(rootDir, 'public', 'assets')))
-
-// Serve source assets (e.g., seeded portfolio media paths like /src/assets/...) so
-// built frontend can reference them the same way as in development.
-app.use('/src', express.static(path.join(rootDir, 'src')))
 
 // If the database is not available, return 503 for API routes except health.
 app.use('/api', (req, res, next) => {
@@ -193,10 +205,15 @@ app.get('/api/health', (_req, res) => {
     return res.status(503).json({
       ok: false,
       database: 'disconnected',
-      error: dbError ? String(dbError.message || dbError) : 'MongoDB connection unavailable.',
+      message: 'Service Unavailable: database not connected.'
     })
   }
-  res.json({ ok: true })
+  res.json({
+    ok: true,
+    database: 'connected',
+    uploadLimitGb: MAX_UPLOAD_GB,
+    teamAccessIdLength: TEAM_ACCESS_ID.length,
+  })
 })
 
 app.post('/api/auth/client', async (req, res) => {
@@ -253,27 +270,42 @@ app.post('/api/auth/google', async (req, res) => {
 })
 
 app.post('/api/auth/team', async (req, res) => {
-  const { teamId = '', name = 'Buildbig Team' } = req.body
-  if (!/^\d{10}$/.test(teamId) || teamId !== TEAM_ACCESS_ID) {
-    return res.status(401).json({ message: 'Enter a valid 10 digit team ID.' })
-  }
+  try {
+    const { teamId = '', name = 'Buildbig Team' } = req.body
+    if (!/^\d{10}$/.test(teamId) || teamId !== TEAM_ACCESS_ID) {
+      return res.status(401).json({ message: 'Enter a valid 10 digit team ID.' })
+    }
 
-  let user = await repository.findUserByEmail(name.trim() + '@team.internal')
-  if (!user) {
-    user = await repository.insertUser({
-      id: id('team'),
-      role: 'team',
-      name: name.trim() || 'Buildbig Team',
-      email: name.trim() + '@team.internal',
-      passwordHash: null,
-      teamId: TEAM_ACCESS_ID,
-      teamCategory: null,
-      googleId: null,
-      createdAt: now(),
-    })
-  }
+    const legacyEmail = `${name.trim()}@team.internal`.toLowerCase()
+    let user = await repository.findTeamUser(TEAM_ACCESS_ID)
+    if (!user) {
+      user = await repository.findUserByEmail(legacyEmail)
+      if (user?.role !== 'team') user = null
+    }
 
-  res.json(await createSessionResponse(user))
+    if (!user) {
+      user = await repository.ensureTeamUser({
+        id: id('team'),
+        role: 'team',
+        name: name.trim() || 'Buildbig Team',
+        email: legacyEmail,
+        passwordHash: null,
+        teamId: TEAM_ACCESS_ID,
+        teamCategory: null,
+        googleId: null,
+        createdAt: now(),
+      })
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: 'Team account not found.' })
+    }
+
+    res.json(await createSessionResponse(user))
+  } catch (err) {
+    console.error('[auth/team]', err.message)
+    res.status(500).json({ message: 'Internal server error.' })
+  }
 })
 
 app.get('/api/me', requireAuth, (req, res) => {
@@ -678,9 +710,10 @@ async function startServer() {
     if (!FRONTEND_ONLY) {
       repository = await createDatabase()
       dbAvailable = true
-      dbError = null
-      console.log('✓ MongoDB Connected')
+      console.log('✓ Mongo connected')
+      console.log('✓ Database selected')
       console.log('✓ Repository initialized')
+      console.log('✓ dbAvailable=true')
       registerV2Routes(app, {
         repository,
         v2: repository.v2,
@@ -691,28 +724,29 @@ async function startServer() {
         createSessionResponse,
         uploadFile,
         TEAM_ACCESS_ID,
-        TEAM_ACCESS_PASSWORD,
+        TEAM_ACCESS_PASSWORD
       })
     } else {
       console.log('FRONTEND_ONLY set — skipping database connection')
       repository = null
       dbAvailable = false
-      dbError = null
     }
   } catch (error) {
-    console.error('Failed to connect to database:')
-    console.error(error)
+    console.error('Failed to connect to database:', error)
+    console.error('Exact failure reason:', error.message)
     repository = null
     dbAvailable = false
-    dbError = error
   }
 
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`Buildbig backend running on http://localhost:${PORT}`)
     console.log(`MongoDB database: ${process.env.MONGODB_DB || 'assetsweber'}`)
     console.log(`Team login ID: ${TEAM_ACCESS_ID}`)
     if (!dbAvailable) console.warn('Warning: database not connected — API endpoints will return 503.')
   })
+
+  server.ref()
+  setInterval(() => {}, 1 << 30)
 }
 
 process.on('unhandledRejection', (reason) => {

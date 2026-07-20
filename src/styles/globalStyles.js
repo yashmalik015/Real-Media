@@ -40,7 +40,7 @@ button:active, a:active { transform: scale(0.96) !important; transition: transfo
 @keyframes btnShine { 0%{left:-100%} 15%{left:200%} 100%{left:200%} }
 .nav-cta:hover{transform:translateY(-2px);box-shadow:0 14px 45px rgba(229,57,53,.55)}
 /* ── LAYOUT ── */
-.page{min-height:100vh;background:#000;overflow-x:hidden;padding-top:81px}
+.page{min-height:100vh;background:#000;overflow-x:hidden;padding-top:80px}
 .section{padding:96px 32px}
 .section-inner{max-width:1400px;margin:0 auto;animation:fadeUp 1s cubic-bezier(0.16,1,0.3,1) forwards}
 .section-label{display:inline-flex;align-items:center;gap:12px;color:var(--red);font-family:'Bebas Neue',sans-serif;letter-spacing:.32em;font-size:.82rem;margin-bottom:14px}
@@ -48,12 +48,12 @@ button:active, a:active { transform: scale(0.96) !important; transition: transfo
 .section-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.8rem,4.5vw,4.2rem);letter-spacing:.03em;line-height:.95;margin-bottom:16px}
 .section-sub{color:var(--muted);line-height:1.75;font-size:1rem;max-width:640px}
 /* ── HERO ── */
-.hero{position:relative;min-height:calc(100vh - 81px);display:grid;align-items:center;overflow:hidden;background:radial-gradient(ellipse at 6% 18%,rgba(229,57,53,.22) 0%,transparent 38%),radial-gradient(ellipse at 88%52%,rgba(229,57,53,.12) 0%,transparent 32%),#020202}
+.hero{position:relative;min-height:calc(100vh - 80px);display:grid;align-items:center;overflow:hidden;background:radial-gradient(ellipse at 6% 18%,rgba(229,57,53,.22) 0%,transparent 38%),radial-gradient(ellipse at 88%52%,rgba(229,57,53,.12) 0%,transparent 32%),#020202}
 .hero::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(229,57,53,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(229,57,53,.04) 1px,transparent 1px);background-size:80px 80px;opacity:.35}
-.hero-inner{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:80px 32px;display:grid;grid-template-columns:1.1fr .9fr;gap:60px;align-items:center;animation:fadeUp 1s cubic-bezier(0.16,1,0.3,1) forwards}
+.hero-inner{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:80px 32px;display:grid;grid-template-columns:1.1fr .9fr;gap:64px;align-items:center;animation:fadeUp 1s cubic-bezier(0.16,1,0.3,1) forwards}
 .hero-label{display:inline-flex;align-items:center;gap:14px;color:var(--red);font-family:'Bebas Neue',sans-serif;letter-spacing:.34em;font-size:.82rem}
 .hero-label::before{content:'';width:44px;height:2px;background:var(--red)}
-.hero-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(5rem,8.5vw,8.5rem);line-height:.9;letter-spacing:.02em;margin:26px 0 30px}
+.hero-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(5rem,8.5vw,8.5rem);line-height:.9;letter-spacing:.02em;margin:24px 0 32px}
 .hero-title .red-w{color:var(--red);position:relative;display:inline-block;animation:gf 3s ease-in-out infinite}
 .hero-title .red-w::before,.hero-title .red-w::after{content:attr(data-text);position:absolute;inset:0;color:var(--red);clip-path:inset(42% 0 38% 0)}
 .hero-title .red-w::before{animation:gs1 1.2s steps(2,end) infinite;text-shadow:-10px 0 #12f7ff}
@@ -83,8 +83,8 @@ button:active, a:active { transform: scale(0.96) !important; transition: transfo
 .fc h4{font-family:'Bebas Neue',sans-serif;letter-spacing:.12em;font-size:1.1rem;color:var(--red);margin-bottom:8px}
 .fc p{color:var(--muted);font-size:.87rem;line-height:1.65}
 /* ── SCROLL HERO (3D frame sequence) ── */
-.scroll-hero-section{height:calc(100vh - 81px + 80vh);position:relative}
-.scroll-hero-sticky{position:sticky;top:81px;height:calc(100vh - 81px);overflow:hidden;background:#020202;z-index:2}
+.scroll-hero-section{height:calc(100vh - 80px + 40vh);position:relative}
+.scroll-hero-sticky{position:sticky;top:80px;height:calc(100vh - 80px);overflow:hidden;background:#020202;z-index:2}
 .scroll-hero-sticky--done .scroll-hero-hint{opacity:0!important}
 .scroll-hero-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .scroll-hero-vignette{position:absolute;inset:0;background:radial-gradient(ellipse at 6% 18%,rgba(229,57,53,.18) 0%,transparent 38%),radial-gradient(ellipse at 88% 52%,rgba(229,57,53,.1) 0%,transparent 32%),linear-gradient(to bottom,rgba(0,0,0,.55) 0%,rgba(0,0,0,.25) 40%,rgba(0,0,0,.65) 100%);pointer-events:none;z-index:1}
@@ -104,14 +104,14 @@ button:active, a:active { transform: scale(0.96) !important; transition: transfo
 .scroll-hero-loader-bar{height:3px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden;margin-bottom:14px}
 .scroll-hero-loader-fill{height:100%;background:var(--red);border-radius:99px;transition:width .2s ease}
 .scroll-hero-loader-text{color:var(--muted);font-size:.84rem}
-@media (max-width:1024px){.scroll-hero-section{height:calc(100vh - 81px + 65vh)}}
+@media (max-width:1024px){.scroll-hero-section{height:calc(100vh - 80px + 30vh)}}
 @media (max-width:768px){
-  .scroll-hero-section{height:calc(100vh - 81px + 55vh)}
+  .scroll-hero-section{height:calc(100vh - 80px + 20vh)}
 }
 /* ── MARQUEE ── */
-.marquee{background:#df3c38;padding:16px 0;overflow:hidden;margin-top:-40vh;position:relative;z-index:10}
-@media (max-width:1024px){.marquee{margin-top:-25vh}}
-@media (max-width:768px){.marquee{margin-top:-15vh}}
+.marquee{background:#df3c38;padding:16px 0;overflow:hidden;margin-top:-20vh;position:relative;z-index:10}
+@media (max-width:1024px){.marquee{margin-top:-15vh}}
+@media (max-width:768px){.marquee{margin-top:-10vh}}
 .marquee-track{display:flex;gap:60px;width:max-content;animation:marquee 22s linear infinite;font-family:'Bebas Neue',sans-serif;letter-spacing:.32em;font-size:1.1rem;white-space:nowrap}
 @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 /* ── TRUST STRIP ── */
