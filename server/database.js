@@ -84,7 +84,6 @@ export async function createDatabase() {
     pricing.createIndex({ category: 1 }),
   ])
 
-  await seedDefaultPortfolio(portfolioItems)
   await seedDefaultSettings(siteSettings)
 
   const repo = makeRepository(client, {
@@ -374,7 +373,8 @@ function makeRepository(client, collections) {
     },
 
     // ── V1 Portfolio ──
-    portfolio: async () => (await portfolioItems.find().sort({ sort_order: 1, created_at: -1 }).toArray()).map(portfolioRow),
+    // One public source ordered by publication time, newest first.
+    portfolio: async () => (await portfolioItems.find().sort({ created_at: -1 }).toArray()).map(portfolioRow),
     portfolioByService: async (service) => (await portfolioItems.find({ service }).sort({ created_at: -1 }).toArray()).map(portfolioRow),
     portfolioById: async (portfolioId) => portfolioRow(await portfolioItems.findOne({ id: portfolioId })),
     createPortfolio: async (item) => {

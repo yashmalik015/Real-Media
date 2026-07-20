@@ -355,7 +355,7 @@ export function ScrollHero({ onStartProject, onExploreSkills, onBecomeFreelancer
                   <div className="hero-stat-label">Projects</div>
                 </div>
                 <div className="hero-stat">
-                  <div className="hero-stat-num">₹2Cr+</div>
+                  <div className="hero-stat-num">₹2 Lakh+</div>
                   <div className="hero-stat-label">Revenue Generated</div>
                 </div>
                 <div className="hero-stat">

@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { styles } from "./styles/globalStyles.js";
-import { COMPANY_NAME, LOGO_URL, SERVICES, SERVICE_OPTIONS } from "./data/siteData.js";
-import { Hero, Footer, Toast, PortfolioSection, TestimonialsSection, ProcessSection } from "./components/index.jsx";
+import { COMPANY_NAME, LOGO_URL, PUBLIC_SERVICES, SERVICE_OPTIONS } from "./data/siteData.js";
+import { Hero, Footer, Toast, ProcessSection } from "./components/index.jsx";
 import { signInWithGoogle, handleGoogleRedirectResult } from "./services/firebase.js";
 import { api, mediaUrl, getToken, setToken } from "./api.js";
 
@@ -9,6 +9,8 @@ import { api, mediaUrl, getToken, setToken } from "./api.js";
 function uid(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
 }
+
+const serviceSlug = (title) => title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
 // ── Nav ──────────────────────────────────────────────────────────────────────
 function NavButton({ active, children, onClick }) {
@@ -62,10 +64,10 @@ function ServiceGrid({ onPick }) {
         <SectionHeader
           label="OUR SERVICES"
           title="Agency Operations and Learning"
-          sub="Premium execution across web, mobile, AI, video, content, branding, and automation."
+          sub="Premium execution across video, web, apps, marketing, design, VFX, and games."
         />
         <div className="services-grid">
-          {SERVICES.map((s) => (
+          {PUBLIC_SERVICES.map((s) => (
             <button className="svc-card" key={s.title} onClick={() => onPick(s.title)}>
               <div className="svc-icon">{s.icon}</div>
               <h3>{s.title}</h3>
@@ -80,8 +82,15 @@ function ServiceGrid({ onPick }) {
 }
 
 // ── Service detail ────────────────────────────────────────────────────────────
-function ServiceDetail({ title, onBack, onInquiry }) {
-  const service = SERVICES.find((s) => s.title === title);
+const SERVICE_PRICING = {
+  "Video Editing": [{ name: "Short Form — Basic", price: "₹1,500" }, { name: "Short Form — Professional", price: "₹2,500" }, { name: "Short Form — Cinematic", price: "₹5,000+" }, { name: "Long Form — Podcast Editing", price: "₹2,000+" }, { name: "Long Form — Documentary", price: "₹6,000+" }, { name: "Commercial Ads", price: "Custom Quote" }],
+  "Web Development": [{ name: "Landing Page", price: "₹24,999+" }, { name: "Business Website", price: "₹49,999+" }, { name: "Ecommerce Store", price: "₹99,999+" }],
+  "App Development": [{ name: "MVP App", price: "₹1,99,999+" }, { name: "Production App", price: "₹3,49,999+" }, { name: "Enterprise App", price: "Custom Quote" }],
+};
+
+function ServiceDetail({ title, onBack, onInquiry, portfolio, loading }) {
+  const service = PUBLIC_SERVICES.find((s) => s.title === title);
+  const work = useMemo(() => portfolio.filter((item) => item.service === title), [portfolio, title]);
   return (
     <section className="section" style={{ paddingTop: 120 }}>
       <div className="section-inner">
@@ -97,6 +106,16 @@ function ServiceDetail({ title, onBack, onInquiry }) {
           ))}
         </div>
         <button className="btn-primary" style={{ marginTop: 24 }} onClick={() => onInquiry(title)}>Project Requirement Form</button>
+        <div style={{ marginTop: 72 }}>
+          <SectionHeader label="PRICING" title={`${title} Plans`} sub="Transparent starting points. Every scope is confirmed before production begins." />
+          <div className="pricing-grid" style={{ marginTop: 36 }}>
+            {(SERVICE_PRICING[title] || [{ name: "Starter", price: "Custom Quote" }, { name: "Professional", price: "Custom Quote" }, { name: "Premium", price: "Custom Quote" }]).map((plan) => <div className="pricing-card" key={plan.name}><div className="pricing-plan">{title}</div><div className="pricing-name">{plan.name}</div><div className="pricing-price"><div className="pricing-amount">{plan.price}</div></div><button className="pricing-cta secondary" onClick={() => onInquiry(title)}>Get Started</button></div>)}
+          </div>
+        </div>
+        <div style={{ marginTop: 72 }}>
+          <SectionHeader label="OUR WORK" title={`Selected ${title} Work`} sub="Projects are published directly by our team." />
+          {loading ? <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20, marginTop: 36 }}><Skeleton h={280} /><Skeleton h={280} /><Skeleton h={280} /></div> : work.length ? <div className="portfolio-grid" style={{ marginTop: 36 }}>{work.map((item) => <PortfolioCard key={item.id} item={item} onStartProject={() => onInquiry(title)} />)}</div> : <div style={{ display: "grid", marginTop: 36 }}><EmptyState icon="🎬" title={`No ${title} projects published yet.`} sub="Check back soon for new work from our team." /></div>}
+        </div>
       </div>
     </section>
   );
@@ -896,7 +915,7 @@ function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, s
 }
 
 // ── Team Dashboard (API-connected) ────────────────────────────────────────────
-function TeamDashboard({ user, onBack, showToast }) {
+function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
   const [activeNav, setActiveNav] = useState("dashboard");
   const [analytics, setAnalytics] = useState(null);
   const [portfolio, setPortfolio] = useState([]);
@@ -960,13 +979,14 @@ function TeamDashboard({ user, onBack, showToast }) {
       setPortForm({ title: "", service: "Video Editing", description: "", client: "", outcome: "" });
       setPortMedia(null);
       await load();
+      await onPortfolioChanged?.();
       showToast("Portfolio item added!");
     } catch (e) { showToast(e.message || "Upload failed."); } finally { setLoad("port", false); }
   };
 
   const deletePortfolio = async (id) => {
     if (!confirm("Delete this portfolio item?")) return;
-    try { await api.deletePortfolio(id); await load(); showToast("Deleted."); } catch (e) { showToast(e.message); }
+    try { await api.deletePortfolio(id); await load(); await onPortfolioChanged?.(); showToast("Deleted."); } catch (e) { showToast(e.message); }
   };
 
   const saveTestimonial = async () => {
@@ -1359,10 +1379,18 @@ export default function App() {
   const [sessionLoading, setSessionLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
   const [portfolio, setPortfolio] = useState([]);
+  const [portfolioFilter, setPortfolioFilter] = useState("All");
   const [testimonials, setTestimonials] = useState([]);
   const [settings, setSettings] = useState({ whatsappNumber: "+919416085060", bookingUrl: "https://calendly.com/" });
   const [dataLoading, setDataLoading] = useState(true);
   const toastTimer = useRef(null);
+
+  const refreshPortfolio = useCallback(async () => {
+    const result = await api.getPublicPortfolio();
+    const newestFirst = [...(result.portfolio || [])].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    setPortfolio(newestFirst);
+    return newestFirst;
+  }, []);
 
   const showToast = useCallback((msg) => {
     clearTimeout(toastTimer.current);
@@ -1414,7 +1442,7 @@ export default function App() {
           api.getTestimonials().catch(() => ({ testimonials: [] })),
           api.getSettings().catch(() => ({ settings: {} })),
         ]);
-        setPortfolio(portRes.portfolio || []);
+        setPortfolio([...(portRes.portfolio || [])].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)));
         setTestimonials(testiRes.testimonials || []);
         const s = settingsRes.settings || {};
         setSettings({
@@ -1426,6 +1454,25 @@ export default function App() {
       }
     };
     loadPublicData();
+  }, []);
+
+  // Keep public portfolio views current after an upload in another dashboard tab.
+  useEffect(() => {
+    const refresh = () => refreshPortfolio().catch(() => {});
+    window.addEventListener("focus", refresh);
+    window.addEventListener("portfolio:changed", refresh);
+    return () => { window.removeEventListener("focus", refresh); window.removeEventListener("portfolio:changed", refresh); };
+  }, [refreshPortfolio]);
+
+  useEffect(() => {
+    const syncRoute = () => {
+      const slug = window.location.pathname.match(/^\/services\/([^/]+)$/)?.[1];
+      const service = PUBLIC_SERVICES.find((item) => serviceSlug(item.title) === slug);
+      if (service) { setSelectedService(service.title); setPage("service"); }
+    };
+    syncRoute();
+    window.addEventListener("popstate", syncRoute);
+    return () => window.removeEventListener("popstate", syncRoute);
   }, []);
 
   // Load notifications when session is learner
@@ -1482,10 +1529,19 @@ export default function App() {
 
   const requestPage = (target) => {
     setPage(target);
+    if (window.location.pathname.startsWith("/services/")) window.history.pushState({}, "", "/");
+    window.scrollTo({ top: 0, behavior: "auto" });
+  };
+
+  const openService = (title) => {
+    setSelectedService(title);
+    setPage("service");
+    window.history.pushState({}, "", `/services/${serviceSlug(title)}`);
     window.scrollTo({ top: 0, behavior: "auto" });
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
+  const filteredPortfolio = portfolioFilter === "All" ? portfolio : portfolio.filter((item) => item.service === portfolioFilter);
   const nav = ["Home", "Services", "Portfolio", "Learning", "Process", "Testimonials", "Contact"];
 
   return (
@@ -1564,7 +1620,7 @@ export default function App() {
         {/* Pages */}
         {session?.role === "team" && page === "team" ? (
           <div className="page">
-            <TeamDashboard user={session} onBack={() => setPage("home")} showToast={showToast} />
+            <TeamDashboard user={session} onBack={() => setPage("home")} showToast={showToast} onPortfolioChanged={async () => { await refreshPortfolio(); window.dispatchEvent(new Event("portfolio:changed")); }} />
           </div>
         ) : page === "learning" ? (
           <div className="page" key="learning-page">
@@ -1583,25 +1639,28 @@ export default function App() {
             )}
           </div>
         ) : page === "services" ? (
-          <div className="page"><ServiceGrid onPick={(svc) => { setSelectedService(svc); setPage("service"); }} /></div>
+          <div className="page"><ServiceGrid onPick={openService} /></div>
         ) : page === "service" ? (
-          <div className="page"><ServiceDetail title={selectedService} onBack={() => setPage("services")} onInquiry={(svc) => { setSelectedService(svc); setShowInquiry(true); }} /></div>
+          <div className="page"><ServiceDetail title={selectedService} portfolio={portfolio} loading={dataLoading} onBack={() => requestPage("services")} onInquiry={(svc) => { setSelectedService(svc); setShowInquiry(true); }} /></div>
         ) : page === "portfolio" ? (
           <div className="page">
             <section className="section portfolio-section" style={{ paddingTop: 120 }}>
               <div className="section-inner">
                 <SectionHeader label="PORTFOLIO" title="Our Work" sub="A selection of real projects delivered by the Assets Weber team." />
+                <div className="pricing-tabs" aria-label="Portfolio filters">
+                  {["All", ...SERVICE_OPTIONS].map((filter) => <button key={filter} className={`ptab ${portfolioFilter === filter ? "active" : ""}`} onClick={() => setPortfolioFilter(filter)}>{filter}</button>)}
+                </div>
                 {dataLoading ? (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20, marginTop: 48 }}>
                     {[1,2,3,4,5,6].map(i => <Skeleton key={i} h={280} radius={22} />)}
                   </div>
-                ) : portfolio.length === 0 ? (
+                ) : filteredPortfolio.length === 0 ? (
                   <div style={{ display: "grid", marginTop: 48 }}>
                     <EmptyState icon="🎬" title="No portfolio uploaded yet." sub="The team hasn't uploaded any portfolio items yet. Check back soon!" action="Start Your Project" onAction={() => setShowInquiry(true)} />
                   </div>
                 ) : (
                   <div className="portfolio-grid" style={{ marginTop: 48 }}>
-                    {portfolio.map(item => (
+                    {filteredPortfolio.map(item => (
                       <PortfolioCard key={item.id} item={item} onStartProject={() => setShowInquiry(true)} />
                     ))}
                   </div>
@@ -1695,10 +1754,10 @@ export default function App() {
                 <div className="stat-item"><div><span className="stat-num">50+</span></div><div className="stat-label">Projects Delivered</div></div>
                 <div className="stat-item"><div><span className="stat-num">4.9</span><span className="stat-suffix">★</span></div><div className="stat-label">Client Rating</div></div>
                 <div className="stat-item"><div><span className="stat-num">98</span><span className="stat-suffix">%</span></div><div className="stat-label">Client Retention</div></div>
-                <div className="stat-item"><div><span className="stat-num">₹2Cr+</span></div><div className="stat-label">Revenue Generated</div></div>
+                <div className="stat-item"><div><span className="stat-num">₹2 Lakh+</span></div><div className="stat-label">Revenue Generated</div></div>
               </div>
             </section>
-            <ServiceGrid onPick={(svc) => { setSelectedService(svc); setPage("service"); }} />
+            <ServiceGrid onPick={openService} />
 
             {/* Portfolio section on home */}
             <section className="section portfolio-section" id="portfolio">
@@ -1805,7 +1864,7 @@ function PortfolioCard({ item, onStartProject }) {
           <h3>{item.title}</h3>
           <p>{desc}</p>
           {item.outcome && <div className="port-results"><span className="port-result">{item.outcome}</span></div>}
-          <button className="btn-primary" style={{ width: "100%", marginTop: 14, fontSize: ".86rem" }} onClick={onStartProject}>Start Your Project</button>
+          <button className="btn-primary" style={{ width: "100%", marginTop: 14, fontSize: ".86rem" }} onClick={onStartProject}>View Project</button>
         </div>
       </div>
       {modalOpen && (

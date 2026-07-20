@@ -41,16 +41,9 @@ export const VIDEO_FILE_META = {
   "Tech and policy Sybercecurity project .mp4": { title:"Tech & Cybersecurity Project", client:"Corporate Client", desc:"Professional explainer video with motion graphics and clean editing.", outcome:"Corporate presentation delivered" },
   "I Moved at the WRONG Time in Roblox Squid Game… 😰.mp4": { title:"Roblox Squid Game Edit", client:"Gaming Client", desc:"Fast-paced gaming edit with retention-focused cuts.", outcome:"High engagement content" },
 };
-export const VIDEO_ASSETS = Object.entries(VIDEO_FILE_META).map(([file, meta], i) => ({
-  id: `video-asset-${i}`,
-  title: meta.title || `Short Video ${i + 1}`,
-  client: meta.client || "Assets Weber",
-  service: "Video Editing",
-  file,
-  fileUrl: withAppBase(`/assets/${encodeURIComponent(file)}`),
-  desc: meta.desc || "Professional video editing by Assets Weber.",
-  outcome: meta.outcome || "Premium content delivered",
-}));
+// Portfolio content is intentionally API-only. Keep this empty export temporarily
+// for legacy component compatibility; no public view may use local demo projects.
+export const VIDEO_ASSETS = [];
 function matchVideoAsset(item) {
   if (!item) return null;
   const fileName = item.file || item.mediaName || item.mediaUrl?.split("/").pop();
@@ -186,7 +179,19 @@ export const ESTIMATE_MAP = {
 export const COMPLEXITY_MULT = {"Simple / MVP":1,"Standard":1.5,"Advanced":2.2,"Enterprise / Custom":3.5};
 export const TIMELINE_MULT = {"Rush (1-2 weeks)":1.5,"Standard (4-6 weeks)":1,"Extended (2-3 months)":0.85,"Flexible":0.9};
 export const TEAM_CATEGORIES = ["All","Web Development","Mobile Apps","AI Solutions","Video Editing","Content Creation","Branding","Automation"];
-export const SERVICE_OPTIONS = ["Web Development","Mobile Apps","AI Solutions","Video Editing","Content Creation","Branding","Automation"];
+export const SERVICE_OPTIONS = ["Video Editing", "Web Development", "App Development", "Digital Marketing", "Graphic Design", "UI/UX Design", "Game Development", "VFX"];
+
+// Public service catalogue. Portfolio service values use these exact labels.
+export const PUBLIC_SERVICES = [
+  { icon: "🎬", title: "Video Editing", desc: "Cinematic edits, reels, ads, trailers, and brand films built for retention.", details: ["Dynamic cuts, colour work, and sound-aware pacing.", "Short-form and long-form content for brands and creators.", "Consistent quality across campaign and social formats."] },
+  { icon: "🌐", title: "Web Development", desc: "High-converting websites, landing pages, portals, and scalable web applications.", details: ["Premium front-end delivery with scalable structure.", "Built for leads, operations, and long-term maintainability.", "Landing pages, websites, portals, and internal tools."] },
+  { icon: "📱", title: "App Development", desc: "Reliable mobile apps with a clean user experience for growing businesses.", details: ["MVPs, client apps, and internal tools.", "Cross-platform delivery focused on usability and speed.", "Built to support future product expansion."] },
+  { icon: "📈", title: "Digital Marketing", desc: "Campaigns and social strategy that turn attention into measurable growth.", details: ["Content strategy, campaign support, and reporting.", "Creative aligned to audience and conversion goals.", "Clear insights for smarter decisions."] },
+  { icon: "🎨", title: "Graphic Design", desc: "Distinctive visual assets that keep every customer touchpoint polished.", details: ["Campaign, social, and print-ready creative assets.", "A cohesive visual system across every format.", "Design decisions grounded in brand goals."] },
+  { icon: "✨", title: "UI/UX Design", desc: "Intuitive digital experiences shaped around user needs and business outcomes.", details: ["User journeys, wireframes, and polished interfaces.", "Accessible, conversion-aware interaction design.", "Design systems ready for development."] },
+  { icon: "🎮", title: "Game Development", desc: "Memorable interactive experiences for brands, publishers, and products.", details: ["2D and 3D production from concept through launch.", "Engaging mechanics and polished player-facing design.", "Built for the right platform and audience."] },
+  { icon: "🌌", title: "VFX", desc: "High-impact visual effects and compositing for content that stands out.", details: ["Clean compositing, tracking, and effects integration.", "Visual polish for ads, music videos, and film.", "Production-minded delivery from shot to final."] },
+];
 // Demo data for workspace
 export const DEMO_PROJECTS = [
   {id:"1",title:"Brand Growth Content Plan",service:"Marketing",clientId:"c1",clientName:"Arjun Mehta",status:"In production",messages:[{id:"1",role:"system",text:"Project created and handler assigned."},{id:"2",role:"team",name:"Rahul (Handler)",text:"Hey! Got your brief. Let's start with the first batch of 8 reels."},{id:"3",role:"client",name:"Arjun Mehta",text:"Sounds great, excited to get started!"}],timeline:[{label:"Brief Submitted",done:true},{label:"Handler Assigned",done:true},{label:"Content Plan Shared",done:true},{label:"First Batch Production",active:true},{label:"Review & Delivery",done:false}]},
