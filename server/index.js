@@ -9,6 +9,7 @@ import helmet from 'helmet'
 import multer from 'multer'
 import Razorpay from 'razorpay'
 import { createDatabase, id, now } from './database.js'
+import { deleteFromCloudinary } from './cloudinary.js'
 import { uploadFile, uploadsDirectory } from './fileStorage.js'
 import { registerV2Routes } from './v2Routes.js'
 
@@ -324,7 +325,8 @@ app.post('/api/portfolio', requireAuth, upload.single('media'), async (req, res)
     client: client.trim(),
     outcome: outcome.trim(),
     mediaUrl: uploaded?.url || '',
-    mediaType: req.file?.mimetype.startsWith('video/') ? 'video' : 'image',
+    mediaPublicId: uploaded?.publicId || '',
+    mediaType: uploaded?.mediaType || (req.file?.mimetype.startsWith('video/') ? 'video' : 'image'),
     mediaName: req.file?.originalname || '',
     createdBy: req.user.id,
     createdAt: timestamp,
@@ -341,6 +343,10 @@ app.delete('/api/portfolio/:id', requireAuth, async (req, res) => {
 
   const portfolioItem = await repository.portfolioById(req.params.id)
   if (!portfolioItem) return res.status(404).json({ message: 'Portfolio item not found.' })
+
+  if (portfolioItem.mediaPublicId) {
+    await deleteFromCloudinary(portfolioItem.mediaPublicId, portfolioItem.mediaType)
+  }
 
   await repository.deletePortfolio(req.params.id)
   res.json({ ok: true, deletedId: req.params.id })

@@ -1,6 +1,7 @@
 import { id, now } from './database.js'
 import { courseToDb } from './database.js'
 import { verifyIdToken } from './firebaseAdmin.js'
+import { deleteFromCloudinary } from './cloudinary.js'
 
 export function registerV2Routes(app, { repository, v2, upload, requireAuth, hashPassword, verifyPassword, createSessionResponse, uploadFile, TEAM_ACCESS_ID, TEAM_ACCESS_PASSWORD }) {
 
@@ -610,9 +611,13 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
     }
 
     if (req.files?.media?.[0]) {
+      if (existing.mediaPublicId) {
+        await deleteFromCloudinary(existing.mediaPublicId, existing.mediaType)
+      }
       const up = await uploadFile(req.files.media[0], `portfolio/${updates.service || 'general'}`)
       updates.mediaUrl = up.url
-      updates.mediaType = req.files.media[0].mimetype.startsWith('video/') ? 'video' : 'image'
+      updates.mediaPublicId = up.publicId || ''
+      updates.mediaType = up.mediaType || (req.files.media[0].mimetype.startsWith('video/') ? 'video' : 'image')
       updates.mediaName = req.files.media[0].originalname
     }
     if (req.files?.thumbnail?.[0]) {
@@ -676,7 +681,8 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
       outcome: outcome.trim(),
       category: req.body.category?.trim() || '',
       mediaUrl: uploaded?.url || '',
-      mediaType: mediaFile?.mimetype.startsWith('video/') ? 'video' : 'image',
+      mediaPublicId: uploaded?.publicId || '',
+      mediaType: uploaded?.mediaType || (mediaFile?.mimetype.startsWith('video/') ? 'video' : 'image'),
       mediaName: mediaFile?.originalname || '',
       thumbnail: thumbnailUp?.url || '',
       videoUrl: videoUp?.url || '',

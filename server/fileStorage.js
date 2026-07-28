@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { uploadToCloudinaryStream } from './cloudinary.js'
 import { safeStorageName, uploadToFirebaseStorage } from './firebaseStorage.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -26,10 +27,44 @@ async function uploadToLocalStorage(file, folder) {
   const fullPath = path.join(uploadsRoot(), relativePath)
   fs.mkdirSync(path.dirname(fullPath), { recursive: true })
   await fs.promises.writeFile(fullPath, file.buffer)
-  return { filename: relativePath, url: `/uploads/${relativePath}` }
+  return { filename: relativePath, url: `/uploads/${relativePath}`, publicId: null }
+}
+
+function isCloudinaryConfigured() {
+  return (
+    process.env.USE_CLOUDINARY === 'true' ||
+    Boolean(process.env.CLOUDINARY_URL) ||
+    Boolean(
+      process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET
+    )
+  )
 }
 
 export async function uploadFile(file, folder) {
+  // Check Cloudinary storage
+  if (isCloudinaryConfigured()) {
+    try {
+      const cleanFolder = folder.toLowerCase().replace(/[^a-z0-9/_\-]+/g, '-')
+      const cloudinaryFolder = `assetsweber/${cleanFolder}`
+      const result = await uploadToCloudinaryStream(file.buffer, {
+        folder: cloudinaryFolder,
+        resourceType: 'auto',
+      })
+      return {
+        filename: result.publicId,
+        url: result.url,
+        publicId: result.publicId,
+        mediaType: result.resourceType,
+      }
+    } catch (err) {
+      console.error('[Upload Failed] Cloudinary upload error:', err)
+      throw new Error(`Cloudinary upload failed: ${err.message || 'Unknown error'}`)
+    }
+  }
+
+  // Check Firebase storage fallback
   if (process.env.USE_FIREBASE_STORAGE === 'true') {
     try {
       return await uploadToFirebaseStorage(file, folder)
@@ -38,6 +73,8 @@ export async function uploadFile(file, folder) {
       return uploadToLocalStorage(file, folder)
     }
   }
+
+  // Default local disk storage
   return uploadToLocalStorage(file, folder)
 }
 
