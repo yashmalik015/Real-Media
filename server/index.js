@@ -31,7 +31,10 @@ let dbAvailable = false
 const app = express()
 
 app.disable('x-powered-by')
-app.use(helmet({ crossOriginResourcePolicy: false }))
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  crossOriginOpenerPolicy: false,
+}))
 // Explicitly list allowed origins so credentials:true works correctly.
 // Browser spec forbids credentials with a wildcard origin.
 const ALLOWED_ORIGINS = CORS_ORIGIN
@@ -43,6 +46,8 @@ const ALLOWED_ORIGINS = CORS_ORIGIN
       'http://127.0.0.1:4173',
       'http://localhost:4000',
       'http://127.0.0.1:4000',
+      'https://assetsweber.com',
+      'https://www.assetsweber.com',
     ]
 
 app.use(cors({

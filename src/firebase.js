@@ -44,6 +44,8 @@ export async function signInWithGoogle() {
     console.error("LOGIN FAILED - Google Sign-In Error:", {
       code: error.code,
       message: error.message,
+      customData: error.customData,
+      stack: error.stack,
     });
     if (
       error.code === "auth/popup-blocked" ||
