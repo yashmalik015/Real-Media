@@ -1,5 +1,6 @@
 import { id, now } from './database.js'
 import { courseToDb } from './database.js'
+import { verifyIdToken } from './firebaseAdmin.js'
 
 export function registerV2Routes(app, { repository, v2, upload, requireAuth, hashPassword, verifyPassword, createSessionResponse, uploadFile, TEAM_ACCESS_ID, TEAM_ACCESS_PASSWORD }) {
 
@@ -8,16 +9,16 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
     const { mode = 'login', name = '', email = '', password = '' } = req.body
     const cleanEmail = email.trim().toLowerCase()
     if (!cleanEmail || !password || (mode === 'register' && !name.trim())) {
-      return res.status(400).json({ message: 'Name, email, and password are required.' })
+      return res.status(400).json({ success: false, message: 'Name, email, and password are required.' })
     }
 
     let user = await repository.findUserByEmail(cleanEmail)
     if (user && user.role !== 'learner') {
-      return res.status(409).json({ message: 'This email is registered under a different account type.' })
+      return res.status(409).json({ success: false, message: 'This email is registered under a different account type.' })
     }
 
     if (mode === 'register') {
-      if (user) return res.status(409).json({ message: 'Account already exists. Please login.' })
+      if (user) return res.status(409).json({ success: false, message: 'Account already exists. Please login.' })
       user = await repository.insertUser({
         id: id('learner'),
         role: 'learner',
@@ -31,40 +32,162 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
       })
       await v2.upsertLearnerProfile(user.id, { bio: '', skills: [] })
     } else if (!user || !verifyPassword(password, user.passwordHash)) {
-      return res.status(401).json({ message: 'Invalid login credentials.' })
+      return res.status(401).json({ success: false, message: 'Invalid login credentials.' })
     }
 
-    res.json(await createSessionResponse(user))
+    const sessionRes = await createSessionResponse(user)
+    res.json({ success: true, ...sessionRes })
   })
 
-  app.post('/api/auth/learner/google', async (req, res) => {
-    const { name = '', email = '', googleId = '' } = req.body
-    const cleanEmail = email.trim().toLowerCase()
-    if (!cleanEmail || !googleId.trim()) {
-      return res.status(400).json({ message: 'Google account email is required.' })
-    }
+  const handleGoogleAuth = async (req, res) => {
+    console.log('GOOGLE LOGIN STARTED')
+    console.log('REQUEST RECEIVED')
 
-    let user = await repository.findUserByEmail(cleanEmail)
-    if (user && user.role !== 'learner') {
-      return res.status(409).json({ message: 'This email is registered under a different account type.' })
-    }
-    if (!user) {
-      user = await repository.insertUser({
-        id: id('learner'),
-        role: 'learner',
-        name: name.trim() || cleanEmail,
-        email: cleanEmail,
-        passwordHash: null,
-        teamId: null,
-        teamCategory: null,
-        googleId: googleId.trim(),
-        createdAt: now(),
+    try {
+      const { idToken, googleId, name: rawName = '', email: rawEmail = '' } = req.body || {}
+
+      if (idToken) {
+        console.log(`idToken received. Token length: ${idToken.length}`)
+      } else if (googleId) {
+        console.log(`googleId received: ${googleId}`)
+      } else {
+        console.error('LOGIN FAILED - Neither idToken nor googleId provided in request body')
+        return res.status(400).json({ success: false, message: 'idToken is required in request body.' })
+      }
+
+      let uid = ''
+      let email = rawEmail.trim().toLowerCase()
+      let name = rawName.trim()
+      let picture = ''
+
+      if (idToken) {
+        console.log('VERIFYING TOKEN')
+        try {
+          const decoded = await verifyIdToken(idToken)
+          console.log('TOKEN VERIFIED')
+          uid = decoded.uid
+          if (decoded.email) email = decoded.email.trim().toLowerCase()
+          if (decoded.name) name = decoded.name
+          if (decoded.picture) picture = decoded.picture
+        } catch (verr) {
+          console.error('[FirebaseAdmin Error]:', verr)
+          console.error(verr.stack)
+          return res.status(401).json({
+            success: false,
+            message: `Token verification failed: ${verr.message}`,
+            stack: verr.stack,
+          })
+        }
+      } else {
+        uid = googleId.trim()
+      }
+
+      console.log(`EMAIL: ${email}`)
+
+      if (!email) {
+        console.error('LOGIN FAILED - Could not extract email from token or body')
+        return res.status(400).json({ success: false, message: 'Email is required and could not be determined.' })
+      }
+
+      console.log('LOOKING FOR USER')
+      let user = null
+      try {
+        if (typeof repository.findUserByEmail !== 'function') {
+          throw new Error('repository.findUserByEmail is not a function')
+        }
+        user = await repository.findUserByEmail(email)
+      } catch (findErr) {
+        console.error('MongoDB findUserByEmail failed:', findErr)
+        console.error(findErr.stack)
+        return res.status(500).json({
+          success: false,
+          message: `findUserByEmail failed: ${findErr.message}`,
+          stack: findErr.stack,
+        })
+      }
+
+      if (user) {
+        console.log('USER FOUND')
+        try {
+          if (typeof repository.updateUserGoogle !== 'function') {
+            throw new Error('repository.updateUserGoogle is not a function')
+          }
+          user = await repository.updateUserGoogle(user.id, uid, picture)
+        } catch (updErr) {
+          console.error('MongoDB updateUserGoogle failed:', updErr)
+          console.error(updErr.stack)
+          return res.status(500).json({
+            success: false,
+            message: `updateUserGoogle failed: ${updErr.message}`,
+            stack: updErr.stack,
+          })
+        }
+      } else {
+        console.log('CREATING USER')
+        try {
+          if (typeof repository.insertUser !== 'function') {
+            throw new Error('repository.insertUser is not a function')
+          }
+          user = await repository.insertUser({
+            id: id('learner'),
+            role: 'learner',
+            name: name || email.split('@')[0],
+            email,
+            passwordHash: null,
+            teamId: null,
+            teamCategory: null,
+            googleId: uid,
+            avatar: picture || null,
+            provider: 'google',
+            createdAt: now(),
+          })
+          await v2.upsertLearnerProfile(user.id, { bio: '', skills: [] })
+          console.log('USER CREATED')
+        } catch (createErr) {
+          console.error('MongoDB insertUser failed:', createErr)
+          console.error(createErr.stack)
+          return res.status(500).json({
+            success: false,
+            message: `insertUser failed: ${createErr.message}`,
+            stack: createErr.stack,
+          })
+        }
+      }
+
+      console.log('CREATING SESSION')
+      let session = null
+      try {
+        session = await createSessionResponse(user)
+        console.log('SESSION CREATED')
+      } catch (sessErr) {
+        console.error('Session creation failed:', sessErr)
+        console.error(sessErr.stack)
+        return res.status(500).json({
+          success: false,
+          message: `createSessionResponse failed: ${sessErr.message}`,
+          stack: sessErr.stack,
+        })
+      }
+
+      console.log('RESPONSE SENT')
+      return res.json({
+        success: true,
+        token: session.token,
+        user: session.user,
       })
-      await v2.upsertLearnerProfile(user.id, { bio: '', skills: [] })
+    } catch (err) {
+      console.error('LOGIN FAILED - Uncaught Exception:', err)
+      console.error(err.stack)
+      return res.status(500).json({
+        success: false,
+        message: err.message || 'Internal server error.',
+        stack: err.stack,
+      })
     }
+  }
 
-    res.json(await createSessionResponse(user))
-  })
+  app.post('/api/auth/google', handleGoogleAuth)
+  app.post('/api/auth/learner/google', handleGoogleAuth)
 
   app.post('/api/auth/team/login', async (req, res) => {
     try {

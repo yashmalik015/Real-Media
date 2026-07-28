@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { styles } from "./styles/globalStyles.js";
 import { COMPANY_NAME, LOGO_URL, PUBLIC_SERVICES, SERVICE_OPTIONS } from "./data/siteData.js";
 import { Hero, Footer, Toast, ProcessSection } from "./components/index.jsx";
-import { signInWithGoogle, handleGoogleRedirectResult } from "./services/firebase.js";
+import { signInWithGoogle, handleGoogleRedirectResult, logoutFirebase } from "./firebase.js";
 import { api, mediaUrl, getToken, setToken } from "./api.js";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -202,6 +202,7 @@ function LoginModal({ onLogin, onGoogleLogin, onClose }) {
   const [mode, setMode] = useState("login"); // login | register
   const [form, setForm] = useState({ name: "", email: "", password: "", teamId: "", teamPass: "" });
   const [loading, setLoading] = useState(false);
+  const [gLoading, setGLoading] = useState(false);
   const [err, setErr] = useState("");
 
   const submit = async () => {
@@ -216,6 +217,18 @@ function LoginModal({ onLogin, onGoogleLogin, onClose }) {
       setErr(e.message || "Login failed.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    setErr("");
+    setGLoading(true);
+    try {
+      await onGoogleLogin();
+    } catch (e) {
+      setErr(e.message || "Google Sign-In failed.");
+    } finally {
+      setGLoading(false);
     }
   };
 
@@ -241,11 +254,11 @@ function LoginModal({ onLogin, onGoogleLogin, onClose }) {
             {mode === "register" && <div className="field"><label>Name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Your full name" /></div>}
             <div className="field"><label>Email</label><input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" /></div>
             <div className="field"><label>Password</label><input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Password" /></div>
-            <button className="btn-primary" style={{ width: "100%" }} onClick={submit} disabled={loading}>{loading ? "…" : mode === "register" ? "Create Account" : "Login"}</button>
+            <button className="btn-primary" style={{ width: "100%" }} onClick={submit} disabled={loading || gLoading}>{loading ? "…" : mode === "register" ? "Create Account" : "Login"}</button>
             <div className="divider">or</div>
-            <button className="google-btn" onClick={onGoogleLogin}>
+            <button className="google-btn" onClick={handleGoogle} disabled={loading || gLoading}>
               <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
-              Continue with Google
+              {gLoading ? "Authenticating with Google..." : "Continue with Google"}
             </button>
           </>
         ) : (
@@ -1418,12 +1431,13 @@ export default function App() {
 
   // Handle Google redirect result
   useEffect(() => {
-    handleGoogleRedirectResult().then(async (googleUser) => {
-      if (!googleUser) return;
+    handleGoogleRedirectResult().then(async (res) => {
+      if (!res?.idToken) return;
       try {
-        const { token, user } = await api.loginGoogleLearner({ name: googleUser.displayName || "", email: googleUser.email || "", googleId: googleUser.uid });
-        setToken(token);
-        setSession(user);
+        const data = await api.loginGoogleLearner({ idToken: res.idToken });
+        setToken(data.token);
+        setSession(data.user);
+        setShowAuth(false);
         setPage("learning");
         showToast("Signed in with Google.");
       } catch (e) {
@@ -1498,21 +1512,21 @@ export default function App() {
   };
 
   const onGoogleLogin = async () => {
-    try {
-      const googleUser = await signInWithGoogle();
-      if (!googleUser) return;
-      const { token, user } = await api.loginGoogleLearner({ name: googleUser.displayName || "", email: googleUser.email || "", googleId: googleUser.uid });
-      setToken(token);
-      setSession(user);
-      setShowAuth(false);
-      showToast("Google login successful!");
-    } catch (e) {
-      showToast(e.message || "Google login failed.");
+    const res = await signInWithGoogle();
+    if (!res?.idToken) return;
+    const data = await api.loginGoogleLearner({ idToken: res.idToken });
+    if (!data || !data.token) {
+      throw new Error(data?.message || "Google auth failed.");
     }
+    setToken(data.token);
+    setSession(data.user);
+    setShowAuth(false);
+    showToast(`Welcome back, ${data.user?.name || "Learner"}!`);
   };
 
   const onLogout = async () => {
     try { await api.logout(); } catch { /* silent */ }
+    try { await logoutFirebase(); } catch { /* silent */ }
     setToken(null);
     setSession(null);
     setNotifications([]);

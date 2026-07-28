@@ -302,6 +302,12 @@ function makeRepository(client, collections) {
       await users.insertOne(payload)
       return userRow(payload)
     },
+    updateUserGoogle: async (userId, googleId, avatar) => {
+      const set = { google_id: googleId }
+      if (avatar) set.avatar = avatar
+      await users.updateOne({ id: userId }, { $set: set })
+      return userRow(await users.findOne({ id: userId }))
+    },
     ensureTeamUser: async (defaults) => {
       const teamId = defaults.teamId ?? defaults.team_id
       const email = defaults.email?.trim().toLowerCase()

@@ -50,7 +50,7 @@ async function request(path, options = {}) {
 export const api = {
   health: () => request('/api/health'),
   loginLearner: (payload) => request('/api/auth/learner', { method: 'POST', body: payload }),
-  loginGoogleLearner: (payload) => request('/api/auth/learner/google', { method: 'POST', body: payload }),
+  loginGoogleLearner: (payload) => request('/api/auth/google', { method: 'POST', body: typeof payload === 'string' ? { idToken: payload } : payload }),
   loginTeamV2: (payload) => request('/api/auth/team/login', { method: 'POST', body: payload }),
   logout: () => request('/api/auth/logout', { method: 'POST' }),
   me: () => request('/api/me'),

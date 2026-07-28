@@ -244,31 +244,6 @@ app.post('/api/auth/client', async (req, res) => {
   res.json(await createSessionResponse(user))
 })
 
-app.post('/api/auth/google', async (req, res) => {
-  const { name = '', email = '', googleId = '' } = req.body
-  const cleanEmail = email.trim().toLowerCase()
-  if (!cleanEmail || !googleId.trim()) {
-    return res.status(400).json({ message: 'Google account email is required.' })
-  }
-
-  let user = await repository.findClientByEmail(cleanEmail)
-  if (!user) {
-    user = await repository.insertUser({
-      id: id('user'),
-      role: 'client',
-      name: name.trim() || cleanEmail,
-      email: cleanEmail,
-      passwordHash: null,
-      teamId: null,
-      teamCategory: null,
-      googleId: googleId.trim(),
-      createdAt: now(),
-    })
-  }
-
-  res.json(await createSessionResponse(user))
-})
-
 app.post('/api/auth/team', async (req, res) => {
   try {
     const { teamId = '', name = 'Buildbig Team' } = req.body
