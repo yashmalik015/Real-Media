@@ -5,6 +5,20 @@ import { Hero, Footer, Toast, ProcessSection } from "./components/index.jsx";
 import { signInWithGoogle, handleGoogleRedirectResult, logoutFirebase } from "./firebase.js";
 import { api, mediaUrl, getToken, setToken } from "./api.js";
 
+import { OSBootLoader } from "./components/futuristic/OSBootLoader.jsx";
+import { FuturisticCursor } from "./components/futuristic/FuturisticCursor.jsx";
+import { FuturisticBackground } from "./components/futuristic/FuturisticBackground.jsx";
+import { FuturisticNavbar } from "./components/futuristic/FuturisticNavbar.jsx";
+import { FuturisticHero } from "./components/futuristic/FuturisticHero.jsx";
+import { HolographicServices } from "./components/futuristic/HolographicServices.jsx";
+import { FuturisticPortfolio } from "./components/futuristic/FuturisticPortfolio.jsx";
+import { LearningPlatformHUD } from "./components/futuristic/LearningPlatformHUD.jsx";
+import { FuturisticPipeline } from "./components/futuristic/FuturisticPipeline.jsx";
+import { HolographicTestimonials } from "./components/futuristic/HolographicTestimonials.jsx";
+import { FuturisticPricing } from "./components/futuristic/FuturisticPricing.jsx";
+import { CommandCenterContact } from "./components/futuristic/CommandCenterContact.jsx";
+import { FuturisticFooter } from "./components/futuristic/FuturisticFooter.jsx";
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function uid(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
@@ -1554,9 +1568,10 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "auto" });
   };
 
+  const [booting, setBooting] = useState(true);
+
   const unreadCount = notifications.filter(n => !n.read).length;
   const filteredPortfolio = portfolioFilter === "All" ? portfolio : portfolio.filter((item) => item.service === portfolioFilter);
-  const nav = ["Home", "Services", "Portfolio", "Learning", "Process", "Testimonials", "Contact"];
 
   return (
     <>
@@ -1564,63 +1579,29 @@ export default function App() {
       <style>{`
         @keyframes skeletonShimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
         .page--home { padding-top: 0 !important; }
-        .nav-user-chip { display:flex;align-items:center;gap:8px;border:1px solid rgba(229,57,53,.35);border-radius:999px;padding:8px 14px;background:rgba(229,57,53,.08);cursor:pointer;transition:all .2s;font-size:.88rem;color:#fff; }
-        .nav-user-chip:hover { border-color:rgba(229,57,53,.7);background:rgba(229,57,53,.15); }
-        .nav-user-avatar { width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--red),var(--red-dark));display:grid;place-items:center;font-weight:700;font-size:.8rem;flex-shrink:0; }
-        .nav-search-btn { width:36px;height:36px;border-radius:50%;border:1px solid var(--line2);background:rgba(255,255,255,.03);display:grid;place-items:center;cursor:pointer;transition:all .2s;font-size:1rem; }
-        .nav-search-btn:hover { border-color:rgba(229,57,53,.5);background:rgba(229,57,53,.08); }
-        .nav-notif-btn { position:relative;width:36px;height:36px;border-radius:50%;border:1px solid var(--line2);background:rgba(255,255,255,.03);display:grid;place-items:center;cursor:pointer;transition:all .2s;font-size:1rem; }
-        .nav-notif-btn:hover { border-color:rgba(229,57,53,.5);background:rgba(229,57,53,.08); }
-        .notif-badge { position:absolute;top:-3px;right:-3px;background:var(--red);color:#fff;border-radius:50%;width:18px;height:18px;font-size:.65rem;font-weight:700;display:grid;place-items:center; }
-        @media(max-width:700px){
-          .lesson-grid { grid-template-columns: 1fr !important; }
-        }
       `}</style>
+
+      {/* 2045 OS Booting Screen */}
+      {booting && <OSBootLoader onComplete={() => setBooting(false)} />}
+
+      {/* Futuristic 2045 Reticle Cursor & Volumetric Background */}
+      <FuturisticCursor />
+      <FuturisticBackground />
 
       <div className={`site-shell ${showAuth ? "site-shell--blurred" : ""}`}>
         <Toast msg={toast.msg} show={toast.show} />
 
-        {/* NAV */}
-        <nav className="nav">
-          <div className="nav-inner">
-            <div className="nav-logo" style={{ cursor: "pointer" }} onClick={() => requestPage("home")}>
-              <img src={LOGO_URL} alt={COMPANY_NAME} className="nav-logo-img" />
-              <span className="nav-logo-text">{COMPANY_NAME.toUpperCase()}</span>
-            </div>
-            <div className="nav-links">
-              {nav.map((item) => (
-                <NavButton key={item} active={page.toLowerCase() === item.toLowerCase()} onClick={() => requestPage(item.toLowerCase())}>
-                  {item}
-                </NavButton>
-              ))}
-            </div>
-            <div className="nav-actions">
-              {/* Search */}
-              <button className="nav-search-btn" onClick={() => setShowSearch(true)} title="Search">🔍</button>
-
-              {sessionLoading ? null : session ? (
-                <>
-                  {/* Notifications (learner only) */}
-                  {session.role === "learner" && (
-                    <button className="nav-notif-btn" onClick={() => setShowNotifications(v => !v)}>
-                      🔔
-                      {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
-                    </button>
-                  )}
-                  {/* User chip */}
-                  <div className="nav-user-chip" onClick={() => session.role === "team" ? requestPage("team") : requestPage("profile")}>
-                    <div className="nav-user-avatar">{session.name?.[0]?.toUpperCase()}</div>
-                    <span style={{ maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{session.name}</span>
-                  </div>
-                  <button className="nav-login" onClick={onLogout} style={{ fontSize: ".82rem", padding: "8px 14px" }}>Sign Out</button>
-                </>
-              ) : (
-                <button className="nav-login" onClick={() => setShowAuth(true)}>Login</button>
-              )}
-              <button className="nav-cta" onClick={() => setShowInquiry(true)}>Start Project</button>
-            </div>
-          </div>
-        </nav>
+        {/* Floating Glass 2045 HUD Navbar */}
+        <FuturisticNavbar
+          page={page}
+          onNavigate={requestPage}
+          session={session}
+          onOpenAuth={() => setShowAuth(true)}
+          onLogout={onLogout}
+          onStartProject={() => setShowInquiry(true)}
+          onOpenNotifications={() => setShowNotifications(v => !v)}
+          unreadCount={unreadCount}
+        />
 
         {/* Notification panel */}
         {showNotifications && (
@@ -1633,210 +1614,96 @@ export default function App() {
 
         {/* Pages */}
         {session?.role === "team" && page === "team" ? (
-          <div className="page">
+          <div className="page" style={{ paddingTop: 100 }}>
             <TeamDashboard user={session} onBack={() => setPage("home")} showToast={showToast} onPortfolioChanged={async () => { await refreshPortfolio(); window.dispatchEvent(new Event("portfolio:changed")); }} />
+            <FuturisticFooter onNavigate={requestPage} />
           </div>
         ) : page === "learning" ? (
-          <div className="page" key="learning-page">
+          <div className="page" key="learning-page" style={{ paddingTop: 100 }}>
             <LearningPage
               user={session?.role === "learner" ? session : null}
               onBack={() => requestPage("home")}
               showToast={showToast}
             />
+            <FuturisticFooter onNavigate={requestPage} />
           </div>
         ) : page === "profile" ? (
-          <div className="page">
+          <div className="page" style={{ paddingTop: 100 }}>
             {session?.role === "learner" ? (
               <LearnerProfilePage user={session} onBack={() => requestPage("home")} showToast={showToast} />
             ) : (
               <div className="section"><div className="section-inner"><p style={{ color: "var(--muted)" }}>Please login as a learner to view your profile.</p><button className="btn-primary" style={{ marginTop: 16 }} onClick={() => setShowAuth(true)}>Login</button></div></div>
             )}
+            <FuturisticFooter onNavigate={requestPage} />
           </div>
         ) : page === "services" ? (
-          <div className="page"><ServiceGrid onPick={openService} /></div>
+          <div className="page" style={{ paddingTop: 100 }}>
+            <HolographicServices onPickService={openService} />
+            <FuturisticFooter onNavigate={requestPage} />
+          </div>
         ) : page === "service" ? (
-          <div className="page"><ServiceDetail title={selectedService} portfolio={portfolio} loading={dataLoading} onBack={() => requestPage("services")} onInquiry={(svc) => { setSelectedService(svc); setShowInquiry(true); }} /></div>
+          <div className="page" style={{ paddingTop: 100 }}>
+            <ServiceDetail title={selectedService} portfolio={portfolio} loading={dataLoading} onBack={() => requestPage("services")} onInquiry={(svc) => { setSelectedService(svc); setShowInquiry(true); }} />
+            <FuturisticFooter onNavigate={requestPage} />
+          </div>
         ) : page === "portfolio" ? (
-          <div className="page">
-            <section className="section portfolio-section" style={{ paddingTop: 120 }}>
-              <div className="section-inner">
-                <SectionHeader label="PORTFOLIO" title="Our Work" sub="A selection of real projects delivered by the Assets Weber team." />
-                <div className="pricing-tabs" aria-label="Portfolio filters">
-                  {["All", ...SERVICE_OPTIONS].map((filter) => <button key={filter} className={`ptab ${portfolioFilter === filter ? "active" : ""}`} onClick={() => setPortfolioFilter(filter)}>{filter}</button>)}
-                </div>
-                {dataLoading ? (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20, marginTop: 48 }}>
-                    {[1,2,3,4,5,6].map(i => <Skeleton key={i} h={280} radius={22} />)}
-                  </div>
-                ) : filteredPortfolio.length === 0 ? (
-                  <div style={{ display: "grid", marginTop: 48 }}>
-                    <EmptyState icon="🎬" title="No portfolio uploaded yet." sub="The team hasn't uploaded any portfolio items yet. Check back soon!" action="Start Your Project" onAction={() => setShowInquiry(true)} />
-                  </div>
-                ) : (
-                  <div className="portfolio-grid" style={{ marginTop: 48 }}>
-                    {filteredPortfolio.map(item => (
-                      <PortfolioCard key={item.id} item={item} onStartProject={() => setShowInquiry(true)} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
+          <div className="page" style={{ paddingTop: 100 }}>
+            <FuturisticPortfolio portfolio={portfolio} />
+            <FuturisticFooter onNavigate={requestPage} />
           </div>
         ) : page === "testimonials" ? (
-          <div className="page">
-            <section className="section testimonials-section" style={{ paddingTop: 120 }}>
-              <div className="section-inner">
-                <SectionHeader label="TESTIMONIALS" title="What Our Clients Say" sub="Real feedback from real clients who trusted us to grow their business." />
-                {dataLoading ? (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 18, marginTop: 48 }}>
-                    {[1,2,3].map(i => <Skeleton key={i} h={200} radius={22} />)}
-                  </div>
-                ) : testimonials.length === 0 ? (
-                  <div style={{ display: "grid", marginTop: 48 }}>
-                    <EmptyState icon="⭐" title="No testimonials yet." sub="Client testimonials will appear here once added by our team." />
-                  </div>
-                ) : (
-                  <div className="testimonials-grid" style={{ marginTop: 48 }}>
-                    {testimonials.map((t, i) => (
-                      <div className="testi-card" key={t.id || i}>
-                        <div className="testi-stars">{"★".repeat(t.rating || 5)}</div>
-                        <p className="testi-quote">"{t.quote}"</p>
-                        <div className="testi-author">
-                          {t.photo ? <img src={mediaUrl(t.photo)} alt={t.name} style={{ width: 42, height: 42, borderRadius: "50%", objectFit: "cover" }} /> : <div className="testi-avatar">{t.initials || t.name?.[0]}</div>}
-                          <div><div className="testi-name">{t.name}</div><div className="testi-biz">{t.biz}</div></div>
-                        </div>
-                        {(t.tag || t.result) && (
-                          <div className="testi-tag">
-                            {t.tag && <span className="testi-pill">{t.tag}</span>}
-                            {t.result && <span className="testi-pill">{t.result}</span>}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
+          <div className="page" style={{ paddingTop: 100 }}>
+            <HolographicTestimonials testimonials={testimonials} />
+            <FuturisticFooter onNavigate={requestPage} />
           </div>
         ) : page === "process" ? (
-          <div className="page"><ProcessSection /></div>
+          <div className="page" style={{ paddingTop: 100 }}>
+            <FuturisticPipeline onStartProject={() => setShowInquiry(true)} />
+            <FuturisticFooter onNavigate={requestPage} />
+          </div>
         ) : page === "contact" ? (
-          <div className="page">
-            <section className="section" style={{ paddingTop: 120 }}>
-              <div className="section-inner">
-                <SectionHeader label="CONTACT" title="Start the Conversation" sub="Submit a project requirement, book a discovery call, or chat on WhatsApp." />
-                <div className="category-grid" style={{ marginTop: 48 }}>
-                  <div className="category-card">
-                    <h3>Discovery Call</h3>
-                    <p>Book a free 30-minute call to discuss your project.</p>
-                    <a className="btn-ghost" href={settings.bookingUrl} target="_blank" rel="noreferrer" style={{ marginTop: 16, display: "inline-flex" }}>Book Call</a>
-                  </div>
-                  <div className="category-card">
-                    <h3>WhatsApp</h3>
-                    <p>{settings.whatsappNumber}</p>
-                    <a className="btn-primary" href={`https://wa.me/${settings.whatsappNumber.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" style={{ marginTop: 16, display: "inline-flex" }}>Chat Now</a>
-                  </div>
-                  <div className="category-card">
-                    <h3>Email</h3>
-                    <p>assetwebermail@gmail.com</p>
-                    <a className="btn-ghost" href="mailto:assetwebermail@gmail.com" style={{ marginTop: 16, display: "inline-flex" }}>Send Email</a>
-                  </div>
-                </div>
-                <div style={{ marginTop: 32 }}>
-                  <button className="btn-primary" onClick={() => setShowInquiry(true)}>Submit Project Inquiry →</button>
-                </div>
-              </div>
-            </section>
+          <div className="page" style={{ paddingTop: 100 }}>
+            <CommandCenterContact showToast={showToast} />
+            <FuturisticFooter onNavigate={requestPage} />
+          </div>
+        ) : page === "pricing" ? (
+          <div className="page" style={{ paddingTop: 100 }}>
+            <FuturisticPricing onSelectPlan={() => setShowInquiry(true)} />
+            <FuturisticFooter onNavigate={requestPage} />
           </div>
         ) : (
-          /* HOME */
-          <div className="page page--home">
-            <Hero
+          /* 2045 HOME OPERATING SYSTEM EXPERIENCE */
+          <div className="page page--home" style={{ paddingTop: 0 }}>
+            {/* 1. Next-Gen 2045 Hero Section */}
+            <FuturisticHero
               onStartProject={() => setShowInquiry(true)}
-              onExploreSkills={() => requestPage("learning")}
-              onBecomeFreelancer={() => { setShowAuth(true); }}
+              onExploreServices={() => requestPage("services")}
+              onLearningClick={() => requestPage("learning")}
             />
-            <div className="marquee">
-              <div className="marquee-track">
-                {["WEB DEVELOPMENT", "MOBILE APPS", "AI SOLUTIONS", "VIDEO EDITING", "CONTENT CREATION", "BRANDING", "AUTOMATION"]
-                  .flatMap(w => [`${w} ·`, `${w} ·`])
-                  .map((w, i) => <span key={i}>{w}</span>)}
-              </div>
-            </div>
-            <section className="section stats-section" style={{ padding: 0 }}>
-              <div className="stats-grid">
-                <div className="stat-item"><div><span className="stat-num">50+</span></div><div className="stat-label">Projects Delivered</div></div>
-                <div className="stat-item"><div><span className="stat-num">4.9</span><span className="stat-suffix">★</span></div><div className="stat-label">Client Rating</div></div>
-                <div className="stat-item"><div><span className="stat-num">98</span><span className="stat-suffix">%</span></div><div className="stat-label">Client Retention</div></div>
-                <div className="stat-item"><div><span className="stat-num">₹2 Lakh+</span></div><div className="stat-label">Revenue Generated</div></div>
-              </div>
-            </section>
-            <ServiceGrid onPick={openService} />
 
-            {/* Portfolio section on home */}
-            <section className="section portfolio-section" id="portfolio">
-              <div className="section-inner">
-                <SectionHeader label="PORTFOLIO" title="Our Video Work" sub="A selection of real projects — cinematic edits, music videos, and brand content." />
-                {dataLoading ? (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20, marginTop: 48 }}>
-                    {[1,2,3].map(i => <Skeleton key={i} h={280} radius={22} />)}
-                  </div>
-                ) : portfolio.length === 0 ? (
-                  <div style={{ display: "grid", marginTop: 48 }}>
-                    <EmptyState icon="🎬" title="No portfolio uploaded yet." sub="Portfolio items will appear here once uploaded by our team." action="Start Your Project" onAction={() => setShowInquiry(true)} />
-                  </div>
-                ) : (
-                  <div className="portfolio-grid" style={{ marginTop: 48 }}>
-                    {portfolio.slice(0, 3).map(item => (
-                      <PortfolioCard key={item.id} item={item} onStartProject={() => setShowInquiry(true)} />
-                    ))}
-                  </div>
-                )}
-                {portfolio.length > 3 && (
-                  <div style={{ textAlign: "center", marginTop: 32 }}>
-                    <button className="btn-ghost" onClick={() => requestPage("portfolio")}>View All Portfolio →</button>
-                  </div>
-                )}
-              </div>
-            </section>
+            {/* 2. Holographic Capabilities Matrix */}
+            <HolographicServices onPickService={openService} />
 
-            <section className="section">
-              <div className="section-inner">
-                <SectionHeader label="LEARNING" title="Public Learner Platform" sub="Browse courses, watch lessons, and build real skills for free." />
-                <button className="btn-primary" style={{ marginTop: 24 }} onClick={() => requestPage("learning")}>Explore Courses →</button>
-              </div>
-            </section>
-            <ProcessSection />
+            {/* 3. 3D Horizontal Showcase Portfolio */}
+            <FuturisticPortfolio portfolio={portfolio} />
 
-            {/* Testimonials on home */}
-            <section className="section testimonials-section" id="testimonials">
-              <div className="section-inner">
-                <SectionHeader label="CLIENT TESTIMONIALS" title="What Our Clients Say" sub="Real feedback from real clients who trusted us to grow their business." />
-                {dataLoading ? (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 18, marginTop: 48 }}>
-                    {[1,2,3].map(i => <Skeleton key={i} h={200} radius={22} />)}
-                  </div>
-                ) : testimonials.length === 0 ? (
-                  <div style={{ display: "grid", marginTop: 48 }}>
-                    <EmptyState icon="⭐" title="No testimonials yet." sub="Client reviews will appear here." />
-                  </div>
-                ) : (
-                  <div className="testimonials-grid" style={{ marginTop: 48 }}>
-                    {testimonials.slice(0, 3).map((t, i) => (
-                      <div className="testi-card" key={t.id || i}>
-                        <div className="testi-stars">{"★".repeat(t.rating || 5)}</div>
-                        <p className="testi-quote">"{t.quote}"</p>
-                        <div className="testi-author">
-                          {t.photo ? <img src={mediaUrl(t.photo)} alt={t.name} style={{ width: 42, height: 42, borderRadius: "50%", objectFit: "cover" }} /> : <div className="testi-avatar">{t.initials || t.name?.[0]}</div>}
-                          <div><div className="testi-name">{t.name}</div><div className="testi-biz">{t.biz}</div></div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
-            <Footer />
+            {/* 4. Netflix + Apple TV Style Learning HUD */}
+            <LearningPlatformHUD onOpenLearning={() => requestPage("learning")} />
+
+            {/* 5. 5-Stage Cybernetic Pipeline */}
+            <FuturisticPipeline onStartProject={() => setShowInquiry(true)} />
+
+            {/* 6. Holographic Verified Testimonials */}
+            <HolographicTestimonials testimonials={testimonials} />
+
+            {/* 7. Production Pricing Matrix */}
+            <FuturisticPricing onSelectPlan={() => setShowInquiry(true)} />
+
+            {/* 8. Command Center Contact Form */}
+            <CommandCenterContact showToast={showToast} />
+
+            {/* 9. Next-Gen Futuristic Footer */}
+            <FuturisticFooter onNavigate={requestPage} />
           </div>
         )}
       </div>

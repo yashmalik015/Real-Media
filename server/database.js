@@ -2,7 +2,7 @@ import crypto from 'node:crypto'
 import { MongoClient } from 'mongodb'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://yashmalik015_db_user:VPyE0KcI35EXtfH1@cluster0.dqhp8cg.mongodb.net/assetsweber?retryWrites=true&w=majority&appName=Cluster0'
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://yashmalik015_db_user:TIHJvglnODWAHuah@cluster0.dqhp8cg.mongodb.net/assetsweber?retryWrites=true&w=majority&appName=Cluster0'
 const MONGODB_DB = process.env.MONGODB_DB || 'assetsweber'
 
 export async function createDatabase() {
@@ -49,10 +49,32 @@ export async function createDatabase() {
   // New Pricing Collection
   const pricing = db.collection('pricing')
 
+  // Automatic migration for outdated team_id_1_role_1 index & data backfill
+  try {
+    const existingIndexes = await users.indexes()
+    const teamIdx = existingIndexes.find((i) => i.name === 'team_id_1_role_1')
+    if (teamIdx && (!teamIdx.partialFilterExpression || teamIdx.sparse)) {
+      console.log('[MongoDB Migration] Dropping outdated sparse index team_id_1_role_1...')
+      await users.dropIndex('team_id_1_role_1')
+      console.log('[MongoDB Migration] Outdated index dropped.')
+    }
+  } catch (_err) {
+    // Ignore if collection doesn't exist yet
+  }
+
+  try {
+    await users.updateMany(
+      { teamId: { $exists: true, $ne: null }, $or: [{ team_id: { $exists: false } }, { team_id: null }] },
+      [{ $set: { team_id: '$teamId' } }]
+    )
+  } catch (_err) {
+    // Ignore if update fails
+  }
+
   await Promise.all([
     // V1 Indexes
     users.createIndex({ email: 1, role: 1 }, { unique: true, sparse: true }),
-    users.createIndex({ team_id: 1, role: 1 }, { unique: true, sparse: true }),
+    users.createIndex({ team_id: 1, role: 1 }, { unique: true, partialFilterExpression: { team_id: { $type: 'string' } } }),
     sessions.createIndex({ token: 1 }, { unique: true }),
     projects.createIndex({ client_id: 1 }),
     projects.createIndex({ service: 1 }),
