@@ -49,6 +49,10 @@ export async function createDatabase() {
   // New Pricing Collection
   const pricing = db.collection('pricing')
 
+  // New Media & Activities Collections
+  const media = db.collection('media')
+  const activities = db.collection('activities')
+
   // Automatic migration for outdated team_id_1_role_1 index & data backfill
   try {
     const existingIndexes = await users.indexes()
@@ -1000,6 +1004,89 @@ function makeRepository(client, collections) {
       await pricing.deleteOne({ id: pricingId })
       return true
     },
+
+    // ── Media Library ──
+    getMedia: async () => {
+      return (await media.find({}).sort({ created_at: -1 }).toArray()).map(m => ({
+        id: m.id || m._id,
+        name: m.name,
+        url: m.url,
+        type: m.type || 'image',
+        size: m.size || '0 KB',
+        folder: m.folder || 'General',
+        usedBy: m.used_by || 'Unassigned',
+        createdAt: m.created_at
+      }))
+    },
+    createMedia: async (data) => {
+      const item = {
+        id: id('med'),
+        _id: id('med'),
+        name: data.name,
+        url: data.url,
+        type: data.type || 'image',
+        size: data.size || '0 KB',
+        folder: data.folder || 'General',
+        used_by: data.usedBy || 'General',
+        created_at: now()
+      }
+      await media.insertOne(item)
+      return item
+    },
+    deleteMedia: async (mediaId) => {
+      await media.deleteOne({ id: mediaId })
+      return true
+    },
+
+    // ── Activity Log ──
+    getActivities: async () => {
+      return await activities.find({}).sort({ created_at: -1 }).limit(20).toArray()
+    },
+    logActivity: async (action, details) => {
+      const item = {
+        id: id('act'),
+        _id: id('act'),
+        action,
+        details,
+        created_at: now()
+      }
+      await activities.insertOne(item)
+      return item
+    },
+
+    // ── Global Search ──
+    globalSearch: async (queryStr) => {
+      if (!queryStr || !queryStr.trim()) return []
+      const regex = new RegExp(queryStr.trim(), 'i')
+      const [ports, crs, tests, inqs] = await Promise.all([
+        portfolioItems.find({ $or: [{ title: regex }, { service: regex }, { client: regex }, { description: regex }] }).limit(5).toArray(),
+        courses.find({ $or: [{ title: regex }, { category: regex }, { description: regex }] }).limit(5).toArray(),
+        testimonials.find({ $or: [{ name: regex }, { biz: regex }, { quote: regex }] }).limit(5).toArray(),
+        inquiries.find({ $or: [{ name: regex }, { company: regex }, { service: regex }, { email: regex }] }).limit(5).toArray()
+      ])
+      return [
+        ...ports.map(p => ({ type: 'Portfolio', id: p.id, title: p.title, subtitle: p.service })),
+        ...crs.map(c => ({ type: 'Course', id: c.id, title: c.title, subtitle: c.category })),
+        ...tests.map(t => ({ type: 'Testimonial', id: t.id, title: t.name, subtitle: t.biz || t.company })),
+        ...inqs.map(i => ({ type: 'Request', id: i.id, title: i.name, subtitle: `${i.service} - ${i.company}` }))
+      ]
+    },
+
+    // ── Bulk Actions ──
+    bulkDelete: async (colName, idsArr) => {
+      if (!Array.isArray(idsArr) || idsArr.length === 0) return true
+      if (colName === 'portfolio') await portfolioItems.deleteMany({ id: { $in: idsArr } })
+      else if (colName === 'courses') await courses.deleteMany({ id: { $in: idsArr } })
+      else if (colName === 'testimonials') await testimonials.deleteMany({ id: { $in: idsArr } })
+      else if (colName === 'inquiries') await inquiries.deleteMany({ id: { $in: idsArr } })
+      else if (colName === 'media') await media.deleteMany({ id: { $in: idsArr } })
+      return true
+    },
+    bulkPublish: async (colName, idsArr, published) => {
+      if (!Array.isArray(idsArr) || idsArr.length === 0) return true
+      if (colName === 'courses') await courses.updateMany({ id: { $in: idsArr } }, { $set: { published: Boolean(published), updated_at: now() } })
+      return true
+    }
   }
 }
 

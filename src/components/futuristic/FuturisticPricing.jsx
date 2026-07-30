@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { playClickSound, playHoverSound } from '../../utils/audio.js';
 import { AnimatedSectionTitle, AnimatedParagraph, AnimatedButtonText } from './CinematicTypography.jsx';
 
-export function FuturisticPricing({ onSelectPlan }) {
-  const plans = [
+gsap.registerPlugin(ScrollTrigger);
+
+export function FuturisticPricing({ onSelectPlan, pricingData }) {
+  const plans = (pricingData && pricingData.length > 0) ? pricingData : [
     {
       name: 'STARTUP ENGINE',
       price: '₹24,999',
@@ -49,6 +53,27 @@ export function FuturisticPricing({ onSelectPlan }) {
     }
   ];
 
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        '.price-card',
+        { y: 60, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.8,
+          stagger: 0.15,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: '#pricing-grid',
+            start: 'top 85%',
+          }
+        }
+      );
+    });
+    return () => ctx.revert();
+  }, [pricingData]);
+
   return (
     <section id="pricing" style={{ padding: '100px 32px', position: 'relative' }}>
       <div style={{ maxWidth: 1440, margin: '0 auto' }}>
@@ -63,6 +88,7 @@ export function FuturisticPricing({ onSelectPlan }) {
 
         {/* Pricing Cards Grid */}
         <div
+          id="pricing-grid"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',

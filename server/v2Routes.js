@@ -412,13 +412,23 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
     const uploaded = await uploadFile(req.file, 'courses/videos')
     const course = await v2.courseById(req.params.courseId)
     if (!course) return res.status(404).json({ message: 'Course not found.' })
+    
+    // Update if lesson exists, otherwise just return the URL for frontend to save.
+    let updated = course
+    let lessonExists = false
     const modules = course.modules.map((m) => ({
       ...m,
-      lessons: m.lessons.map((l) =>
-        l.id === req.params.lessonId ? { ...l, videoUrl: uploaded.url, uploadedAt: now() } : l,
-      ),
+      lessons: m.lessons.map((l) => {
+        if (l.id === req.params.lessonId) {
+          lessonExists = true
+          return { ...l, videoUrl: uploaded.url, uploadedAt: now() }
+        }
+        return l
+      }),
     }))
-    const updated = await v2.updateCourse(req.params.courseId, { modules })
+    if (lessonExists) {
+      updated = await v2.updateCourse(req.params.courseId, { modules })
+    }
     res.json({ course: updated, url: uploaded.url })
   })
 
@@ -428,13 +438,22 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
     const uploaded = await uploadFile(req.file, 'courses/thumbnails')
     const course = await v2.courseById(req.params.courseId)
     if (!course) return res.status(404).json({ message: 'Course not found.' })
+    
+    let updated = course
+    let lessonExists = false
     const modules = course.modules.map((m) => ({
       ...m,
-      lessons: m.lessons.map((l) =>
-        l.id === req.params.lessonId ? { ...l, thumbnail: uploaded.url } : l,
-      ),
+      lessons: m.lessons.map((l) => {
+        if (l.id === req.params.lessonId) {
+          lessonExists = true
+          return { ...l, thumbnail: uploaded.url }
+        }
+        return l
+      }),
     }))
-    const updated = await v2.updateCourse(req.params.courseId, { modules })
+    if (lessonExists) {
+      updated = await v2.updateCourse(req.params.courseId, { modules })
+    }
     res.json({ course: updated, url: uploaded.url })
   })
 
@@ -811,5 +830,107 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
         totalCourseViews: courses.reduce((s, c) => s + (c.views || 0), 0),
       },
     })
+  })
+
+  // ── Media Library Routes ──
+  app.get('/api/media', requireAuth, async (req, res) => {
+    if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
+    try {
+      const items = await repository.getMedia()
+      res.json({ media: items })
+    } catch (err) {
+      res.status(500).json({ message: err.message })
+    }
+  })
+
+  app.post('/api/media', requireAuth, upload.single('file'), async (req, res) => {
+    if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
+    try {
+      if (!req.file) return res.status(400).json({ message: 'File is required' })
+      const folder = req.body.folder || 'General'
+      const uploaded = await uploadFile(req.file, `media/${folder}`)
+      const item = await repository.createMedia({
+        name: req.file.originalname,
+        url: uploaded.url,
+        type: req.file.mimetype.startsWith('video/') ? 'video' : 'image',
+        size: `${(req.file.size / (1024 * 1024)).toFixed(2)} MB`,
+        folder,
+        usedBy: req.body.usedBy || 'General'
+      })
+      await repository.logActivity('Media Uploaded', `Uploaded ${req.file.originalname} to ${folder}`)
+      res.status(201).json({ media: item })
+    } catch (err) {
+      res.status(500).json({ message: err.message })
+    }
+  })
+
+  app.delete('/api/media/:id', requireAuth, async (req, res) => {
+    if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
+    try {
+      await repository.deleteMedia(req.params.id)
+      await repository.logActivity('Media Deleted', `Deleted media ID: ${req.params.id}`)
+      res.json({ ok: true })
+    } catch (err) {
+      res.status(500).json({ message: err.message })
+    }
+  })
+
+  // ── Activity Log Routes ──
+  app.get('/api/activities', requireAuth, async (req, res) => {
+    if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
+    try {
+      const activities = await repository.getActivities()
+      res.json({ activities })
+    } catch (err) {
+      res.status(500).json({ message: err.message })
+    }
+  })
+
+  app.post('/api/activities', requireAuth, async (req, res) => {
+    if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
+    try {
+      const { action, details } = req.body
+      const item = await repository.logActivity(action || 'Action', details || '')
+      res.status(201).json({ activity: item })
+    } catch (err) {
+      res.status(500).json({ message: err.message })
+    }
+  })
+
+  // ── Global Search Route ──
+  app.get('/api/search', requireAuth, async (req, res) => {
+    if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
+    try {
+      const q = req.query.q || ''
+      const results = await repository.globalSearch(q)
+      res.json({ results })
+    } catch (err) {
+      res.status(500).json({ message: err.message })
+    }
+  })
+
+  // ── Bulk Actions Routes ──
+  app.post('/api/bulk/delete', requireAuth, async (req, res) => {
+    if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
+    try {
+      const { collection, ids } = req.body
+      await repository.bulkDelete(collection, ids)
+      await repository.logActivity('Bulk Delete', `Deleted ${ids?.length || 0} items from ${collection}`)
+      res.json({ ok: true })
+    } catch (err) {
+      res.status(500).json({ message: err.message })
+    }
+  })
+
+  app.post('/api/bulk/publish', requireAuth, async (req, res) => {
+    if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
+    try {
+      const { collection, ids, published } = req.body
+      await repository.bulkPublish(collection, ids, published)
+      await repository.logActivity('Bulk Publish', `Updated ${ids?.length || 0} items in ${collection} to ${published ? 'Published' : 'Draft'}`)
+      res.json({ ok: true })
+    } catch (err) {
+      res.status(500).json({ message: err.message })
+    }
   })
 }

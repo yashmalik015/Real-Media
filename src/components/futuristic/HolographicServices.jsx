@@ -1,22 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { PUBLIC_SERVICES } from '../../data/siteData.js';
 import { playClickSound, playHoverSound } from '../../utils/audio.js';
 import { AnimatedSectionTitle, AnimatedParagraph, AnimatedButtonText } from './CinematicTypography.jsx';
+import { Video, Globe, Smartphone, BarChart, Palette, PenTool, Gamepad2, Wand2 } from 'lucide-react';
+
+gsap.registerPlugin(ScrollTrigger);
 
 export function HolographicServices({ onPickService }) {
   const [selectedService, setSelectedService] = useState(null);
+
+  const getIcon = (title) => {
+    switch (title) {
+      case "Video Editing": return <Video size={36} color="#ff2d55" />;
+      case "Web Development": return <Globe size={36} color="#ff2d55" />;
+      case "App Development": return <Smartphone size={36} color="#ff2d55" />;
+      case "Digital Marketing": return <BarChart size={36} color="#ff2d55" />;
+      case "Graphic Design": return <Palette size={36} color="#ff2d55" />;
+      case "UI/UX Design": return <PenTool size={36} color="#ff2d55" />;
+      case "Game Development": return <Gamepad2 size={36} color="#ff2d55" />;
+      case "VFX": return <Wand2 size={36} color="#ff2d55" />;
+      default: return <Wand2 size={36} color="#ff2d55" />;
+    }
+  };
 
   const services = PUBLIC_SERVICES.map((s, idx) => ({
     ...s,
     id: `svc_${idx}`,
     tag: `MODULE 0${idx + 1}`,
-    tech: ['WebGL', 'GPU Accelerated', 'AI Powered', 'Real-Time'][idx % 4]
+    tech: ['WebGL', 'GPU Accelerated', 'AI Powered', 'Real-Time'][idx % 4],
+    lucideIcon: getIcon(s.title)
   }));
 
   const handleCardClick = (service) => {
     playClickSound();
     setSelectedService(service);
   };
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        '.holo-card',
+        { y: 60, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.8,
+          stagger: 0.1,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: '#services-grid',
+            start: 'top 85%',
+          }
+        }
+      );
+    });
+    return () => ctx.revert();
+  }, []);
 
   return (
     <section id="services" style={{ padding: '100px 32px', position: 'relative' }}>
@@ -33,6 +74,7 @@ export function HolographicServices({ onPickService }) {
 
         {/* Floating Holographic Cards Grid */}
         <div
+          id="services-grid"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
@@ -66,8 +108,8 @@ export function HolographicServices({ onPickService }) {
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                  <span style={{ fontSize: '2.4rem', filter: 'drop-shadow(0 0 15px rgba(255, 45, 85, 0.6))' }}>
-                    {svc.icon}
+                  <span style={{ filter: 'drop-shadow(0 0 15px rgba(255, 45, 85, 0.6))' }}>
+                    {svc.lucideIcon}
                   </span>
                   <span style={{ fontSize: '0.68rem', fontFamily: 'monospace', color: '#ff2d55', letterSpacing: '0.15em', padding: '4px 10px', borderRadius: 999, border: '1px solid rgba(255, 45, 85, 0.3)' }}>
                     {svc.tag}
@@ -156,7 +198,7 @@ export function HolographicServices({ onPickService }) {
             </button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-              <span style={{ fontSize: '3rem' }}>{selectedService.icon}</span>
+              <span>{selectedService.lucideIcon}</span>
               <div>
                 <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#ff2d55', letterSpacing: '0.2em' }}>
                   {selectedService.tag} // HOLOGRAPHIC SPEC

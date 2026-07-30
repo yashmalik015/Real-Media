@@ -1,7 +1,11 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { playClickSound, playHoverSound } from '../../utils/audio.js';
 import { mediaUrl } from '../../api.js';
 import { AnimatedSectionTitle, AnimatedParagraph, AnimatedButtonText } from './CinematicTypography.jsx';
+
+gsap.registerPlugin(ScrollTrigger);
 
 export function FuturisticPortfolio({ portfolio = [] }) {
   const scrollContainerRef = useRef(null);
@@ -49,6 +53,27 @@ export function FuturisticPortfolio({ portfolio = [] }) {
       scrollContainerRef.current.scrollBy({ left: amount, behavior: 'smooth' });
     }
   };
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        '.port-card',
+        { x: 100, opacity: 0 },
+        {
+          x: 0,
+          opacity: 1,
+          duration: 0.8,
+          stagger: 0.15,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: scrollContainerRef.current,
+            start: 'top 85%',
+          }
+        }
+      );
+    });
+    return () => ctx.revert();
+  }, [items]);
 
   return (
     <section id="portfolio" style={{ padding: '100px 0', position: 'relative', overflow: 'hidden' }}>

@@ -128,6 +128,21 @@ export const api = {
   createPricing: (payload) => request('/api/pricing', { method: 'POST', body: payload }),
   updatePricing: (id, payload) => request(`/api/pricing/${id}`, { method: 'PUT', body: payload }),
   deletePricing: (id) => request(`/api/pricing/${id}`, { method: 'DELETE' }),
+
+  // ── Media Library ──
+  getMedia: () => request('/api/media'),
+  uploadMedia: (formData) => request('/api/media', { method: 'POST', body: formData }),
+  deleteMedia: (id) => request(`/api/media/${id}`, { method: 'DELETE' }),
+
+  // ── Activities ──
+  getActivities: () => request('/api/activities'),
+  logActivity: (action, details) => request('/api/activities', { method: 'POST', body: { action, details } }),
+
+  // ── Global Search & Bulk Actions ──
+  globalSearch: (q) => request(`/api/search?q=${encodeURIComponent(q)}`),
+  bulkDelete: (collection, ids) => request('/api/bulk/delete', { method: 'POST', body: { collection, ids } }),
+  bulkPublish: (collection, ids, published) => request('/api/bulk/publish', { method: 'POST', body: { collection, ids, published } }),
+  updatePortfolio: (id, formData) => request(`/api/portfolio/${id}`, { method: 'PUT', body: formData }),
 }
 
 export function mediaUrl(url) {

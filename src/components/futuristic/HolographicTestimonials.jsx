@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { playClickSound, playHoverSound } from '../../utils/audio.js';
 import { AnimatedSectionTitle, AnimatedParagraph } from './CinematicTypography.jsx';
+
+gsap.registerPlugin(ScrollTrigger);
 
 export function HolographicTestimonials({ testimonials = [] }) {
   const defaultReviews = [
@@ -32,6 +36,27 @@ export function HolographicTestimonials({ testimonials = [] }) {
 
   const reviews = testimonials.length > 0 ? testimonials : defaultReviews;
 
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        '.testi-card',
+        { y: 60, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.8,
+          stagger: 0.15,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: '#testimonials-grid',
+            start: 'top 85%',
+          }
+        }
+      );
+    });
+    return () => ctx.revert();
+  }, [reviews]);
+
   return (
     <section id="testimonials" style={{ padding: '100px 32px', position: 'relative' }}>
       <div style={{ maxWidth: 1440, margin: '0 auto' }}>
@@ -46,6 +71,7 @@ export function HolographicTestimonials({ testimonials = [] }) {
 
         {/* Floating 3D Cards */}
         <div
+          id="testimonials-grid"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',

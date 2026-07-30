@@ -18,6 +18,7 @@ import { HolographicTestimonials } from "./components/futuristic/HolographicTest
 import { FuturisticPricing } from "./components/futuristic/FuturisticPricing.jsx";
 import { CommandCenterContact } from "./components/futuristic/CommandCenterContact.jsx";
 import { FuturisticFooter } from "./components/futuristic/FuturisticFooter.jsx";
+import { TeamDashboard } from "./components/dashboard/TeamDashboard.jsx";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function uid(prefix) {
@@ -941,8 +942,8 @@ function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, s
   );
 }
 
-// ── Team Dashboard (API-connected) ────────────────────────────────────────────
-function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
+// ── Team Dashboard (Imported from ./components/dashboard/TeamDashboard.jsx) ──
+function LegacyTeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
   const [activeNav, setActiveNav] = useState("dashboard");
   const [analytics, setAnalytics] = useState(null);
   const [portfolio, setPortfolio] = useState([]);
@@ -950,6 +951,7 @@ function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
   const [courses, setCourses] = useState([]);
   const [inquiries, setInquiries] = useState([]);
   const [settings, setSettings] = useState({ whatsappNumber: "", bookingUrl: "" });
+  const [pricing, setPricing] = useState([]);
   const [loading, setLoading] = useState({});
   const [portForm, setPortForm] = useState({ title: "", service: "Video Editing", description: "", client: "", outcome: "" });
   const [portMedia, setPortMedia] = useState(null);
@@ -957,6 +959,8 @@ function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
   const [testimonialPhoto, setTestimonialPhoto] = useState(null);
   const [editingTestimonial, setEditingTestimonial] = useState(null);
   const [courseForm, setCourseForm] = useState({ title: "", category: "", description: "" });
+  const [pricingForm, setPricingForm] = useState({ name: "", price: "", period: "", desc: "", features: "" });
+  const [editingPricing, setEditingPricing] = useState(null);
   const [selectedCourseId, setSelectedCourseId] = useState(null);
   const [moduleTitle, setModuleTitle] = useState("");
   const [lessonForm, setLessonForm] = useState({ title: "", description: "", videoUrl: "", driveLink: "", resources: "", notes: "" });
@@ -978,12 +982,14 @@ function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
         api.getAllCourses().catch(() => ({ courses: [] })),
         api.getInquiries().catch(() => ({ inquiries: [] })),
         api.getSettings().catch(() => ({ settings: {} })),
+        api.getPricing().catch(() => ({ pricing: [] })),
       ]);
       setAnalytics(analyticsRes.analytics);
       setPortfolio(portfolioRes.portfolio || []);
       setTestimonials(testimonialsRes.testimonials || []);
       setCourses(coursesRes.courses || []);
       setInquiries(inquiriesRes.inquiries || []);
+      setPricing(pricingRes.pricing || pricingRes || []);
       const s = settingsRes.settings || {};
       setSettings({ whatsappNumber: s.whatsappNumber || s.whatsapp_number || "", bookingUrl: s.bookingUrl || s.booking_url || "" });
     } catch (e) {
@@ -1084,12 +1090,13 @@ function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
     setLoad("lesson", true);
     try {
       let videoUrl = lessonForm.videoUrl;
+      const lessonId = uid("les");
       if (videoFile) {
         const fd = new FormData(); fd.append("video", videoFile);
-        const { url } = await api.uploadLessonVideo(selectedCourse.id, uid("les"), fd);
+        const { url } = await api.uploadLessonVideo(selectedCourse.id, lessonId, fd);
         videoUrl = url;
       }
-      const lesson = { id: uid("les"), ...lessonForm, videoUrl };
+      const lesson = { id: lessonId, ...lessonForm, videoUrl };
       const modules = selectedCourse.modules.map(m => m.id === modId ? { ...m, lessons: [...(m.lessons || []), lesson] } : m);
       await api.updateCourse(selectedCourse.id, { ...selectedCourse, modules });
       setLessonForm({ title: "", description: "", videoUrl: "", driveLink: "", resources: "", notes: "" });
@@ -1108,7 +1115,30 @@ function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
     try { await api.updateSettings(settings); showToast("Settings saved."); } catch (e) { showToast(e.message); }
   };
 
-  const navItems = ["dashboard", "portfolio", "courses", "testimonials", "requests", "settings"];
+  const savePricing = async () => {
+    if (!pricingForm.name || !pricingForm.price) { showToast("Name and price required."); return; }
+    try {
+      const payload = {
+        ...pricingForm,
+        features: pricingForm.features.split("\n").map(s => s.trim()).filter(Boolean)
+      };
+      if (editingPricing) {
+        await api.updatePricing(editingPricing.id, payload);
+      } else {
+        await api.createPricing(payload);
+      }
+      setPricingForm({ name: "", price: "", period: "", desc: "", features: "" });
+      setEditingPricing(null);
+      await load(); showToast(editingPricing ? "Pricing updated." : "Pricing added!");
+    } catch (e) { showToast(e.message); }
+  };
+
+  const deletePricing = async (id) => {
+    if (!confirm("Delete this pricing tier?")) return;
+    try { await api.deletePricing(id); await load(); showToast("Deleted."); } catch (e) { showToast(e.message); }
+  };
+
+  const navItems = ["dashboard", "portfolio", "courses", "testimonials", "pricing", "requests", "settings"];
 
   return (
     <div className="workspace">
@@ -1120,7 +1150,7 @@ function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
         <button className="btn-ghost" style={{ width: "100%", marginBottom: 16 }} onClick={onBack}>Exit Dashboard</button>
         {navItems.map((k) => (
           <button key={k} className={`snav-btn ${activeNav === k ? "active" : ""}`} onClick={() => setActiveNav(k)}>
-            {k === "dashboard" ? "📊" : k === "portfolio" ? "🎬" : k === "courses" ? "📚" : k === "testimonials" ? "⭐" : k === "requests" ? "📬" : "⚙️"} {k[0].toUpperCase() + k.slice(1)}
+            {k === "dashboard" ? "📊" : k === "portfolio" ? "🎬" : k === "courses" ? "📚" : k === "testimonials" ? "⭐" : k === "pricing" ? "💳" : k === "requests" ? "📬" : "⚙️"} {k[0].toUpperCase() + k.slice(1)}
           </button>
         ))}
       </aside>
@@ -1379,6 +1409,48 @@ function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
           </div>
         )}
 
+        {/* Pricing */}
+        {activeNav === "pricing" && (
+          <>
+            <div className="port-upload-form">
+              <h3 className="bn" style={{ fontSize: "1.4rem", marginBottom: 18 }}>{editingPricing ? "Edit Pricing Tier" : "Add Pricing Tier"}</h3>
+              <div className="msf-grid">
+                <div className="field"><label>Plan Name *</label><input value={pricingForm.name} onChange={(e) => setPricingForm({ ...pricingForm, name: e.target.value })} placeholder="e.g. STARTUP ENGINE" /></div>
+                <div className="field"><label>Price *</label><input value={pricingForm.price} onChange={(e) => setPricingForm({ ...pricingForm, price: e.target.value })} placeholder="e.g. ₹24,999" /></div>
+              </div>
+              <div className="msf-grid">
+                <div className="field"><label>Period</label><input value={pricingForm.period} onChange={(e) => setPricingForm({ ...pricingForm, period: e.target.value })} placeholder="e.g. per project" /></div>
+              </div>
+              <div className="field"><label>Description</label><textarea value={pricingForm.desc} onChange={(e) => setPricingForm({ ...pricingForm, desc: e.target.value })} placeholder="Ideal for landing pages..." style={{ minHeight: 60 }} /></div>
+              <div className="field"><label>Features (one per line)</label><textarea value={pricingForm.features} onChange={(e) => setPricingForm({ ...pricingForm, features: e.target.value })} placeholder="Single Page Ultra Web App&#10;Custom 60 FPS Animations" style={{ minHeight: 100 }} /></div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button className="btn-primary" onClick={savePricing}>{editingPricing ? "Update Pricing ✓" : "Add Pricing ✓"}</button>
+                {editingPricing && <button className="btn-ghost" onClick={() => { setEditingPricing(null); setPricingForm({ name: "", price: "", period: "", desc: "", features: "" }); }}>Cancel</button>}
+              </div>
+            </div>
+            {pricing.length === 0 ? (
+              <div style={{ display: "grid" }}><EmptyState icon="💳" title="No pricing tiers." sub="Add your first pricing tier above." /></div>
+            ) : (
+              <div className="category-grid">
+                {pricing.map(p => (
+                  <div key={p.id} className="category-card" style={{ textAlign: "left" }}>
+                    <h3>{p.name}</h3>
+                    <div style={{ color: "var(--red)", fontSize: "1.6rem", fontFamily: "'Bebas Neue',sans-serif", margin: "8px 0" }}>{p.price} <span style={{ fontSize: "1rem", color: "var(--muted)" }}>/ {p.period}</span></div>
+                    <p style={{ fontSize: ".88rem", color: "var(--muted)", marginBottom: 12 }}>{p.desc}</p>
+                    <ul style={{ paddingLeft: 16, fontSize: ".84rem", color: "var(--line)", marginBottom: 16 }}>
+                      {(p.features || []).map((f, i) => <li key={i}>{f}</li>)}
+                    </ul>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button className="btn-ghost" style={{ fontSize: ".78rem" }} onClick={() => { setEditingPricing(p); setPricingForm({ name: p.name, price: p.price, period: p.period || "", desc: p.desc || "", features: (p.features || []).join("\n") }); }}>Edit</button>
+                      <button className="btn-ghost" style={{ fontSize: ".78rem", color: "#fca5a5" }} onClick={() => deletePricing(p.id)}>Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
         {/* Settings */}
         {activeNav === "settings" && (
           <div className="port-upload-form">
@@ -1408,6 +1480,7 @@ export default function App() {
   const [portfolio, setPortfolio] = useState([]);
   const [portfolioFilter, setPortfolioFilter] = useState("All");
   const [testimonials, setTestimonials] = useState([]);
+  const [pricing, setPricing] = useState([]);
   const [settings, setSettings] = useState({ whatsappNumber: "+919416085060", bookingUrl: "https://calendly.com/" });
   const [dataLoading, setDataLoading] = useState(true);
   const toastTimer = useRef(null);
@@ -1465,13 +1538,15 @@ export default function App() {
     const loadPublicData = async () => {
       setDataLoading(true);
       try {
-        const [portRes, testiRes, settingsRes] = await Promise.all([
+        const [portRes, testiRes, settingsRes, pricingRes] = await Promise.all([
           api.getPublicPortfolio().catch(() => ({ portfolio: [] })),
           api.getTestimonials().catch(() => ({ testimonials: [] })),
           api.getSettings().catch(() => ({ settings: {} })),
+          api.getPricing().catch(() => ({ pricing: [] })),
         ]);
         setPortfolio([...(portRes.portfolio || [])].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)));
         setTestimonials(testiRes.testimonials || []);
+        setPricing(pricingRes.pricing || pricingRes || []);
         const s = settingsRes.settings || {};
         setSettings({
           whatsappNumber: s.whatsappNumber || s.whatsapp_number || "+919416085060",
@@ -1668,7 +1743,7 @@ export default function App() {
           </div>
         ) : page === "pricing" ? (
           <div className="page" style={{ paddingTop: 100 }}>
-            <FuturisticPricing onSelectPlan={() => setShowInquiry(true)} />
+            <FuturisticPricing onSelectPlan={() => setShowInquiry(true)} pricingData={pricing} />
             <FuturisticFooter onNavigate={requestPage} />
           </div>
         ) : (
@@ -1696,8 +1771,8 @@ export default function App() {
             {/* 6. Holographic Verified Testimonials */}
             <HolographicTestimonials testimonials={testimonials} />
 
-            {/* 7. Production Pricing Matrix */}
-            <FuturisticPricing onSelectPlan={() => setShowInquiry(true)} />
+            {/* 7. Transparent Pricing */}
+            <FuturisticPricing onSelectPlan={() => setShowInquiry(true)} pricingData={pricing} />
 
             {/* 8. Command Center Contact Form */}
             <CommandCenterContact showToast={showToast} />
@@ -1724,6 +1799,14 @@ function PortfolioCard({ item, onStartProject }) {
   const src = item.mediaUrl ? mediaUrl(item.mediaUrl) : (item.fileUrl || "");
   const isVideo = item.mediaType === "video" || (item.mediaUrl && /\.(mp4|webm|mov)/i.test(item.mediaUrl)) || item.fileUrl;
   const desc = item.desc || item.description || "";
+
+  useEffect(() => {
+    if (isVideo && videoRef.current) {
+      videoRef.current.defaultMuted = true;
+      videoRef.current.muted = true;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [isVideo, src]);
 
   return (
     <>
