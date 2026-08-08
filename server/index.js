@@ -776,11 +776,15 @@ app.post('/api/team-chat/files', requireAuth, upload.array('files', 10), async (
 
 app.use((err, _req, res, next) => {
   void next
-  console.error(err)
+  console.error('[Unhandled Express Error]:', err.message || err)
   if (err instanceof multer.MulterError) {
     return res.status(400).json({ message: err.message })
   }
-  res.status(500).json({ message: 'Internal server error.' })
+  const status = err.status || err.statusCode || 500
+  res.status(status).json({
+    message: err.message || 'Internal server error.',
+    error: process.env.NODE_ENV === 'production' ? undefined : err.stack
+  })
 })
 
 async function startServer() {
@@ -794,25 +798,12 @@ async function startServer() {
 
   try {
     if (process.env.FRONTEND_ONLY !== 'true') {
-      repository = await createDatabase(process.env.MONGODB_URI || 'mongodb://localhost:27017', process.env.MONGODB_DB || 'assetsweber')
+      repository = await createDatabase()
       dbAvailable = true
       console.log('✓ Database connected')
       console.log('✓ Database selected')
       console.log('✓ Repository initialized')
       console.log('✓ dbAvailable=true')
-      registerV2Routes(app, {
-        repository,
-        v2: repository.v2,
-        upload,
-        requireAuth,
-        hashPassword,
-        verifyPassword,
-        createSessionResponse,
-        uploadFile,
-        TEAM_ACCESS_ID,
-        TEAM_ACCESS_PASSWORD,
-        io
-      })
     } else {
       console.log('FRONTEND_ONLY set — skipping database connection')
       repository = null
@@ -824,6 +815,21 @@ async function startServer() {
     repository = null
     dbAvailable = false
   }
+
+  // Always register V2 routes so Express handles requests cleanly without throwing 500 errors
+  registerV2Routes(app, {
+    repository,
+    v2: repository?.v2 || {},
+    upload,
+    requireAuth,
+    hashPassword,
+    verifyPassword,
+    createSessionResponse,
+    uploadFile,
+    TEAM_ACCESS_ID,
+    TEAM_ACCESS_PASSWORD,
+    io
+  })
 
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {

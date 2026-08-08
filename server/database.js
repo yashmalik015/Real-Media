@@ -7,14 +7,25 @@ const MONGODB_DB = process.env.MONGODB_DB || 'assetsweber'
 
 export async function createDatabase() {
   let activeUri = MONGODB_URI
+  const isProd = process.env.NODE_ENV === 'production'
+
   try {
-    const testClient = new MongoClient(activeUri, { serverSelectionTimeoutMS: 3000 })
+    const testClient = new MongoClient(activeUri, { serverSelectionTimeoutMS: 5000 })
     await testClient.connect()
     await testClient.close()
   } catch (err) {
+    if (isProd) {
+      console.error(`[MongoDB Error] Failed to connect to MongoDB in production (${err.message})`)
+      throw new Error(`MongoDB connection failed: ${err.message}`)
+    }
     console.warn(`Original MongoDB connection failed (${err.message}), falling back to mongodb-memory-server for local dev...`)
-    const mongod = await MongoMemoryServer.create()
-    activeUri = mongod.getUri()
+    try {
+      const mongod = await MongoMemoryServer.create()
+      activeUri = mongod.getUri()
+    } catch (memErr) {
+      console.error('[MongoDB Error] Could not start memory server fallback:', memErr.message)
+      throw err
+    }
   }
 
   const client = new MongoClient(activeUri)
