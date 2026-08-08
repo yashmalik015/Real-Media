@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { LOGO_URL, COMPANY_NAME } from '../../data/siteData.js';
 import { playHoverSound, playClickSound, toggleAudioMute, isAudioMuted } from '../../utils/audio.js';
+import { LogOut } from 'lucide-react';
 
 export function FuturisticNavbar({
   page,
@@ -186,12 +187,12 @@ export function FuturisticNavbar({
               {audioMuted ? '🔇' : '🔊'}
             </button>
 
-            {/* Notifications (if learner) */}
+            {/* Learner Logout */}
             {session && session.role === 'learner' && (
               <button
                 onClick={() => {
                   playClickSound();
-                  if (onOpenNotifications) onOpenNotifications();
+                  if (onLogout) onLogout();
                 }}
                 onMouseEnter={playHoverSound}
                 style={{
@@ -199,36 +200,17 @@ export function FuturisticNavbar({
                   width: 36,
                   height: 36,
                   borderRadius: '50%',
-                  backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  backgroundColor: 'rgba(255, 45, 85, 0.1)',
+                  border: '1px solid rgba(255, 45, 85, 0.3)',
                   display: 'grid',
                   placeItems: 'center',
-                  color: '#ffffff',
-                  fontSize: '0.9rem'
+                  color: '#ff2d55',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
                 }}
+                title="Logout"
               >
-                🔔
-                {unreadCount > 0 && (
-                  <span
-                    style={{
-                      position: 'absolute',
-                      top: -2,
-                      right: -2,
-                      width: 16,
-                      height: 16,
-                      borderRadius: '50%',
-                      backgroundColor: '#ff2d55',
-                      color: '#ffffff',
-                      fontSize: '0.6rem',
-                      fontWeight: 700,
-                      display: 'grid',
-                      placeItems: 'center',
-                      boxShadow: '0 0 10px #ff2d55'
-                    }}
-                  >
-                    {unreadCount}
-                  </span>
-                )}
+                <LogOut size={16} />
               </button>
             )}
 
@@ -314,7 +296,7 @@ export function FuturisticNavbar({
                 transition: 'transform 0.2s, boxShadow 0.2s'
               }}
             >
-              Start Project ⚡
+              Start Project
             </button>
 
             {/* Mobile Hamburger Toggle */}

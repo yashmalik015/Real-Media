@@ -13,13 +13,13 @@ export function DashboardOverview({
   onNavigateTab
 }) {
   const stats = [
-    { title: 'Total Portfolio Projects', value: analytics.portfolioCount || portfolio.length || 0, change: '+12%', icon: FolderGit2, color: '#ff2d55' },
-    { title: 'Total Courses', value: analytics.courseCount || courses.length || 0, change: '+4', icon: BookOpen, color: '#007aff' },
-    { title: 'Total Students', value: analytics.totalStudents || 1240, change: '+18%', icon: Users, color: '#af52de' },
-    { title: 'Total Reviews', value: analytics.testimonialCount || testimonials.length || 0, change: '5.0 ★', icon: Star, color: '#ffcc00' },
-    { title: 'Pending Requests', value: analytics.newInquiries || inquiries.filter(i => i.status === 'New').length || 0, change: 'Action Needed', icon: Inbox, color: '#ff9500' },
-    { title: 'Completed Projects', value: analytics.completedProjects || 84, change: '+95%', icon: CheckCircle2, color: '#34c759' },
-    { title: 'Revenue', value: `$${(analytics.revenue || 148500).toLocaleString()}`, change: '+24%', icon: DollarSign, color: '#30b0c7' }
+    { title: 'Total Portfolio Projects', value: analytics.portfolioCount || portfolio.length || 0, change: '0%', icon: FolderGit2, color: '#ff2d55' },
+    { title: 'Total Courses', value: analytics.courseCount || courses.length || 0, change: '0', icon: BookOpen, color: '#007aff' },
+    { title: 'Total Students', value: analytics.totalStudents || 0, change: '0%', icon: Users, color: '#af52de' },
+    { title: 'Total Reviews', value: analytics.testimonialCount || testimonials.length || 0, change: '0.0 ★', icon: Star, color: '#ffcc00' },
+    { title: 'Pending Requests', value: analytics.newInquiries || inquiries.filter(i => i.status === 'New').length || 0, change: '0', icon: Inbox, color: '#ff9500' },
+    { title: 'Completed Projects', value: analytics.completedProjects || 0, change: '0%', icon: CheckCircle2, color: '#34c759' },
+    { title: 'Revenue', value: `$${(analytics.revenue || 0).toLocaleString()}`, change: '0%', icon: DollarSign, color: '#30b0c7' }
   ];
 
   return (

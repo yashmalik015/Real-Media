@@ -7,53 +7,10 @@ import { AnimatedSectionTitle, AnimatedParagraph, AnimatedButtonText } from './C
 gsap.registerPlugin(ScrollTrigger);
 
 export function FuturisticPricing({ onSelectPlan, pricingData }) {
-  const plans = (pricingData && pricingData.length > 0) ? pricingData : [
-    {
-      name: 'STARTUP ENGINE',
-      price: '₹24,999',
-      period: 'per project',
-      desc: 'Ideal for landing pages, promotional video reels, or MVP mobile prototypes.',
-      features: [
-        'Single Page Ultra Web App',
-        'Custom 60 FPS Animations',
-        '3 Revisions Included',
-        'SEO & Core Web Vitals Audit',
-        '7 Days Delivery Target'
-      ],
-      popular: false
-    },
-    {
-      name: 'ENTERPRISE MATRIX',
-      price: '₹49,999',
-      period: 'per project',
-      desc: 'Full scale business system with custom WebGL, backend database & mobile software.',
-      features: [
-        'Multi-Page Web & Mobile System',
-        'WebGL 3D Interactive Canvas',
-        'Full REST API & Database Integration',
-        'Unlimited Revisions',
-        'Dedicated Project Lead Support',
-        '14 Days Delivery Target'
-      ],
-      popular: true
-    },
-    {
-      name: 'CUSTOM HYPERDRIVE',
-      price: 'Custom Quote',
-      period: 'tailored build',
-      desc: 'Enterprise-grade custom software, VFX commercials, game engine builds & AI pipelines.',
-      features: [
-        'End-to-End Enterprise Architecture',
-        'Custom AI Agent Automation',
-        'Unreal Engine 5 VFX & 3D',
-        '24/7 Priority SLA',
-        'Dedicated Senior Engineering Team'
-      ],
-      popular: false
-    }
-  ];
+  const plans = pricingData || [];
 
   useEffect(() => {
+    if (plans.length === 0) return;
     const ctx = gsap.context(() => {
       gsap.fromTo(
         '.price-card',
@@ -72,7 +29,20 @@ export function FuturisticPricing({ onSelectPlan, pricingData }) {
       );
     });
     return () => ctx.revert();
-  }, [pricingData]);
+  }, [plans]);
+
+  if (plans.length === 0) {
+    return (
+      <section className="relative w-full py-32 bg-[#07070a] text-center" id="pricing">
+        <h2 className="font-bebas text-5xl md:text-7xl mb-6 text-white tracking-wider" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>
+          <span className="text-[#ff2d55]" style={{ color: '#ff2d55' }}>AGENCY</span> PRICING
+        </h2>
+        <p className="text-white/50 font-mono text-sm uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>
+          Custom packages available. Contact our team.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section id="pricing" style={{ padding: '100px 32px', position: 'relative' }}>
@@ -180,7 +150,7 @@ export function FuturisticPricing({ onSelectPlan, pricingData }) {
                   transition: 'all 0.25s ease'
                 }}
               >
-                <AnimatedButtonText label="SELECT TIER & START 🚀" />
+                <AnimatedButtonText label="SELECT TIER & START" />
               </button>
             </div>
           ))}

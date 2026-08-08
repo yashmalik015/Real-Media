@@ -3,7 +3,7 @@ import { courseToDb } from './database.js'
 import { verifyIdToken } from './firebaseAdmin.js'
 import { deleteFromCloudinary } from './cloudinary.js'
 
-export function registerV2Routes(app, { repository, v2, upload, requireAuth, hashPassword, verifyPassword, createSessionResponse, uploadFile, TEAM_ACCESS_ID, TEAM_ACCESS_PASSWORD }) {
+export function registerV2Routes(app, { repository, v2, upload, requireAuth, hashPassword, verifyPassword, createSessionResponse: createAuthResponse, uploadFile, TEAM_ACCESS_ID, TEAM_ACCESS_PASSWORD }) {
 
   // ── Learner auth ──
   app.post('/api/auth/learner', async (req, res) => {
@@ -36,8 +36,8 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
       return res.status(401).json({ success: false, message: 'Invalid login credentials.' })
     }
 
-    const sessionRes = await createSessionResponse(user)
-    res.json({ success: true, ...sessionRes })
+    const sessionRes = await createAuthResponse(user)
+    res.json({ success: true, accessToken: sessionRes.accessToken, token: sessionRes.accessToken, user: sessionRes.user })
   })
 
   const handleGoogleAuth = async (req, res) => {
@@ -158,14 +158,14 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
       console.log('CREATING SESSION')
       let session = null
       try {
-        session = await createSessionResponse(user)
+        session = await createAuthResponse(user)
         console.log('SESSION CREATED')
       } catch (sessErr) {
         console.error('Session creation failed:', sessErr)
         console.error(sessErr.stack)
         return res.status(500).json({
           success: false,
-          message: `createSessionResponse failed: ${sessErr.message}`,
+          message: `createAuthResponse failed: ${sessErr.message}`,
           stack: sessErr.stack,
         })
       }
@@ -173,7 +173,8 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
       console.log('RESPONSE SENT')
       return res.json({
         success: true,
-        token: session.token,
+        accessToken: session.accessToken,
+        token: session.accessToken,
         user: session.user,
       })
     } catch (err) {
@@ -233,9 +234,9 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
         return res.status(500).json({ success: false, message: 'Team account could not be found or created.' })
       }
 
-      const sessionResult = await createSessionResponse(user)
-      console.log('[auth/team/login] session created, token length:', sessionResult.token?.length)
-      res.json({ success: true, ...sessionResult })
+      const sessionResult = await createAuthResponse(user)
+      console.log('[auth/team/login] session created, accessToken length:', sessionResult.accessToken?.length)
+      res.json({ success: true, accessToken: sessionResult.accessToken, token: sessionResult.accessToken, user: sessionResult.user })
     } catch (err) {
       console.error('[auth/team/login] EXCEPTION:', err.message, err.stack)
       res.status(500).json({
@@ -266,6 +267,9 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
   // ── Inquiries (public submit, team manage) ──
   app.post('/api/inquiries', async (req, res) => {
     const inquiry = await v2.createInquiry(req.body)
+    if (deps.io) {
+      deps.io.emit('newInquiry', inquiry)
+    }
     res.status(201).json({ inquiry })
   })
 
@@ -613,9 +617,10 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
     if (!existing) return res.status(404).json({ message: 'Portfolio item not found.' })
 
     const body = req.body
+    const serviceValue = (body.service || body.category || existing.service || '').trim()
     const updates = {
       title: body.title ?? existing.title,
-      service: body.service ?? existing.service,
+      service: serviceValue || existing.service,
       description: body.description ?? existing.description,
       client: body.client ?? existing.client,
       outcome: body.outcome ?? existing.outcome,
@@ -675,9 +680,10 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
   ]), async (req, res) => {
     if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
 
-    const { title = '', service = '', description = '', client = '', outcome = '' } = req.body
+    const { title = '', description = '', client = '', outcome = '' } = req.body
+    const service = (req.body.service || req.body.category || '').trim()
     if (!title.trim() || !service.trim() || !description.trim()) {
-      return res.status(400).json({ message: 'Title, service, and description are required.' })
+      return res.status(400).json({ message: 'Title, category/service, and description are required.' })
     }
 
     const timestamp = now()

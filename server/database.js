@@ -31,6 +31,7 @@ export async function createDatabase() {
   const portfolioItems = db.collection('portfolio_items')
   const testimonials = db.collection('testimonials')
   const teamChatMessages = db.collection('team_chat_messages')
+  const refreshTokens = db.collection('refresh_tokens') // New collection for JWT refresh tokens
 
   // V2 Collections
   const learnerProfiles = db.collection('learner_profiles')
@@ -122,6 +123,7 @@ export async function createDatabase() {
     portfolioItems,
     testimonials,
     teamChatMessages,
+    refreshTokens,
     learnerProfiles,
     courses,
     teachers,
@@ -237,6 +239,7 @@ function makeRepository(client, collections) {
     portfolioItems,
     testimonials,
     teamChatMessages,
+    refreshTokens,
     learnerProfiles,
     courses,
     teachers,
@@ -377,8 +380,32 @@ function makeRepository(client, collections) {
       await sessions.insertOne(session)
       return session
     },
+    // ── Session & Refresh Token Management ──
     deleteSession: async (token) => {
       await sessions.deleteOne({ token })
+    },
+    // Store a hashed refresh token
+    saveRefreshToken: async (userId, tokenHash, expiresAt) => {
+      const doc = {
+        user_id: userId,
+        token_hash: tokenHash,
+        expires_at: expiresAt,
+        created_at: now(),
+      }
+      await refreshTokens.insertOne(doc)
+      return doc
+    },
+    // Find a stored refresh token by its hash
+    findRefreshToken: async (tokenHash) => {
+      return await refreshTokens.findOne({ token_hash: tokenHash })
+    },
+    // Delete a specific refresh token
+    deleteRefreshToken: async (tokenHash) => {
+      await refreshTokens.deleteOne({ token_hash: tokenHash })
+    },
+    // Delete all refresh tokens for a user (e.g., on logout)
+    deleteAllRefreshTokensForUser: async (userId) => {
+      await refreshTokens.deleteMany({ user_id: userId })
     },
     notify: async (userId, projectId, title, message) => {
       const note = {
@@ -414,16 +441,15 @@ function makeRepository(client, collections) {
       await portfolioItems.insertOne(payload)
       return portfolioRow(await portfolioItems.findOne({ id: item.id }))
     },
-    updatePortfolio: async (item) => {
-      await portfolioItems.updateOne({ id: item.id }, { $set: {
-        title: item.title,
-        service: item.service,
-        description: item.description,
-        client: item.client,
-        outcome: item.outcome,
-        updated_at: item.updatedAt || now(),
-      } })
-      return portfolioRow(await portfolioItems.findOne({ id: item.id }))
+    updatePortfolio: async (idOrItem, data) => {
+      const portfolioId = typeof idOrItem === 'string' ? idOrItem : idOrItem?.id
+      if (!portfolioId) return null
+      const set = typeof idOrItem === 'string' ? portfolioToDb(data || {}) : portfolioToDb(idOrItem || {})
+      delete set._id
+      delete set.id
+      set.updated_at = now()
+      await portfolioItems.updateOne({ id: portfolioId }, { $set: set })
+      return portfolioRow(await portfolioItems.findOne({ id: portfolioId }))
     },
     deletePortfolio: async (portfolioId) => {
       await portfolioItems.deleteOne({ id: portfolioId })
@@ -709,7 +735,12 @@ function makeRepository(client, collections) {
         thumbnail: data.thumbnail || '',
         banner: data.banner || '',
         teacher_id: data.teacherId || data.teacher_id || userId,
-        teacher_name: data.teacherName || data.teacher_name || '',
+        teacher_name: data.teacherName || data.teacher_name || data.instructor || '',
+        instructor: data.instructor || data.teacherName || '',
+        difficulty: data.difficulty || 'Intermediate',
+        duration: data.duration || '',
+        price: Number(data.price) || 0,
+        isFree: Boolean(data.isFree),
         published: Boolean(data.published),
         views: 0,
         modules: data.modules || [],
@@ -732,6 +763,11 @@ function makeRepository(client, collections) {
         banner: data.banner ?? existing.banner,
         teacher_id: data.teacherId ?? data.teacher_id ?? existing.teacher_id,
         teacher_name: data.teacherName ?? data.teacher_name ?? existing.teacher_name,
+        instructor: data.instructor ?? existing.instructor,
+        difficulty: data.difficulty ?? existing.difficulty,
+        duration: data.duration ?? existing.duration,
+        price: data.price ?? existing.price,
+        isFree: data.isFree !== undefined ? Boolean(data.isFree) : existing.isFree,
         published: data.published !== undefined ? Boolean(data.published) : existing.published,
         modules: data.modules ?? existing.modules,
         sort_order: data.sortOrder ?? data.sort_order ?? existing.sort_order,
@@ -1297,6 +1333,11 @@ function courseRow(doc) {
     banner: doc.banner || '',
     teacherId: doc.teacher_id || '',
     teacherName: doc.teacher_name || '',
+    instructor: doc.instructor || doc.teacher_name || '',
+    difficulty: doc.difficulty || 'Intermediate',
+    duration: doc.duration || '',
+    price: doc.price || 0,
+    isFree: Boolean(doc.isFree),
     published: Boolean(doc.published),
     views: doc.views || 0,
     modules: (doc.modules || []).map((m) => ({

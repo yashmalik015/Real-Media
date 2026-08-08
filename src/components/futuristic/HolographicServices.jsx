@@ -245,7 +245,7 @@ export function HolographicServices({ onPickService }) {
                   cursor: 'pointer'
                 }}
               >
-                <AnimatedButtonText label="DEPLOY MODULE NOW 🚀" />
+                <AnimatedButtonText label="DEPLOY MODULE NOW" />
               </button>
             </div>
           </div>

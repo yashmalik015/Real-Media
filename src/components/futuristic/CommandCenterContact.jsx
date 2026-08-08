@@ -31,7 +31,7 @@ export function CommandCenterContact({ showToast }) {
     setStatus('submitting');
 
     try {
-      await api.createInquiry({
+      await api.submitInquiry({
         name: form.name,
         email: form.email,
         phone: form.phone,
@@ -39,11 +39,7 @@ export function CommandCenterContact({ showToast }) {
         service: form.service,
         description: form.description
       });
-    } catch (_err) {
-      // Fallback UI simulation
-    }
-
-    setTimeout(() => {
+      
       setStatus('success');
       playWarpSound();
 
@@ -60,7 +56,10 @@ export function CommandCenterContact({ showToast }) {
         setStatus('idle');
         setForm({ name: '', email: '', phone: '', company: '', service: 'Web Development', description: '' });
       }, 3500);
-    }, 1200);
+    } catch (err) {
+      setStatus('idle');
+      if (showToast) showToast(err.message || 'Failed to submit inquiry. Please try again.');
+    }
   };
 
   return (
@@ -247,8 +246,8 @@ export function CommandCenterContact({ showToast }) {
                     status === 'submitting'
                       ? 'TRANSMITTING TELEMETRY DATA...'
                       : status === 'success'
-                      ? 'TRANSMISSION SUCCESSFUL ✓'
-                      : 'TRANSMIT PROJECT BRIEF NOW 🚀'
+                      ? 'TRANSMISSION SUCCESSFUL'
+                      : 'TRANSMIT PROJECT BRIEF NOW'
                   }
                 />
               </button>

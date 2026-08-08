@@ -1670,9 +1670,11 @@ export function CtaBand({onStartProject}){
 // ─── FOOTER ───────────────────────────────────────────────────────────────────
 export function Footer(){
   const contactLinks = {
-    "Email Us": { href: "mailto:assetwebermail@gmail.com", label: "assetwebermail@gmail.com" },
-    "Instagram": { href: "https://instagram.com/assetsweber", label: "@assetsweber" },
+    "Email Us": { href: "mailto:assetsweber@assetsweber.com", label: "assetsweber@assetsweber.com" },
+    "Instagram": { href: "https://www.instagram.com/assetsweber/?hl=en", label: "@assetsweber" },
     "YouTube": { href: "https://youtube.com/@AssetsWeber", label: "@AssetsWeber" },
+    "X / Twitter": { href: "https://x.com/AssetsWeber", label: "@AssetsWeber" },
+    "LinkedIn": { href: "https://linkedin.com/in/yash-malik-31720837a", label: "LinkedIn" },
     "WhatsApp": { href: "https://wa.me/919416085060", label: "+91 9416085060" },
   };
 
@@ -1689,7 +1691,7 @@ export function Footer(){
           {[
             {title:"Services",links:SERVICE_OPTIONS},
             {title:"Company",links:["Portfolio","Process","Pricing","Testimonials"]},
-            {title:"Contact",links:["Email Us","Instagram","YouTube","WhatsApp"]},
+            {title:"Contact",links:["Email Us","Instagram","YouTube","X / Twitter","LinkedIn"]},
           ].map(col=>(
             <div className="footer-col" key={col.title}>
               <h5>{col.title}</h5>

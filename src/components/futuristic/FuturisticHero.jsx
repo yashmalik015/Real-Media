@@ -216,7 +216,7 @@ export function FuturisticHero({ onStartProject, onExploreServices, onLearningCl
                 overflow: 'hidden'
               }}
             >
-              <AnimatedButtonText label="LAUNCH PROJECT NOW 🚀" />
+              <AnimatedButtonText label="LAUNCH PROJECT NOW" />
             </button>
 
             <button

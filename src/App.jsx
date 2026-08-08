@@ -1481,6 +1481,7 @@ export default function App() {
   const [portfolioFilter, setPortfolioFilter] = useState("All");
   const [testimonials, setTestimonials] = useState([]);
   const [pricing, setPricing] = useState([]);
+  const [homeCourses, setHomeCourses] = useState([]);
   const [settings, setSettings] = useState({ whatsappNumber: "+919416085060", bookingUrl: "https://calendly.com/" });
   const [dataLoading, setDataLoading] = useState(true);
   const toastTimer = useRef(null);
@@ -1522,7 +1523,7 @@ export default function App() {
       if (!res?.idToken) return;
       try {
         const data = await api.loginGoogleLearner({ idToken: res.idToken });
-        setToken(data.token);
+        setToken(data.accessToken || data.token);
         setSession(data.user);
         setShowAuth(false);
         setPage("learning");
@@ -1538,15 +1539,17 @@ export default function App() {
     const loadPublicData = async () => {
       setDataLoading(true);
       try {
-        const [portRes, testiRes, settingsRes, pricingRes] = await Promise.all([
+        const [portRes, testiRes, settingsRes, pricingRes, coursesRes] = await Promise.all([
           api.getPublicPortfolio().catch(() => ({ portfolio: [] })),
           api.getTestimonials().catch(() => ({ testimonials: [] })),
           api.getSettings().catch(() => ({ settings: {} })),
           api.getPricing().catch(() => ({ pricing: [] })),
+          api.getCourses().catch(() => ({ courses: [] })),
         ]);
         setPortfolio([...(portRes.portfolio || [])].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)));
         setTestimonials(testiRes.testimonials || []);
         setPricing(pricingRes.pricing || pricingRes || []);
+        setHomeCourses(coursesRes.courses || []);
         const s = settingsRes.settings || {};
         setSettings({
           whatsappNumber: s.whatsappNumber || s.whatsapp_number || "+919416085060",
@@ -1586,17 +1589,17 @@ export default function App() {
 
   const onLogin = async (payload) => {
     if (payload.role === "team") {
-      const { token, user } = await api.loginTeamV2({ teamId: payload.teamId, password: payload.password });
-      setToken(token);
-      setSession(user);
+      const data = await api.loginTeamV2({ teamId: payload.teamId, password: payload.password });
+      setToken(data.accessToken || data.token);
+      setSession(data.user);
       setShowAuth(false);
       setPage("team");
     } else {
-      const { token, user } = await api.loginLearner({ name: payload.name, email: payload.email, password: payload.password, mode: payload.mode });
-      setToken(token);
-      setSession(user);
+      const data = await api.loginLearner({ name: payload.name, email: payload.email, password: payload.password, mode: payload.mode });
+      setToken(data.accessToken || data.token);
+      setSession(data.user);
       setShowAuth(false);
-      showToast(`Welcome${payload.mode === "register" ? " to Assets Weber" : " back"}, ${user.name}!`);
+      showToast(`Welcome${payload.mode === "register" ? " to Assets Weber" : " back"}, ${data.user.name}!`);
     }
   };
 
@@ -1604,10 +1607,10 @@ export default function App() {
     const res = await signInWithGoogle();
     if (!res?.idToken) return;
     const data = await api.loginGoogleLearner({ idToken: res.idToken });
-    if (!data || !data.token) {
+    if (!data || (!data.accessToken && !data.token)) {
       throw new Error(data?.message || "Google auth failed.");
     }
-    setToken(data.token);
+    setToken(data.accessToken || data.token);
     setSession(data.user);
     setShowAuth(false);
     showToast(`Welcome back, ${data.user?.name || "Learner"}!`);
@@ -1763,7 +1766,7 @@ export default function App() {
             <FuturisticPortfolio portfolio={portfolio} />
 
             {/* 4. Netflix + Apple TV Style Learning HUD */}
-            <LearningPlatformHUD onOpenLearning={() => requestPage("learning")} />
+            <LearningPlatformHUD courses={homeCourses} onOpenLearning={() => requestPage("learning")} />
 
             {/* 5. 5-Stage Cybernetic Pipeline */}
             <FuturisticPipeline onStartProject={() => setShowInquiry(true)} />

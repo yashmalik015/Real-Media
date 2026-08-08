@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { io } from 'socket.io-client';
 import {
   LayoutDashboard,
   FolderGit2,
@@ -19,8 +20,9 @@ import { PortfolioManager } from './pages/PortfolioManager.jsx';
 import { CourseManager } from './pages/CourseManager.jsx';
 import { TestimonialManager } from './pages/TestimonialManager.jsx';
 import { RequestCRM } from './pages/RequestCRM.jsx';
-import { SettingsPanel } from './pages/SettingsPanel.jsx';
 import { MediaLibrary } from './pages/MediaLibrary.jsx';
+import { SettingsPanel } from './pages/SettingsPanel.jsx';
+import { PricingManager } from './pages/PricingManager.jsx';
 
 import { playClickSound, playHoverSound } from '../../utils/audio.js';
 import { api } from '../../api.js';
@@ -68,6 +70,20 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
     loadAllData();
   }, [loadAllData]);
 
+  // Listen for real-time inquiries via socket.io
+  useEffect(() => {
+    const socket = io(window.location.origin);
+    
+    socket.on('newInquiry', (inquiry) => {
+      showToast(`New inquiry received from ${inquiry.name}!`);
+      loadAllData(); // refresh data
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [loadAllData, showToast]);
+
   // Handle Global Search input
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -92,13 +108,20 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
     { id: 'portfolio', label: 'Portfolio CMS', icon: FolderGit2, badge: portfolio.length },
     { id: 'courses', label: 'Courses LMS', icon: BookOpen, badge: courses.length },
     { id: 'testimonials', label: 'Testimonials', icon: Star, badge: testimonials.length },
+    { id: 'pricing', label: 'Pricing', icon: DollarSign },
     { id: 'requests', label: 'Client Requests', icon: Inbox, badge: inquiries.filter((i) => i.status === 'New').length || undefined, badgeColor: '#ff2d55' },
     { id: 'media', label: 'Media Library', icon: ImageIcon },
     { id: 'settings', label: 'Settings', icon: Settings }
   ];
 
+  // Scroll to top of main panel when nav changes
+  useEffect(() => {
+    const mainPanel = document.getElementById('team-dashboard-main');
+    if (mainPanel) mainPanel.scrollTo(0, 0);
+  }, [activeNav]);
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#07070a', color: '#ffffff', fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ display: 'flex', height: 'calc(100vh - 100px)', backgroundColor: '#0c0c10', color: '#ffffff', fontFamily: "'Inter', sans-serif" }}>
       {/* Sidebar Navigation */}
       <aside
         style={{
@@ -223,7 +246,7 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
       </aside>
 
       {/* Main Panel Content */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <main id="team-dashboard-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowY: 'auto' }}>
         {/* Top bar with Global Search & Quick Notifications */}
         <header
           style={{
@@ -337,6 +360,7 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
               portfolio={portfolio}
               onLoad={loadAllData}
               showToast={showToast}
+              onPortfolioChanged={onPortfolioChanged}
             />
           )}
 
@@ -362,6 +386,12 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
               onLoad={loadAllData}
               showToast={showToast}
               settings={settings}
+            />
+          )}
+
+          {activeNav === 'pricing' && (
+            <PricingManager
+              showToast={showToast}
             />
           )}
 

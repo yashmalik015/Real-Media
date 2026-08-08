@@ -2,6 +2,9 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import http from 'node:http'
+import { Server as SocketIOServer } from 'socket.io'
+import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import express from 'express'
 import rateLimit from 'express-rate-limit'
@@ -11,7 +14,9 @@ import Razorpay from 'razorpay'
 import { createDatabase, id, now } from './database.js'
 import { deleteFromCloudinary } from './cloudinary.js'
 import { uploadFile, uploadsDirectory } from './fileStorage.js'
-import { registerV2Routes } from './v2Routes.js'
+import { registerV2Routes } from './v2Routes.js';
+import { verifyJwt, requireRoles, firebaseLoginHandler } from './middleware/auth.js';
+import { signAccessToken, signRefreshToken, hashRefreshToken, verifyToken } from './utils/jwt.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
@@ -61,6 +66,7 @@ app.use(cors({
   credentials: true,
 }))
 app.use(express.json({ limit: '2mb' }))
+app.use(cookieParser())
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 500,
@@ -114,21 +120,33 @@ function publicUser(user) {
   return rest
 }
 
-async function requireAuth(req, res, next) {
-  const token = req.headers.authorization?.replace(/^Bearer\s+/i, '')
-  if (!token) return res.status(401).json({ message: 'Missing auth token.' })
+const requireAuth = verifyJwt;
 
-  const user = await repository.findUserByToken(token)
-  if (!user) return res.status(401).json({ message: 'Invalid session.' })
-
-  req.user = user
-  next()
+async function createAuthResponse(user) {
+  const accessToken = signAccessToken({ sub: user.id, role: user.role, email: user.email });
+  const refreshToken = signRefreshToken({ sub: user.id });
+  // Store hashed refresh token with expiration
+  const expiresAt = new Date(Date.now() + parseDuration(process.env.JWT_REFRESH_EXPIRES_IN || '7d'));
+  await repository.saveRefreshToken(user.id, hashRefreshToken(refreshToken), expiresAt);
+  return { accessToken, refreshToken, user: publicUser(user) };
 }
 
-async function createSessionResponse(user) {
-  const session = await repository.createSession(user.id)
-  return { token: session.token, user: publicUser(user) }
+/** Parse a duration string like '7d', '15m', '1h' into milliseconds */
+function parseDuration(str) {
+  const match = str.match(/^(\d+)([smhd])$/)
+  if (!match) return 7 * 24 * 60 * 60 * 1000 // default 7 days
+  const val = parseInt(match[1], 10)
+  switch (match[2]) {
+    case 's': return val * 1000
+    case 'm': return val * 60 * 1000
+    case 'h': return val * 60 * 60 * 1000
+    case 'd': return val * 24 * 60 * 60 * 1000
+    default: return 7 * 24 * 60 * 60 * 1000
+  }
 }
+
+// Keep backward-compat alias so v2Routes and existing callers still work
+const createSessionResponse = createAuthResponse;
 
 async function serviceQuestions(service) {
   const base = [
@@ -247,7 +265,15 @@ app.post('/api/auth/client', async (req, res) => {
     return res.status(401).json({ message: 'Invalid client login.' })
   }
 
-  res.json(await createSessionResponse(user))
+  const authResult = await createAuthResponse(user)
+  // Set refresh token as HttpOnly cookie
+  res.cookie('refreshToken', authResult.refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: parseDuration(process.env.JWT_REFRESH_EXPIRES_IN || '7d'),
+  })
+  res.json({ accessToken: authResult.accessToken, user: authResult.user })
 })
 
 app.post('/api/auth/team', async (req, res) => {
@@ -282,15 +308,81 @@ app.post('/api/auth/team', async (req, res) => {
       return res.status(404).json({ message: 'Team account not found.' })
     }
 
-    res.json(await createSessionResponse(user))
+    const authResult = await createAuthResponse(user)
+    res.cookie('refreshToken', authResult.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: parseDuration(process.env.JWT_REFRESH_EXPIRES_IN || '7d'),
+    })
+    res.json({ accessToken: authResult.accessToken, user: authResult.user })
   } catch (err) {
     console.error('[auth/team]', err.message)
     res.status(500).json({ message: 'Internal server error.' })
   }
 })
 
-app.get('/api/me', requireAuth, (req, res) => {
-  res.json({ user: publicUser(req.user) })
+// ── Token Refresh ──
+app.post('/api/auth/refresh', async (req, res) => {
+  try {
+    const token = req.cookies?.refreshToken || req.body?.refreshToken
+    if (!token) return res.status(400).json({ message: 'Refresh token missing.' })
+
+    const payload = verifyToken(token)
+    if (!payload) return res.status(401).json({ message: 'Invalid or expired refresh token.' })
+
+    const tokenHash = hashRefreshToken(token)
+    const stored = await repository.findRefreshToken(tokenHash)
+    if (!stored) return res.status(401).json({ message: 'Refresh token not recognized.' })
+
+    // Check expiration
+    if (new Date(stored.expires_at) < new Date()) {
+      await repository.deleteRefreshToken(tokenHash)
+      return res.status(401).json({ message: 'Refresh token expired.' })
+    }
+
+    // Rotate: delete old, issue new
+    await repository.deleteRefreshToken(tokenHash)
+
+    const user = await repository.findUserById(payload.sub)
+    if (!user) return res.status(401).json({ message: 'User not found.' })
+
+    const authResult = await createAuthResponse(user)
+    res.cookie('refreshToken', authResult.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: parseDuration(process.env.JWT_REFRESH_EXPIRES_IN || '7d'),
+    })
+    res.json({ accessToken: authResult.accessToken, user: authResult.user })
+  } catch (err) {
+    console.error('[auth/refresh]', err.message)
+    res.status(500).json({ message: 'Internal server error.' })
+  }
+})
+
+// ── Logout ──
+app.post('/api/auth/logout', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.sub || req.user.id
+    await repository.deleteAllRefreshTokensForUser(userId)
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    })
+    res.json({ ok: true })
+  } catch (err) {
+    console.error('[auth/logout]', err.message)
+    res.status(500).json({ message: 'Internal server error.' })
+  }
+})
+
+app.get('/api/me', requireAuth, async (req, res) => {
+  const userId = req.user.sub || req.user.id
+  const user = await repository.findUserById(userId)
+  if (!user) return res.status(404).json({ message: 'User not found.' })
+  res.json({ user: publicUser(user) })
 })
 
 app.get('/api/questions/:service', requireAuth, (req, res) => {
@@ -692,11 +784,19 @@ app.use((err, _req, res, next) => {
 })
 
 async function startServer() {
+  const server = http.createServer(app)
+  const io = new SocketIOServer(server, { cors: { origin: '*' } })
+  
+  io.on('connection', (socket) => {
+    console.log('Client connected:', socket.id)
+    socket.on('disconnect', () => console.log('Client disconnected:', socket.id))
+  })
+
   try {
-    if (!FRONTEND_ONLY) {
-      repository = await createDatabase()
+    if (process.env.FRONTEND_ONLY !== 'true') {
+      repository = await createDatabase(process.env.MONGODB_URI || 'mongodb://localhost:27017', process.env.MONGODB_DB || 'assetsweber')
       dbAvailable = true
-      console.log('✓ Mongo connected')
+      console.log('✓ Database connected')
       console.log('✓ Database selected')
       console.log('✓ Repository initialized')
       console.log('✓ dbAvailable=true')
@@ -710,7 +810,8 @@ async function startServer() {
         createSessionResponse,
         uploadFile,
         TEAM_ACCESS_ID,
-        TEAM_ACCESS_PASSWORD
+        TEAM_ACCESS_PASSWORD,
+        io
       })
     } else {
       console.log('FRONTEND_ONLY set — skipping database connection')
@@ -724,7 +825,27 @@ async function startServer() {
     dbAvailable = false
   }
 
-  const server = app.listen(PORT, () => {
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[Server Error] Port ${PORT} is already in use by an old process.`)
+      console.log(`Auto-clearing old process on port ${PORT}...`)
+      import('child_process').then(({ execSync }) => {
+        try {
+          execSync(`npx -y kill-port ${PORT}`)
+          setTimeout(() => {
+            server.listen(PORT)
+          }, 400)
+        } catch (_killErr) {
+          process.exit(1)
+        }
+      })
+    } else {
+      console.error('[Server Error]:', err)
+      process.exit(1)
+    }
+  })
+
+  server.listen(PORT, () => {
     console.log(`Buildbig backend running on http://localhost:${PORT}`)
     console.log(`MongoDB database: ${process.env.MONGODB_DB || 'assetsweber'}`)
     console.log(`Team login ID: ${TEAM_ACCESS_ID}`)

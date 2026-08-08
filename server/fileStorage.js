@@ -43,40 +43,29 @@ function isCloudinaryConfigured() {
 }
 
 export async function uploadFile(file, folder) {
-  // Check Cloudinary storage
-  if (isCloudinaryConfigured()) {
-    try {
-      const cleanFolder = folder.toLowerCase().replace(/[^a-z0-9/_\-]+/g, '-')
-      const cloudinaryFolder = `assetsweber/${cleanFolder}`
-      const result = await uploadToCloudinaryStream(file.buffer, {
-        folder: cloudinaryFolder,
-        resourceType: 'auto',
-      })
-      return {
-        filename: result.publicId,
-        url: result.url,
-        publicId: result.publicId,
-        mediaType: result.resourceType,
-      }
-    } catch (err) {
-      console.error('[Upload Failed] Cloudinary upload error:', err)
-      throw new Error(`Cloudinary upload failed: ${err.message || 'Unknown error'}`)
-    }
+  // Enforce Cloudinary usage only
+  if (!isCloudinaryConfigured()) {
+    throw new Error('Cloudinary configuration missing. Media uploads are disabled.')
   }
-
-  // Check Firebase storage fallback
-  if (process.env.USE_FIREBASE_STORAGE === 'true') {
-    try {
-      return await uploadToFirebaseStorage(file, folder)
-    } catch (err) {
-      console.warn('[upload] Firebase failed, using local storage:', err.code || err.message)
-      return uploadToLocalStorage(file, folder)
+  try {
+    const cleanFolder = folder.toLowerCase().replace(/[^a-z0-9/_\\-]+/g, '-')
+    const cloudinaryFolder = `assetsweber/${cleanFolder}`
+    const result = await uploadToCloudinaryStream(file.buffer, {
+      folder: cloudinaryFolder,
+      resourceType: 'auto',
+    })
+    return {
+      filename: result.publicId,
+      url: result.url,
+      publicId: result.publicId,
+      mediaType: result.resourceType,
     }
+  } catch (err) {
+    console.error('[Upload Failed] Cloudinary upload error:', err)
+    throw new Error(`Cloudinary upload failed: ${err.message || 'Unknown error'}`)
   }
-
-  // Default local disk storage
-  return uploadToLocalStorage(file, folder)
 }
+
 
 export function uploadsDirectory() {
   return uploadsRoot()

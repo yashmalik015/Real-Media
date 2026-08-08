@@ -7,44 +7,83 @@ import { AnimatedSectionTitle, AnimatedParagraph, AnimatedButtonText } from './C
 
 gsap.registerPlugin(ScrollTrigger);
 
+/** Detect if a portfolio item is a video based on mediaType or URL extension */
+function isVideoItem(item) {
+  if (item.mediaType === 'video') return true;
+  const url = item.mediaUrl || item.fileUrl || '';
+  return /\.(mp4|webm|mov|avi|mkv)/i.test(url);
+}
+
+/** Resolve the media source URL */
+function getMediaSrc(item) {
+  if (item.mediaUrl) return mediaUrl(item.mediaUrl);
+  if (item.fileUrl) return item.fileUrl;
+  return '';
+}
+
+function PortfolioMediaPreview({ item }) {
+  const videoRef = useRef(null);
+  const [videoError, setVideoError] = useState(false);
+  const src = getMediaSrc(item);
+  const isVideo = isVideoItem(item);
+
+  useEffect(() => {
+    if (isVideo && videoRef.current) {
+      videoRef.current.defaultMuted = true;
+      videoRef.current.muted = true;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [isVideo, src]);
+
+  if (isVideo && !videoError && src) {
+    return (
+      <video
+        ref={videoRef}
+        src={src}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }}
+        className="port-img"
+        loop
+        playsInline
+        autoPlay
+        muted
+        preload="metadata"
+        onError={() => setVideoError(true)}
+      />
+    );
+  }
+
+  if (src && !isVideo) {
+    return (
+      <img
+        src={src}
+        alt={item.title}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }}
+        className="port-img"
+        loading="lazy"
+      />
+    );
+  }
+
+  // Fallback placeholder
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'linear-gradient(135deg, rgba(255,45,85,0.15), rgba(12,12,16,0.9))',
+      fontSize: '2.5rem'
+    }}>
+      {isVideo ? '▶' : '🖼'}
+    </div>
+  );
+}
+
 export function FuturisticPortfolio({ portfolio = [] }) {
   const scrollContainerRef = useRef(null);
   const [selectedItem, setSelectedItem] = useState(null);
+  const selectedVideoRef = useRef(null);
+  const [selectedVideoError, setSelectedVideoError] = useState(false);
 
-  const defaultShowcase = [
-    {
-      id: 'p1',
-      title: 'Neon Cyberpunk 2045 VFX Commercial',
-      service: 'Video Editing',
-      description: 'High-octane commercial edit for global tech campaign with 3D compositing & speed ramps.',
-      outcome: '+4.2M Views & 340% Conversion Increase',
-      mediaUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=800&q=80',
-      client: 'Apex Cybernetics',
-      tech: ['After Effects', 'Blender 3D', 'Color Grading']
-    },
-    {
-      id: 'p2',
-      title: 'HyperDrive AI SaaS Platform',
-      service: 'Web Development',
-      description: 'Next-generation web application with WebGL interactive particle canvas and 60 FPS performance.',
-      outcome: '$1.4M ARR Generated within 90 Days',
-      mediaUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80',
-      client: 'Vanguard Systems',
-      tech: ['React 19', 'Three.js', 'Node.js', 'MongoDB']
-    },
-    {
-      id: 'p3',
-      title: 'Aether Vision Mobile App',
-      service: 'App Development',
-      description: 'iOS & Android spatial computing app for realtime 3D model visualization.',
-      outcome: '#1 Trending Product on App Store',
-      mediaUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
-      client: 'OmniTech Global',
-      tech: ['React Native', 'Metal API', 'Firebase']
-    }
-  ];
-
-  const items = portfolio.length > 0 ? portfolio : defaultShowcase;
+  const items = portfolio;
 
   const scroll = (direction) => {
     playClickSound();
@@ -55,6 +94,7 @@ export function FuturisticPortfolio({ portfolio = [] }) {
   };
 
   useEffect(() => {
+    if (items.length === 0) return;
     const ctx = gsap.context(() => {
       gsap.fromTo(
         '.port-card',
@@ -75,6 +115,20 @@ export function FuturisticPortfolio({ portfolio = [] }) {
     return () => ctx.revert();
   }, [items]);
 
+  // Reset modal video error when selecting new item
+  useEffect(() => {
+    setSelectedVideoError(false);
+  }, [selectedItem]);
+
+  // Play modal video when opened
+  useEffect(() => {
+    if (selectedItem && isVideoItem(selectedItem) && selectedVideoRef.current) {
+      selectedVideoRef.current.defaultMuted = true;
+      selectedVideoRef.current.muted = true;
+      selectedVideoRef.current.play().catch(() => {});
+    }
+  }, [selectedItem]);
+
   return (
     <section id="portfolio" style={{ padding: '100px 0', position: 'relative', overflow: 'hidden' }}>
       <div style={{ maxWidth: 1440, margin: '0 auto', padding: '0 32px 32px' }}>
@@ -89,78 +143,72 @@ export function FuturisticPortfolio({ portfolio = [] }) {
           </div>
 
           {/* Slider Controls */}
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button
-              onClick={() => scroll('left')}
-              onMouseEnter={playHoverSound}
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: '50%',
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 45, 85, 0.3)',
-                color: '#ffffff',
-                fontSize: '1.2rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              ←
-            </button>
-            <button
-              onClick={() => scroll('right')}
-              onMouseEnter={playHoverSound}
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: '50%',
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 45, 85, 0.3)',
-                color: '#ffffff',
-                fontSize: '1.2rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              →
-            </button>
-          </div>
+          {items.length > 0 && (
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                onClick={() => scroll('left')}
+                onMouseEnter={playHoverSound}
+                style={{
+                  width: 48, height: 48, borderRadius: '50%',
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 45, 85, 0.3)',
+                  color: '#ffffff', fontSize: '1.2rem', cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                ←
+              </button>
+              <button
+                onClick={() => scroll('right')}
+                onMouseEnter={playHoverSound}
+                style={{
+                  width: 48, height: 48, borderRadius: '50%',
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 45, 85, 0.3)',
+                  color: '#ffffff', fontSize: '1.2rem', cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                →
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* 3D Horizontal Slider */}
-      <div
-        ref={scrollContainerRef}
-        style={{
-          display: 'flex',
-          gap: 32,
-          overflowX: 'auto',
-          scrollSnapType: 'x mandatory',
-          padding: '20px 32px 40px',
-          scrollbarWidth: 'none'
-        }}
-      >
-        {items.map((item, idx) => {
-          const imageSrc = item.mediaUrl ? mediaUrl(item.mediaUrl) : item.mediaUrl || defaultShowcase[0].mediaUrl;
-
-          return (
+      {items.length === 0 ? (
+        /* Empty state */
+        <div style={{ textAlign: 'center', padding: '60px 32px' }}>
+          <div style={{ fontSize: '3rem', marginBottom: 16, opacity: 0.3 }}>⬡</div>
+          <h4 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>
+            NO PROJECTS DEPLOYED YET
+          </h4>
+          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.9rem', maxWidth: 420, margin: '0 auto' }}>
+            Our portfolio is being curated. Check back soon for high-impact production builds.
+          </p>
+        </div>
+      ) : (
+        /* 3D Horizontal Slider */
+        <div
+          ref={scrollContainerRef}
+          style={{
+            display: 'flex', gap: 32, overflowX: 'auto',
+            scrollSnapType: 'x mandatory', padding: '20px 32px 40px',
+            scrollbarWidth: 'none'
+          }}
+        >
+          {items.map((item, idx) => (
             <div
               key={item.id || idx}
-              onClick={() => {
-                playClickSound();
-                setSelectedItem(item);
-              }}
+              onClick={() => { playClickSound(); setSelectedItem(item); }}
               onMouseEnter={playHoverSound}
               style={{
-                flex: '0 0 420px',
-                scrollSnapAlign: 'start',
-                borderRadius: 28,
+                flex: '0 0 420px', scrollSnapAlign: 'start', borderRadius: 28,
                 backgroundColor: 'rgba(14, 14, 20, 0.8)',
                 border: '1px solid rgba(255, 45, 85, 0.3)',
                 backdropFilter: 'blur(24px)',
                 boxShadow: '0 20px 50px rgba(0, 0, 0, 0.8)',
-                overflow: 'hidden',
-                cursor: 'pointer',
+                overflow: 'hidden', cursor: 'pointer',
                 transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
                 perspective: 1000
               }}
@@ -168,161 +216,123 @@ export function FuturisticPortfolio({ portfolio = [] }) {
             >
               {/* Media Container with Cinematic Zoom */}
               <div style={{ position: 'relative', height: 260, overflow: 'hidden' }}>
-                <img
-                  src={imageSrc}
-                  alt={item.title}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)'
-                  }}
-                  className="port-img"
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'linear-gradient(to top, rgba(14, 14, 20, 1) 0%, transparent 60%)'
-                  }}
-                />
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: 16,
-                    left: 16,
-                    padding: '6px 14px',
-                    borderRadius: 999,
-                    backgroundColor: 'rgba(10, 10, 14, 0.85)',
-                    border: '1px solid rgba(255, 45, 85, 0.5)',
-                    color: '#ff2d55',
-                    fontSize: '0.72rem',
-                    fontFamily: 'monospace',
-                    letterSpacing: '0.15em'
-                  }}
-                >
-                  {item.service || 'DEPLOYMENT'}
+                <PortfolioMediaPreview item={item} />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(14, 14, 20, 1) 0%, transparent 60%)', pointerEvents: 'none' }} />
+                {isVideoItem(item) && (
+                  <div style={{
+                    position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                    width: 48, height: 48, borderRadius: '50%', backgroundColor: 'rgba(255,45,85,0.85)',
+                    display: 'grid', placeItems: 'center', color: '#fff', fontSize: '1.2rem',
+                    boxShadow: '0 0 20px rgba(255,45,85,0.6)', pointerEvents: 'none'
+                  }}>▶</div>
+                )}
+                <span style={{
+                  position: 'absolute', top: 16, left: 16, padding: '6px 14px', borderRadius: 999,
+                  backgroundColor: 'rgba(10, 10, 14, 0.85)', border: '1px solid rgba(255, 45, 85, 0.5)',
+                  color: '#ff2d55', fontSize: '0.72rem', fontFamily: 'monospace', letterSpacing: '0.15em'
+                }}>
+                  {item.service || item.category || 'DEPLOYMENT'}
                 </span>
               </div>
 
               {/* Card Meta Details */}
               <div style={{ padding: '24px 28px 28px' }}>
-                <h3
-                  style={{
-                    fontFamily: "'Bebas Neue', sans-serif",
-                    fontSize: '1.8rem',
-                    color: '#ffffff',
-                    margin: '0 0 10px 0',
-                    lineHeight: 1.1
-                  }}
-                >
+                <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.8rem', color: '#ffffff', margin: '0 0 10px 0', lineHeight: 1.1 }}>
                   {item.title}
                 </h3>
-                <AnimatedParagraph
-                  style={{
-                    color: 'rgba(255, 255, 255, 0.6)',
-                    fontSize: '0.88rem',
-                    lineHeight: 1.6,
-                    marginBottom: 20,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
-                  }}
-                >
-                  {item.description}
+                <AnimatedParagraph style={{
+                  color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.88rem', lineHeight: 1.6,
+                  marginBottom: 20, display: '-webkit-box', WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical', overflow: 'hidden'
+                }}>
+                  {item.description || item.desc || ''}
                 </AnimatedParagraph>
 
                 {item.outcome && (
-                  <div
-                    style={{
-                      padding: '10px 14px',
-                      borderRadius: 12,
-                      backgroundColor: 'rgba(255, 45, 85, 0.1)',
-                      border: '1px solid rgba(255, 45, 85, 0.25)',
-                      color: '#ff2d55',
-                      fontSize: '0.78rem',
-                      fontWeight: 600,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8
-                    }}
-                  >
-                    <span>📈</span> {item.outcome}
+                  <div style={{
+                    padding: '10px 14px', borderRadius: 12,
+                    backgroundColor: 'rgba(255, 45, 85, 0.1)', border: '1px solid rgba(255, 45, 85, 0.25)',
+                    color: '#ff2d55', fontSize: '0.78rem', fontWeight: 600,
+                    display: 'flex', alignItems: 'center', gap: 8
+                  }}>
+                    {item.outcome}
                   </div>
                 )}
               </div>
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Project Modal Preview */}
       {selectedItem && (
         <div
+          onClick={() => { playClickSound(); setSelectedItem(null); }}
           style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 99999,
-            backgroundColor: 'rgba(2, 2, 4, 0.88)',
-            backdropFilter: 'blur(32px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 24
+            position: 'fixed', inset: 0, zIndex: 99999,
+            backgroundColor: 'rgba(2, 2, 4, 0.88)', backdropFilter: 'blur(32px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24
           }}
         >
           <div
+            onClick={(e) => e.stopPropagation()}
             style={{
-              position: 'relative',
-              width: '100%',
-              maxWidth: 780,
+              position: 'relative', width: '100%', maxWidth: 780,
               backgroundColor: 'rgba(14, 14, 20, 0.95)',
-              border: '1px solid rgba(255, 45, 85, 0.5)',
-              borderRadius: 32,
-              padding: 40,
-              boxShadow: '0 30px 100px rgba(0,0,0,0.95), 0 0 60px rgba(255, 45, 85, 0.3)',
-              maxHeight: '90vh',
-              overflowY: 'auto'
+              border: '1px solid rgba(255, 45, 85, 0.5)', borderRadius: 32,
+              padding: 40, boxShadow: '0 30px 100px rgba(0,0,0,0.95), 0 0 60px rgba(255, 45, 85, 0.3)',
+              maxHeight: '90vh', overflowY: 'auto'
             }}
           >
             <button
-              onClick={() => {
-                playClickSound();
-                setSelectedItem(null);
-              }}
+              onClick={() => { playClickSound(); setSelectedItem(null); }}
               style={{
-                position: 'absolute',
-                top: 24,
-                right: 24,
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                color: '#ffffff',
-                fontSize: '1.2rem',
-                cursor: 'pointer'
+                position: 'absolute', top: 24, right: 24, width: 40, height: 40,
+                borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff',
+                fontSize: '1.2rem', cursor: 'pointer'
               }}
             >
               ✕
             </button>
 
             <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#ff2d55', letterSpacing: '0.2em' }}>
-              PROJECT INSPECTION // {selectedItem.service}
+              PROJECT INSPECTION // {selectedItem.service || selectedItem.category || 'DEPLOYMENT'}
             </span>
             <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '3rem', color: '#ffffff', margin: '8px 0 20px 0' }}>
               {selectedItem.title}
             </h2>
 
-            <img
-              src={selectedItem.mediaUrl ? mediaUrl(selectedItem.mediaUrl) : selectedItem.mediaUrl || defaultShowcase[0].mediaUrl}
-              alt={selectedItem.title}
-              style={{ width: '100%', height: 320, objectFit: 'cover', borderRadius: 20, marginBottom: 24, border: '1px solid rgba(255,255,255,0.1)' }}
-            />
+            {/* Modal media: video or image */}
+            {isVideoItem(selectedItem) && !selectedVideoError ? (
+              <video
+                ref={selectedVideoRef}
+                src={getMediaSrc(selectedItem)}
+                style={{ width: '100%', height: 320, objectFit: 'cover', borderRadius: 20, marginBottom: 24, border: '1px solid rgba(255,255,255,0.1)' }}
+                controls
+                autoPlay
+                muted
+                playsInline
+                preload="metadata"
+                onError={() => setSelectedVideoError(true)}
+              />
+            ) : getMediaSrc(selectedItem) ? (
+              <img
+                src={getMediaSrc(selectedItem)}
+                alt={selectedItem.title}
+                style={{ width: '100%', height: 320, objectFit: 'cover', borderRadius: 20, marginBottom: 24, border: '1px solid rgba(255,255,255,0.1)' }}
+              />
+            ) : (
+              <div style={{
+                width: '100%', height: 320, borderRadius: 20, marginBottom: 24,
+                background: 'linear-gradient(135deg, rgba(255,45,85,0.15), rgba(12,12,16,0.9))',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: '1px solid rgba(255,255,255,0.1)', fontSize: '3rem', color: 'rgba(255,255,255,0.2)'
+              }}>⬡</div>
+            )}
 
             <AnimatedParagraph style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1rem', lineHeight: 1.75, marginBottom: 24 }}>
-              {selectedItem.description}
+              {selectedItem.description || selectedItem.desc || ''}
             </AnimatedParagraph>
 
             {selectedItem.outcome && (

@@ -27,9 +27,35 @@ async function request(path, options = {}) {
 
   let res
   try {
-    res = await fetch(`${API_BASE}${path}`, { ...options, headers, body })
+    res = await fetch(`${API_BASE}${path}`, { ...options, headers, body, credentials: 'include' })
   } catch {
     throw new Error('Cannot reach the server. Start the backend with: npm run dev:full')
+  }
+
+  // Auto-refresh on 401 (access token expired)
+  if (res.status === 401 && getToken() && !path.includes('/auth/refresh')) {
+    try {
+      const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json()
+        const newToken = refreshData.accessToken || refreshData.token
+        if (newToken) {
+          setToken(newToken)
+          // Retry original request with new token
+          headers.Authorization = `Bearer ${newToken}`
+          res = await fetch(`${API_BASE}${path}`, { ...options, headers, body, credentials: 'include' })
+        }
+      } else {
+        // Refresh failed — clear session
+        setToken(null)
+      }
+    } catch {
+      setToken(null)
+    }
   }
 
   const data = await res.json().catch(() => ({}))
@@ -37,7 +63,6 @@ async function request(path, options = {}) {
     if (res.status === 502 || res.status === 503) {
       throw new Error(data.message || 'Backend server is not running. Start it with: npm run dev:full')
     }
-    // Always surface the real backend message
     const msg = data.message || data.error || `Server error ${res.status}`
     const err = new Error(msg)
     err.status = res.status
