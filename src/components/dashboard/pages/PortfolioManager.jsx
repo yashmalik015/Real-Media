@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Search, Filter, Eye, Edit3, Trash2, ExternalLink, Image, Video, Sparkles, ChevronDown, ChevronUp, UploadCloud } from 'lucide-react';
 import { GlassModal } from '../ui/GlassModal.jsx';
 import { playClickSound, playHoverSound } from '../../../utils/audio.js';
-import { api, mediaUrl } from '../../../api.js';
+import { api, mediaUrl, optimizedMediaUrl } from '../../../api.js';
 
 export function PortfolioManager({ portfolio = [], onLoad, showToast, onPortfolioChanged }) {
   const [search, setSearch] = useState('');
@@ -455,16 +455,18 @@ export function PortfolioManager({ portfolio = [], onLoad, showToast, onPortfoli
               <div style={{ position: 'relative', height: 180, overflow: 'hidden' }}>
                 {item.mediaType === 'video' || /\.(mp4|webm|mov)/i.test(item.mediaUrl || item.videoUrl || '') ? (
                   <video
-                    src={mediaUrl(item.mediaUrl || item.videoUrl || item.thumbnail)}
+                    src={optimizedMediaUrl(item.mediaUrl || item.videoUrl || item.thumbnail, { width: 720 })}
+                    poster={item.thumbnail ? optimizedMediaUrl(item.thumbnail, { width: 720 }) : undefined}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     muted
                     loop
                     autoPlay
                     playsInline
+                    preload="metadata"
                   />
                 ) : (
                   <img
-                    src={mediaUrl(item.mediaUrl || item.thumbnail || item.videoUrl)}
+                    src={optimizedMediaUrl(item.mediaUrl || item.thumbnail || item.videoUrl, { width: 720 })}
                     alt={item.title}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />

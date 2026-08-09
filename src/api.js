@@ -180,3 +180,21 @@ export function mediaUrl(url) {
   if (cleanUrl.startsWith('/uploads')) return `${API_BASE}${cleanUrl}`
   return `${API_BASE}${cleanUrl}`
 }
+
+/**
+ * Generates an optimized media URL for Cloudinary assets (automatically applies compression q_auto, f_auto, and resolution scaling),
+ * or returns standard mediaUrl for local storage assets.
+ */
+export function optimizedMediaUrl(url, { width = 1280, quality = 'auto' } = {}) {
+  if (!url) return ''
+  const fullUrl = mediaUrl(url)
+  if (fullUrl.includes('res.cloudinary.com') && fullUrl.includes('/upload/')) {
+    // Prevent duplicating transformations if already transformed
+    if (fullUrl.includes('/q_auto') || fullUrl.includes('/f_auto')) {
+      return fullUrl
+    }
+    const transformStr = width ? `f_auto,q_${quality},w_${width},c_limit` : `f_auto,q_${quality}`
+    return fullUrl.replace('/upload/', `/upload/${transformStr}/`)
+  }
+  return fullUrl
+}

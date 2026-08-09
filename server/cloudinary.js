@@ -45,8 +45,12 @@ export function uploadToCloudinaryStream(buffer, { folder = 'assetsweber/uploads
           console.error('[Cloudinary Upload Error]:', error)
           return reject(error)
         }
+        let url = result.secure_url
+        if (result.resource_type === 'video' && url.includes('/upload/')) {
+          url = url.replace('/upload/', '/upload/f_auto,q_auto,w_1280,c_limit/')
+        }
         resolve({
-          url: result.secure_url,
+          url,
           publicId: result.public_id,
           resourceType: result.resource_type,
         })

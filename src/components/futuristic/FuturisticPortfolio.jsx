@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { playClickSound, playHoverSound } from '../../utils/audio.js';
-import { mediaUrl } from '../../api.js';
+import { mediaUrl, optimizedMediaUrl } from '../../api.js';
 import { AnimatedSectionTitle, AnimatedParagraph, AnimatedButtonText } from './CinematicTypography.jsx';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -14,20 +14,20 @@ function isVideoItem(item) {
   return /\.(mp4|webm|mov|avi|mkv)/i.test(url);
 }
 
-/** Resolve the media source URL */
-function getMediaSrc(item) {
-  if (item.mediaUrl) return mediaUrl(item.mediaUrl);
-  if (item.videoUrl) return mediaUrl(item.videoUrl);
-  if (item.thumbnail) return mediaUrl(item.thumbnail);
-  if (item.fileUrl) return item.fileUrl;
-  return '';
+/** Resolve the media source URL with resolution & quality optimization */
+function getMediaSrc(item, options = {}) {
+  const rawUrl = item.mediaUrl || item.videoUrl || item.thumbnail || item.fileUrl || '';
+  if (!rawUrl) return '';
+  return optimizedMediaUrl(rawUrl, options);
 }
 
 function PortfolioMediaPreview({ item }) {
   const videoRef = useRef(null);
   const [videoError, setVideoError] = useState(false);
-  const src = getMediaSrc(item);
+  // Request lightweight 720p compressed preview URL for card thumbnails
+  const src = getMediaSrc(item, { width: 720 });
   const isVideo = isVideoItem(item);
+  const poster = item.thumbnail ? optimizedMediaUrl(item.thumbnail, { width: 720 }) : undefined;
 
   useEffect(() => {
     if (isVideo && videoRef.current) {
@@ -42,6 +42,7 @@ function PortfolioMediaPreview({ item }) {
       <video
         ref={videoRef}
         src={src}
+        poster={poster}
         style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }}
         className="port-img"
         loop
@@ -478,7 +479,7 @@ export function FuturisticPortfolio({ portfolio = [], isStandalone = false, onNa
               }}>
                 <video
                   ref={selectedVideoRef}
-                  src={getMediaSrc(selectedItem)}
+                  src={getMediaSrc(selectedItem, { width: 1280 })}
                   onLoadedMetadata={(e) => {
                     if (e.target.videoHeight > e.target.videoWidth) {
                       setIsVideoVertical(true);
@@ -519,7 +520,7 @@ export function FuturisticPortfolio({ portfolio = [], isStandalone = false, onNa
                 overflow: 'hidden'
               }}>
                 <img
-                  src={getMediaSrc(selectedItem)}
+                  src={getMediaSrc(selectedItem, { width: 1280 })}
                   alt={selectedItem.title}
                   onLoad={(e) => {
                     if (e.target.naturalHeight > e.target.naturalWidth) {
