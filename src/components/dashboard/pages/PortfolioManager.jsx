@@ -612,7 +612,19 @@ export function PortfolioManager({ portfolio = [], onLoad, showToast, onPortfoli
       <GlassModal isOpen={Boolean(drawerItem)} onClose={() => setDrawerItem(null)} title={drawerItem?.title || 'PROJECT PREVIEW'}>
         {drawerItem && (
           <div>
-            <img src={mediaUrl(drawerItem.mediaUrl || drawerItem.thumbnail)} alt="" style={{ width: '100%', height: 260, objectFit: 'cover', borderRadius: 16, marginBottom: 20 }} />
+            {drawerItem.mediaType === 'video' || /\.(mp4|webm|mov)/i.test(drawerItem.mediaUrl || drawerItem.videoUrl || '') ? (
+              <div style={{ display: 'flex', justifyContent: 'center', backgroundColor: '#000', borderRadius: 16, marginBottom: 20, padding: 12 }}>
+                <video
+                  src={mediaUrl(drawerItem.mediaUrl || drawerItem.videoUrl || drawerItem.thumbnail)}
+                  controls
+                  autoPlay
+                  muted
+                  style={{ width: '100%', maxHeight: 480, objectFit: 'contain', borderRadius: 12 }}
+                />
+              </div>
+            ) : (
+              <img src={mediaUrl(drawerItem.mediaUrl || drawerItem.thumbnail || drawerItem.videoUrl)} alt="" style={{ width: '100%', maxHeight: 360, objectFit: 'contain', borderRadius: 16, marginBottom: 20 }} />
+            )}
             <p style={{ color: 'rgba(255,255,255,0.8)', lineHeight: 1.6 }}>{drawerItem.description}</p>
             <div style={{ marginTop: 16, fontSize: '0.85rem', color: '#ff2d55', fontFamily: 'monospace' }}>Category: {drawerItem.service} • Client: {drawerItem.client || 'N/A'}</div>
           </div>

@@ -84,6 +84,7 @@ export function FuturisticPortfolio({ portfolio = [] }) {
   const [selectedItem, setSelectedItem] = useState(null);
   const selectedVideoRef = useRef(null);
   const [selectedVideoError, setSelectedVideoError] = useState(false);
+  const [isVideoVertical, setIsVideoVertical] = useState(false);
 
   const items = portfolio;
 
@@ -117,9 +118,10 @@ export function FuturisticPortfolio({ portfolio = [] }) {
     return () => ctx.revert();
   }, [items]);
 
-  // Reset modal video error when selecting new item
+  // Reset modal video error and vertical state when selecting new item
   useEffect(() => {
     setSelectedVideoError(false);
+    setIsVideoVertical(false);
   }, [selectedItem]);
 
   // Play modal video when opened
@@ -307,23 +309,80 @@ export function FuturisticPortfolio({ portfolio = [] }) {
 
             {/* Modal media: video or image */}
             {isVideoItem(selectedItem) && !selectedVideoError ? (
-              <video
-                ref={selectedVideoRef}
-                src={getMediaSrc(selectedItem)}
-                style={{ width: '100%', height: 320, objectFit: 'cover', borderRadius: 20, marginBottom: 24, border: '1px solid rgba(255,255,255,0.1)' }}
-                controls
-                autoPlay
-                muted
-                playsInline
-                preload="metadata"
-                onError={() => setSelectedVideoError(true)}
-              />
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                width: '100%',
+                marginBottom: 24,
+                backgroundColor: 'rgba(0, 0, 0, 0.65)',
+                borderRadius: 24,
+                padding: isVideoVertical ? '20px 0' : '0',
+                border: '1px solid rgba(255, 45, 85, 0.3)',
+                overflow: 'hidden',
+                boxShadow: 'inset 0 0 30px rgba(0,0,0,0.8)'
+              }}>
+                <video
+                  ref={selectedVideoRef}
+                  src={getMediaSrc(selectedItem)}
+                  onLoadedMetadata={(e) => {
+                    if (e.target.videoHeight > e.target.videoWidth) {
+                      setIsVideoVertical(true);
+                    } else {
+                      setIsVideoVertical(false);
+                    }
+                  }}
+                  style={{
+                    width: isVideoVertical ? 'auto' : '100%',
+                    maxWidth: isVideoVertical ? '320px' : '100%',
+                    maxHeight: isVideoVertical ? '65vh' : '55vh',
+                    height: isVideoVertical ? '520px' : 'auto',
+                    aspectRatio: isVideoVertical ? '9/16' : 'auto',
+                    objectFit: 'contain',
+                    borderRadius: isVideoVertical ? 20 : 16,
+                    boxShadow: isVideoVertical ? '0 15px 40px rgba(0,0,0,0.9), 0 0 25px rgba(255,45,85,0.3)' : 'none',
+                    border: isVideoVertical ? '1px solid rgba(255,45,85,0.4)' : 'none',
+                  }}
+                  controls
+                  autoPlay
+                  muted
+                  playsInline
+                  preload="metadata"
+                  onError={() => setSelectedVideoError(true)}
+                />
+              </div>
             ) : getMediaSrc(selectedItem) ? (
-              <img
-                src={getMediaSrc(selectedItem)}
-                alt={selectedItem.title}
-                style={{ width: '100%', height: 320, objectFit: 'cover', borderRadius: 20, marginBottom: 24, border: '1px solid rgba(255,255,255,0.1)' }}
-              />
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                width: '100%',
+                marginBottom: 24,
+                backgroundColor: 'rgba(0, 0, 0, 0.65)',
+                borderRadius: 24,
+                padding: isVideoVertical ? '20px 0' : '0',
+                border: '1px solid rgba(255, 45, 85, 0.3)',
+                overflow: 'hidden'
+              }}>
+                <img
+                  src={getMediaSrc(selectedItem)}
+                  alt={selectedItem.title}
+                  onLoad={(e) => {
+                    if (e.target.naturalHeight > e.target.naturalWidth) {
+                      setIsVideoVertical(true);
+                    }
+                  }}
+                  style={{
+                    width: isVideoVertical ? 'auto' : '100%',
+                    maxWidth: isVideoVertical ? '360px' : '100%',
+                    maxHeight: isVideoVertical ? '65vh' : '55vh',
+                    height: isVideoVertical ? '520px' : 'auto',
+                    aspectRatio: isVideoVertical ? '9/16' : 'auto',
+                    objectFit: 'contain',
+                    borderRadius: isVideoVertical ? 20 : 16,
+                  }}
+                />
+              </div>
             ) : (
               <div style={{
                 width: '100%', height: 320, borderRadius: 20, marginBottom: 24,
