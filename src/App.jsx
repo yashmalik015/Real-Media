@@ -1726,7 +1726,7 @@ export default function App() {
           </div>
         ) : page === "portfolio" ? (
           <div className="page" style={{ paddingTop: 100 }}>
-            <FuturisticPortfolio portfolio={portfolio} />
+            <FuturisticPortfolio portfolio={portfolio} isStandalone={true} onNavigate={requestPage} />
             <FuturisticFooter onNavigate={requestPage} />
           </div>
         ) : page === "testimonials" ? (
@@ -1763,7 +1763,7 @@ export default function App() {
             <HolographicServices onPickService={openService} />
 
             {/* 3. 3D Horizontal Showcase Portfolio */}
-            <FuturisticPortfolio portfolio={portfolio} />
+            <FuturisticPortfolio portfolio={portfolio} isStandalone={false} onNavigate={requestPage} />
 
             {/* 4. Netflix + Apple TV Style Learning HUD */}
             <LearningPlatformHUD courses={homeCourses} onOpenLearning={() => requestPage("learning")} />

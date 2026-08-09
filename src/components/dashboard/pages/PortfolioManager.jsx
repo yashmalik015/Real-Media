@@ -325,7 +325,7 @@ export function PortfolioManager({ portfolio = [], onLoad, showToast, onPortfoli
                 style={{ width: 18, height: 18, accentColor: '#ff2d55', cursor: 'pointer' }}
               />
               <label htmlFor="inline-feat" style={{ color: '#fff', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 600 }}>
-                Mark as Featured Project on Website Home & Portfolio Page
+                🌟 Feature this project on Website Home Page Showcase (Selected for Landing Page)
               </label>
             </div>
 
@@ -598,7 +598,7 @@ export function PortfolioManager({ portfolio = [], onLoad, showToast, onPortfoli
 
           <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
             <input type="checkbox" id="feat" checked={form.featured} onChange={(e) => setForm({ ...form, featured: e.target.checked })} style={{ accentColor: '#ff2d55', cursor: 'pointer' }} />
-            <label htmlFor="feat" style={{ color: '#fff', fontSize: '0.9rem', cursor: 'pointer' }}>Mark as Featured Project on Landing Page</label>
+            <label htmlFor="feat" style={{ color: '#fff', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 600 }}>🌟 Feature this project on Website Home Page Showcase (Selected for Landing Page)</label>
           </div>
 
           <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 20 }}>

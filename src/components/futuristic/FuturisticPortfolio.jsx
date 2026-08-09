@@ -79,14 +79,31 @@ function PortfolioMediaPreview({ item }) {
   );
 }
 
-export function FuturisticPortfolio({ portfolio = [] }) {
+export function FuturisticPortfolio({ portfolio = [], isStandalone = false, onNavigate }) {
   const scrollContainerRef = useRef(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const selectedVideoRef = useRef(null);
   const [selectedVideoError, setSelectedVideoError] = useState(false);
   const [isVideoVertical, setIsVideoVertical] = useState(false);
 
-  const items = portfolio;
+  // Standalone page filters
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [search, setSearch] = useState('');
+
+  const categories = ['All', 'Video Editing', 'Web Development', 'App Development', 'Digital Marketing', 'Graphic Design', 'UI/UX Design', 'VFX'];
+
+  // Home Page logic (isStandalone === false): Only display items marked as featured (or fallback to top 4 recent)
+  const featuredItems = portfolio.filter((item) => Boolean(item.featured));
+  const homeDisplayItems = featuredItems.length > 0 ? featuredItems.slice(0, 4) : portfolio.slice(0, 4);
+
+  // Dedicated Portfolio Page logic (isStandalone === true): Display EVERY portfolio project uploaded with category/search filters
+  const fullFilteredItems = portfolio.filter((item) => {
+    const matchesSearch = !search || item.title?.toLowerCase().includes(search.toLowerCase()) || item.client?.toLowerCase().includes(search.toLowerCase()) || item.description?.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = categoryFilter === 'All' || item.service === categoryFilter || item.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
+  const items = isStandalone ? fullFilteredItems : homeDisplayItems;
 
   const scroll = (direction) => {
     playClickSound();
@@ -136,48 +153,120 @@ export function FuturisticPortfolio({ portfolio = [] }) {
   return (
     <section id="portfolio" style={{ padding: '100px 0', position: 'relative', overflow: 'hidden' }}>
       <div style={{ maxWidth: 1440, margin: '0 auto', padding: '0 32px 32px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-end', gap: 20 }}>
           <div>
             <AnimatedSectionTitle
-              label="FUTURISTIC PROJECT SHOWCASE"
-              title="CRAFTSMANSHIP & RECENT DEPLOYMENTS"
-              sub="A selection of high-impact production builds delivered with extreme precision."
+              label={isStandalone ? "COMPLETE WORK ARCHIVE" : "FUTURISTIC PROJECT SHOWCASE"}
+              title={isStandalone ? "OUR FULL PORTFOLIO & RECENT PROJECTS" : "CRAFTSMANSHIP & RECENT DEPLOYMENTS"}
+              sub={isStandalone ? `Explore all ${portfolio.length} video edits, web apps, VFX reels, and brand campaigns delivered by Assets Weber.` : "A curated selection of high-impact production builds featured on our home page."}
               animationStyle="portfolio"
             />
           </div>
 
-          {/* Slider Controls */}
-          {items.length > 0 && (
-            <div style={{ display: 'flex', gap: 12 }}>
+          {/* Action buttons or slider controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            {!isStandalone && onNavigate && (
               <button
-                onClick={() => scroll('left')}
+                onClick={() => { playClickSound(); onNavigate('portfolio'); }}
                 onMouseEnter={playHoverSound}
                 style={{
-                  width: 48, height: 48, borderRadius: '50%',
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 45, 85, 0.3)',
-                  color: '#ffffff', fontSize: '1.2rem', cursor: 'pointer',
+                  padding: '12px 24px',
+                  borderRadius: 14,
+                  backgroundColor: 'rgba(255, 45, 85, 0.15)',
+                  border: '1px solid #ff2d55',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 0 20px rgba(255, 45, 85, 0.3)',
                   transition: 'all 0.2s ease'
                 }}
               >
-                ←
+                View Full Portfolio ({portfolio.length}) →
               </button>
-              <button
-                onClick={() => scroll('right')}
-                onMouseEnter={playHoverSound}
-                style={{
-                  width: 48, height: 48, borderRadius: '50%',
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 45, 85, 0.3)',
-                  color: '#ffffff', fontSize: '1.2rem', cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                →
-              </button>
-            </div>
-          )}
+            )}
+
+            {!isStandalone && items.length > 0 && (
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button
+                  onClick={() => scroll('left')}
+                  onMouseEnter={playHoverSound}
+                  style={{
+                    width: 48, height: 48, borderRadius: '50%',
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 45, 85, 0.3)',
+                    color: '#ffffff', fontSize: '1.2rem', cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  ←
+                </button>
+                <button
+                  onClick={() => scroll('right')}
+                  onMouseEnter={playHoverSound}
+                  style={{
+                    width: 48, height: 48, borderRadius: '50%',
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 45, 85, 0.3)',
+                    color: '#ffffff', fontSize: '1.2rem', cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  →
+                </button>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Standalone Filter & Search Bar */}
+        {isStandalone && (
+          <div style={{ marginTop: 28, display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(14, 14, 20, 0.8)', padding: 20, borderRadius: 20, border: '1px solid rgba(255, 45, 85, 0.25)' }}>
+            {/* Category Pills */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => { playClickSound(); setCategoryFilter(cat); }}
+                  onMouseEnter={playHoverSound}
+                  style={{
+                    padding: '8px 18px',
+                    borderRadius: 999,
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    border: categoryFilter === cat ? '1px solid #ff2d55' : '1px solid rgba(255, 255, 255, 0.1)',
+                    backgroundColor: categoryFilter === cat ? '#ff2d55' : 'rgba(255, 255, 255, 0.05)',
+                    color: '#ffffff',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            {/* Search Box */}
+            <div style={{ minWidth: 260, flex: 1, maxWidth: 360 }}>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search projects by title or client..."
+                style={{
+                  width: '100%',
+                  padding: '10px 16px',
+                  borderRadius: 12,
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  border: '1px solid rgba(255, 45, 85, 0.3)',
+                  color: '#ffffff',
+                  fontSize: '0.88rem',
+                  outline: 'none'
+                }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {items.length === 0 ? (
@@ -185,14 +274,79 @@ export function FuturisticPortfolio({ portfolio = [] }) {
         <div style={{ textAlign: 'center', padding: '60px 32px' }}>
           <div style={{ fontSize: '3rem', marginBottom: 16, opacity: 0.3 }}>⬡</div>
           <h4 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>
-            NO PROJECTS DEPLOYED YET
+            NO PROJECTS FOUND
           </h4>
           <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.9rem', maxWidth: 420, margin: '0 auto' }}>
-            Our portfolio is being curated. Check back soon for high-impact production builds.
+            {isStandalone ? "No projects match your selected filter or search query." : "No projects featured yet. Mark projects as featured in the Team Dashboard to display them here."}
           </p>
         </div>
+      ) : isStandalone ? (
+        /* Standalone Page Responsive Grid */
+        <div style={{ maxWidth: 1440, margin: '0 auto', padding: '0 32px 40px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 32 }}>
+          {items.map((item, idx) => (
+            <div
+              key={item.id || idx}
+              onClick={() => { playClickSound(); setSelectedItem(item); }}
+              onMouseEnter={playHoverSound}
+              style={{
+                borderRadius: 28,
+                backgroundColor: 'rgba(14, 14, 20, 0.8)',
+                border: '1px solid rgba(255, 45, 85, 0.3)',
+                backdropFilter: 'blur(24px)',
+                boxShadow: '0 20px 50px rgba(0, 0, 0, 0.8)',
+                overflow: 'hidden', cursor: 'pointer',
+                transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
+              }}
+              className="port-card"
+            >
+              <div style={{ position: 'relative', height: 240, overflow: 'hidden' }}>
+                <PortfolioMediaPreview item={item} />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(14, 14, 20, 1) 0%, transparent 60%)', pointerEvents: 'none' }} />
+                {isVideoItem(item) && (
+                  <div style={{
+                    position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                    width: 48, height: 48, borderRadius: '50%', backgroundColor: 'rgba(255,45,85,0.85)',
+                    display: 'grid', placeItems: 'center', color: '#fff', fontSize: '1.2rem',
+                    boxShadow: '0 0 20px rgba(255,45,85,0.6)', pointerEvents: 'none'
+                  }}>▶</div>
+                )}
+                <span style={{
+                  position: 'absolute', top: 16, left: 16, padding: '6px 14px', borderRadius: 999,
+                  backgroundColor: 'rgba(10, 10, 14, 0.85)', border: '1px solid rgba(255, 45, 85, 0.5)',
+                  color: '#ff2d55', fontSize: '0.72rem', fontFamily: 'monospace', letterSpacing: '0.15em'
+                }}>
+                  {item.service || item.category || 'DEPLOYMENT'}
+                </span>
+              </div>
+
+              <div style={{ padding: '24px 28px 28px' }}>
+                <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.8rem', color: '#ffffff', margin: '0 0 10px 0', lineHeight: 1.1 }}>
+                  {item.title}
+                </h3>
+                <AnimatedParagraph style={{
+                  color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.88rem', lineHeight: 1.6,
+                  marginBottom: 20, display: '-webkit-box', WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical', overflow: 'hidden'
+                }}>
+                  {item.description || item.desc || ''}
+                </AnimatedParagraph>
+
+                {item.outcome && (
+                  <div style={{
+                    padding: '10px 14px', borderRadius: 12,
+                    backgroundColor: 'rgba(255, 45, 85, 0.1)', border: '1px solid rgba(255, 45, 85, 0.25)',
+                    color: '#ff2d55', fontSize: '0.78rem', fontWeight: 600,
+                    display: 'flex', alignItems: 'center', gap: 8
+                  }}>
+                    {item.outcome}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
-        /* 3D Horizontal Slider */
+        /* Home Page 3D Horizontal Slider */
         <div
           ref={scrollContainerRef}
           style={{
