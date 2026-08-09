@@ -3,6 +3,21 @@ import { courseToDb } from './database.js'
 import { verifyIdToken } from './firebaseAdmin.js'
 import { deleteFromCloudinary } from './cloudinary.js'
 
+function parseJsonSafely(val, fallback = []) {
+  if (!val) return fallback
+  if (Array.isArray(val)) return val
+  if (typeof val === 'object') return val
+  try {
+    const parsed = JSON.parse(val)
+    return Array.isArray(parsed) ? parsed : [parsed]
+  } catch {
+    if (typeof val === 'string') {
+      return val.split(',').map((s) => s.trim()).filter(Boolean)
+    }
+    return fallback
+  }
+}
+
 export function registerV2Routes(app, { repository, v2, upload, requireAuth, hashPassword, verifyPassword, createSessionResponse: createAuthResponse, uploadFile, TEAM_ACCESS_ID, TEAM_ACCESS_PASSWORD }) {
 
   // ── Learner auth ──
@@ -625,9 +640,9 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
       client: body.client ?? existing.client,
       outcome: body.outcome ?? existing.outcome,
       category: body.category ?? existing.category ?? '',
-      technologies: body.technologies ? JSON.parse(body.technologies) : existing.technologies,
+      technologies: parseJsonSafely(body.technologies, existing.technologies),
       completionDate: body.completionDate ?? existing.completionDate ?? '',
-      tags: body.tags ? JSON.parse(body.tags) : existing.tags,
+      tags: parseJsonSafely(body.tags, existing.tags),
       cta: body.cta ?? existing.cta ?? '',
       featured: body.featured === 'true' || body.featured === true,
       sortOrder: body.sortOrder !== undefined ? Number(body.sortOrder) : existing.sortOrder,
@@ -651,6 +666,10 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
     if (req.files?.video?.[0]) {
       const up = await uploadFile(req.files.video[0], 'portfolio/videos')
       updates.videoUrl = up.url
+      if (!updates.mediaUrl) {
+        updates.mediaUrl = up.url
+        updates.mediaType = 'video'
+      }
     }
     if (req.files?.gallery) {
       const gallery = await Promise.all(
@@ -697,6 +716,11 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
       ? await Promise.all(req.files.gallery.map((f) => uploadFile(f, 'portfolio/gallery')))
       : []
 
+    const finalMediaUrl = uploaded?.url || videoUp?.url || thumbnailUp?.url || ''
+    const finalVideoUrl = videoUp?.url || (uploaded?.mediaType === 'video' ? uploaded?.url : '')
+    const finalThumbnail = thumbnailUp?.url || (uploaded?.mediaType === 'image' ? uploaded?.url : '')
+    const finalMediaType = uploaded?.mediaType || (videoUp ? 'video' : (mediaFile?.mimetype?.startsWith('video/') ? 'video' : 'image'))
+
     const portfolioItem = await repository.addPortfolioFull({
       id: id('portfolio'),
       title: title.trim(),
@@ -704,19 +728,19 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
       description: description.trim(),
       client: client.trim(),
       outcome: outcome.trim(),
-      category: req.body.category?.trim() || '',
-      mediaUrl: uploaded?.url || '',
-      mediaPublicId: uploaded?.publicId || '',
-      mediaType: uploaded?.mediaType || (mediaFile?.mimetype.startsWith('video/') ? 'video' : 'image'),
-      mediaName: mediaFile?.originalname || '',
-      thumbnail: thumbnailUp?.url || '',
-      videoUrl: videoUp?.url || '',
+      category: req.body.category?.trim() || service.trim(),
+      mediaUrl: finalMediaUrl,
+      mediaPublicId: uploaded?.publicId || videoUp?.publicId || '',
+      mediaType: finalMediaType,
+      mediaName: mediaFile?.originalname || videoFile?.originalname || '',
+      thumbnail: finalThumbnail,
+      videoUrl: finalVideoUrl,
       galleryImages: galleryUp.map((g) => g.url),
-      technologies: req.body.technologies ? JSON.parse(req.body.technologies) : [],
+      technologies: parseJsonSafely(req.body.technologies, []),
       completionDate: req.body.completionDate || '',
-      tags: req.body.tags ? JSON.parse(req.body.tags) : [],
+      tags: parseJsonSafely(req.body.tags, []),
       cta: req.body.cta || '',
-      featured: req.body.featured === 'true',
+      featured: req.body.featured === 'true' || req.body.featured === true,
       sortOrder: Date.now(),
       createdBy: req.user.id,
       createdAt: timestamp,

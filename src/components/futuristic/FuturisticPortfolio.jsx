@@ -10,13 +10,15 @@ gsap.registerPlugin(ScrollTrigger);
 /** Detect if a portfolio item is a video based on mediaType or URL extension */
 function isVideoItem(item) {
   if (item.mediaType === 'video') return true;
-  const url = item.mediaUrl || item.fileUrl || '';
+  const url = item.mediaUrl || item.videoUrl || item.fileUrl || '';
   return /\.(mp4|webm|mov|avi|mkv)/i.test(url);
 }
 
 /** Resolve the media source URL */
 function getMediaSrc(item) {
   if (item.mediaUrl) return mediaUrl(item.mediaUrl);
+  if (item.videoUrl) return mediaUrl(item.videoUrl);
+  if (item.thumbnail) return mediaUrl(item.thumbnail);
   if (item.fileUrl) return item.fileUrl;
   return '';
 }

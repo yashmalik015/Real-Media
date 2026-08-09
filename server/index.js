@@ -397,7 +397,11 @@ app.get('/api/portfolio/public', async (_req, res) => {
   res.json({ portfolio: await repository.portfolio() })
 })
 
-app.post('/api/portfolio', requireAuth, upload.single('media'), async (req, res) => {
+app.post('/api/portfolio', requireAuth, upload.fields([
+  { name: 'media', maxCount: 1 },
+  { name: 'video', maxCount: 1 },
+  { name: 'thumbnail', maxCount: 1 },
+]), async (req, res) => {
   if (req.user.role !== 'team') {
     return res.status(403).json({ message: 'Only team members can add portfolio work.' })
   }
@@ -407,8 +411,9 @@ app.post('/api/portfolio', requireAuth, upload.single('media'), async (req, res)
     return res.status(400).json({ message: 'Project name, service, and description are required.' })
   }
 
+  const file = req.file || req.files?.media?.[0] || req.files?.video?.[0]
   const timestamp = now()
-  const uploaded = req.file ? await uploadFile(req.file, `portfolio/${service.trim() || 'general'}`) : null
+  const uploaded = file ? await uploadFile(file, `portfolio/${service.trim() || 'general'}`) : null
   const portfolioItem = await repository.createPortfolio({
     id: id('portfolio'),
     title: title.trim(),
@@ -418,8 +423,8 @@ app.post('/api/portfolio', requireAuth, upload.single('media'), async (req, res)
     outcome: outcome.trim(),
     mediaUrl: uploaded?.url || '',
     mediaPublicId: uploaded?.publicId || '',
-    mediaType: uploaded?.mediaType || (req.file?.mimetype.startsWith('video/') ? 'video' : 'image'),
-    mediaName: req.file?.originalname || '',
+    mediaType: uploaded?.mediaType || (file?.mimetype?.startsWith('video/') ? 'video' : 'image'),
+    mediaName: file?.originalname || '',
     createdBy: req.user.id,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -778,12 +783,12 @@ app.use((err, _req, res, next) => {
   void next
   console.error('[Unhandled Express Error]:', err.message || err)
   if (err instanceof multer.MulterError) {
-    return res.status(400).json({ message: err.message })
+    return res.status(400).json({ message: `Upload error: ${err.message}`, error: err.message })
   }
   const status = err.status || err.statusCode || 500
   res.status(status).json({
     message: err.message || 'Internal server error.',
-    error: process.env.NODE_ENV === 'production' ? undefined : err.stack
+    error: err.message || 'Server error',
   })
 })
 

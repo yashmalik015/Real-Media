@@ -43,26 +43,33 @@ function isCloudinaryConfigured() {
 }
 
 export async function uploadFile(file, folder) {
-  // Enforce Cloudinary usage only
-  if (!isCloudinaryConfigured()) {
-    throw new Error('Cloudinary configuration missing. Media uploads are disabled.')
-  }
-  try {
-    const cleanFolder = folder.toLowerCase().replace(/[^a-z0-9/_\\-]+/g, '-')
-    const cloudinaryFolder = `assetsweber/${cleanFolder}`
-    const result = await uploadToCloudinaryStream(file.buffer, {
-      folder: cloudinaryFolder,
-      resourceType: 'auto',
-    })
-    return {
-      filename: result.publicId,
-      url: result.url,
-      publicId: result.publicId,
-      mediaType: result.resourceType,
+  const isVideo = file.mimetype?.startsWith('video/')
+  const defaultResourceType = isVideo ? 'video' : 'auto'
+
+  if (isCloudinaryConfigured()) {
+    try {
+      const cleanFolder = folder.toLowerCase().replace(/[^a-z0-9/_\\-]+/g, '-')
+      const cloudinaryFolder = `assetsweber/${cleanFolder}`
+      const result = await uploadToCloudinaryStream(file.buffer, {
+        folder: cloudinaryFolder,
+        resourceType: defaultResourceType,
+      })
+      return {
+        filename: result.publicId,
+        url: result.url,
+        publicId: result.publicId,
+        mediaType: result.resourceType || (isVideo ? 'video' : 'image'),
+      }
+    } catch (err) {
+      console.warn('[Cloudinary Fallback] Upload to Cloudinary failed, falling back to local storage:', err.message || err)
     }
-  } catch (err) {
-    console.error('[Upload Failed] Cloudinary upload error:', err)
-    throw new Error(`Cloudinary upload failed: ${err.message || 'Unknown error'}`)
+  }
+  
+  // Fallback to local disk storage if Cloudinary is not configured or fails
+  const localRes = await uploadToLocalStorage(file, folder)
+  return {
+    ...localRes,
+    mediaType: isVideo ? 'video' : 'image',
   }
 }
 

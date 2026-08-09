@@ -453,11 +453,22 @@ export function PortfolioManager({ portfolio = [], onLoad, showToast, onPortfoli
           >
             <div>
               <div style={{ position: 'relative', height: 180, overflow: 'hidden' }}>
-                <img
-                  src={mediaUrl(item.mediaUrl || item.thumbnail)}
-                  alt={item.title}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
+                {item.mediaType === 'video' || /\.(mp4|webm|mov)/i.test(item.mediaUrl || item.videoUrl || '') ? (
+                  <video
+                    src={mediaUrl(item.mediaUrl || item.videoUrl || item.thumbnail)}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    muted
+                    loop
+                    autoPlay
+                    playsInline
+                  />
+                ) : (
+                  <img
+                    src={mediaUrl(item.mediaUrl || item.thumbnail || item.videoUrl)}
+                    alt={item.title}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                )}
                 {item.featured && (
                   <span style={{ position: 'absolute', top: 12, left: 12, padding: '4px 10px', borderRadius: 999, backgroundColor: 'rgba(255, 45, 85, 0.9)', color: '#fff', fontSize: '0.7rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
                     <Sparkles size={12} /> FEATURED
