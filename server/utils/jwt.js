@@ -3,9 +3,9 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
-const ACCESS_TOKEN_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || '15m';
-const REFRESH_TOKEN_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex');
+const ACCESS_TOKEN_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || '30d';
+const REFRESH_TOKEN_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '90d';
+const JWT_SECRET = process.env.JWT_SECRET || 'assetsweber_jwt_secret_key_2045_stable_v1';
 
 /** Sign a JWT access token */
 export function signAccessToken(payload) {

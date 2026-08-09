@@ -32,8 +32,8 @@ async function request(path, options = {}) {
     throw new Error('Cannot reach the server. Start the backend with: npm run dev:full')
   }
 
-  // Auto-refresh on 401 (access token expired)
-  if (res.status === 401 && getToken() && !path.includes('/auth/refresh')) {
+  // Auto-refresh on 401 (access token expired or missing in memory)
+  if (res.status === 401 && !path.includes('/auth/refresh') && !path.includes('/auth/login') && !path.includes('/auth/team/login')) {
     try {
       const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
         method: 'POST',
@@ -63,7 +63,10 @@ async function request(path, options = {}) {
     if (res.status === 502 || res.status === 503) {
       throw new Error(data.message || 'Backend server is not running. Start it with: npm run dev:full')
     }
-    const msg = data.message || data.error || `Server error ${res.status}`
+    let msg = data.message || data.error || `Server error ${res.status}`
+    if (res.status === 401 && (msg.includes('Authorization') || msg.includes('token') || msg.includes('authenticated'))) {
+      msg = 'Team authorization session expired. Please log in to Team Dashboard again.'
+    }
     const err = new Error(msg)
     err.status = res.status
     err.data = data

@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { verifyIdToken } from '../firebaseAdmin.js';
-import { verifyToken } from '../utils/jwt.js';
+import { verifyToken, signAccessToken } from '../utils/jwt.js';
 
 /** Verify JWT from Authorization header */
 export function verifyJwt(req, res, next) {
@@ -41,7 +41,7 @@ export async function firebaseLoginHandler(req, res) {
     // This handler is no longer self-contained — callers should use createAuthResponse
     // from index.js instead. Keep basic fallback for backward compat.
     const payload = { sub: firebaseUser.uid, email: firebaseUser.email };
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '15m' });
+    const token = signAccessToken(payload);
     return res.json({ accessToken: token, user: { uid: firebaseUser.uid, email: firebaseUser.email, name: firebaseUser.name } });
   } catch (err) {
     console.error('[Firebase Login] error:', err.message);
