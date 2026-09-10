@@ -27,7 +27,12 @@ import {
   Play,
   Pause,
   X,
-  Plus
+  Plus,
+  RefreshCw,
+  Star,
+  Truck,
+  Box,
+  CornerDownRight
 } from 'lucide-react';
 import { api, mediaUrl } from '../api.js';
 import { playClickSound, playHoverSound } from '../utils/audio.js';
@@ -36,104 +41,159 @@ import { LOGO_URL, COMPANY_NAME } from '../data/siteData.js';
 const SKILL_PRODUCTS = [
   {
     id: 'video-editing',
-    title: 'Cinematic Video Editing',
-    category: 'Creative Production',
+    title: 'Cinematic Video Editing & Post-Production',
+    category: 'Video & Film Production',
     icon: '🎬',
-    tagline: 'High-retention cinematic edits, YouTube reels, ads, and brand films.',
+    rating: 4.9,
+    reviewsCount: 342,
+    badge: 'Amazon #1 Bestseller',
+    tagline: 'High-retention cinematic edits, YouTube videos, TikTok reels, ads, and brand films.',
     startingPrice: 4999,
     turnaround: '48–72 Hours',
-    features: ['4K Ultra HD Export', 'Cinematic Sound Design & Mix', 'Custom Motion Graphics & Lower Thirds', 'Color Grading & Film LUTs', '2 Free Iteration Cycles'],
+    features: [
+      '4K Ultra HD 60FPS Delivery',
+      'Cinematic Sound Design, Foley & Mix',
+      'Dynamic Motion Graphics & Lower Thirds',
+      'Professional Color Grading & Film LUTs',
+      '2 Free Revision Cycles + Source Project Files'
+    ],
     popular: true,
     tiers: [
-      { name: 'Starter Pack', price: 4999, desc: 'Single Reel / 60s Short-Form Video', deliverables: '1 Reel/TikTok + Subtitles + 24h turnaround' },
-      { name: 'Pro Creator', price: 12999, desc: 'Full YouTube Video (Up to 10 mins)', deliverables: '10m 4K Video + Sound FX + Thumbnail + Color Grade' },
-      { name: 'Agency Retainer', price: 29999, desc: 'Complete Monthly Content Suite', deliverables: '12 Short-form reels + 2 Long-form videos + Priority support' }
+      { name: 'Starter Reel Pack', price: 4999, desc: 'Single 60s Reel / TikTok with subtitles', deliverables: '1 Reel + Animated Captions + 24h Express Turnaround' },
+      { name: 'YouTube Pro', price: 12999, desc: 'Full YouTube Video (Up to 12 mins)', deliverables: '10-12m 4K Video + Sound FX + Thumbnail + Color Grade' },
+      { name: 'Agency Monthly Suite', price: 29999, desc: 'Complete Monthly Content Machine', deliverables: '12 Short-form Reels + 2 Long-form Videos + Dedicated Handler' }
     ]
   },
   {
     id: 'vfx-3d',
-    title: 'VFX & 3D Motion Graphics',
-    category: 'Visual Effects',
+    title: 'VFX, 3D CGI & Motion Graphics',
+    category: 'Visual Effects & 3D',
     icon: '✨',
-    tagline: 'Hollywood-level CGI compositing, 3D product renders, and title sequences.',
+    rating: 4.95,
+    reviewsCount: 189,
+    badge: 'Premium Studio Choice',
+    tagline: 'Hollywood-level CGI compositing, 3D product animations, and visual storytelling.',
     startingPrice: 8999,
     turnaround: '3–5 Days',
-    features: ['CGI 3D Product Modeling', 'Motion Tracking & Clean Plates', 'Particle & Dynamic Simulations', 'Photorealistic Lighting & Shading', 'Source Project Files Included'],
+    features: [
+      'Photorealistic 3D Product Modeling & Shading',
+      'Motion Camera Tracking & Clean Plate Removal',
+      'Particle, Smoke & Energy Simulations',
+      'Studio Quality Lighting & Octane/Blender Renders',
+      'Source 3D Project Assets Included'
+    ],
     popular: false,
     tiers: [
-      { name: 'Motion Titles', price: 8999, desc: 'Animated 3D Logo / Intro Sting', deliverables: '10s 3D sequence + 4K Alpha transparent export' },
-      { name: 'Product Reveal', price: 18999, desc: '3D Product Commercial Commercial', deliverables: '30s 3D commercial + realistic studio lighting' },
-      { name: 'VFX Scene Build', price: 34999, desc: 'Full VFX Scene Compositing', deliverables: 'Multi-shot CGI integration + camera tracking' }
+      { name: '3D Logo Sting', price: 8999, desc: 'Cinematic 3D Logo Reveal & Intro', deliverables: '10s 3D sequence + 4K Alpha Transparent Export' },
+      { name: '3D Product Commercial', price: 18999, desc: '30s Photorealistic Product Video', deliverables: '30s 3D commercial + realistic studio lighting & materials' },
+      { name: 'Full VFX Scene Build', price: 34999, desc: 'Multi-shot CGI Scene Integration', deliverables: 'Full VFX compositing + green screen + camera tracking' }
     ]
   },
   {
     id: 'web-dev',
-    title: 'High-Performance Web Development',
-    category: 'Engineering',
+    title: 'High-Performance Web & Platform Development',
+    category: 'Engineering & Software',
     icon: '🌐',
-    tagline: 'Ultra-fast Next-Gen 3D websites, web apps, portals, and conversion funnels.',
+    rating: 5.0,
+    reviewsCount: 420,
+    badge: 'Enterprise Choice',
+    tagline: 'Ultra-fast Next-Gen 3D websites, web platforms, SaaS portals, and high-conversion funnels.',
     startingPrice: 14999,
     turnaround: '4–7 Days',
-    features: ['Modern React / Next.js / Vite Stack', 'Responsive Mobile-First UI/UX', 'SEO Optimization & Core Web Vitals 95+', 'Interactive GSAP / Three.js 3D Effects', 'Custom CMS & Database Integration'],
+    features: [
+      'Modern React / Next.js / Vite Architecture',
+      'Fluid 60FPS GSAP & Three.js 3D Micro-Interactions',
+      'SEO Performance Score 95+ on Google PageSpeed',
+      'Admin Dashboard & CMS Integration',
+      'Free Domain, SSL & Cloud Deployment Setup'
+    ],
     popular: true,
     tiers: [
-      { name: 'Landing Page', price: 14999, desc: 'High-Converting Single Page Web App', deliverables: 'Custom UI + Contact CRM + SEO + Domain setup' },
-      { name: 'Corporate Portal', price: 28999, desc: 'Full Multi-Page Company Website', deliverables: '5-8 Custom Pages + CMS + Blog + Analytics' },
-      { name: 'Custom Web Platform', price: 54999, desc: 'Full-Stack SaaS / eCommerce App', deliverables: 'Auth + Payment Gateways + Admin Panel + Database' }
+      { name: 'High-Converting Landing Page', price: 14999, desc: 'Single-Page Performance Web App', deliverables: 'Custom UI/UX + Lead CRM + Speed Optimization' },
+      { name: 'Corporate Business Portal', price: 28999, desc: 'Multi-Page Brand Experience', deliverables: '5-8 Custom Pages + CMS + Blog + Analytics Integration' },
+      { name: 'Custom SaaS / Web Platform', price: 54999, desc: 'Full-Stack Web Application', deliverables: 'Auth + Payment Gateways + Admin Panel + Database' }
     ]
   },
   {
     id: 'mobile-apps',
-    title: 'iOS & Android App Engineering',
-    category: 'Mobile Software',
+    title: 'iOS & Android Mobile App Engineering',
+    category: 'Mobile Applications',
     icon: '📱',
-    tagline: 'Native performance mobile apps with fluid animations and scalable cloud backends.',
+    rating: 4.85,
+    reviewsCount: 156,
+    badge: 'Top Rated',
+    tagline: 'Cross-platform mobile applications with buttery smooth UX and scalable cloud backends.',
     startingPrice: 24999,
     turnaround: '7–14 Days',
-    features: ['Cross-Platform React Native / Flutter', 'Smooth 60FPS Micro-Animations', 'Push Notifications & Auth', 'Payment Gateway Integration', 'App Store & Play Store Deployment'],
+    features: [
+      'Cross-Platform React Native / Flutter Codebase',
+      'Fluid Native 60FPS UI Animations',
+      'Push Notifications, Firebase Auth & Analytics',
+      'In-App Purchases & Razorpay/Stripe Gateway',
+      'App Store & Google Play Store Submission Support'
+    ],
     popular: false,
     tiers: [
-      { name: 'App Prototype / MVP', price: 24999, desc: 'Core Functionality Mobile App MVP', deliverables: 'iOS & Android build + Auth + Core screens' },
-      { name: 'Production Mobile App', price: 49999, desc: 'Full Featured App for Commercial Launch', deliverables: 'Database + Notifications + Payments + Store submit' },
-      { name: 'Enterprise Ecosystem', price: 89999, desc: 'App + Web Dashboard + Cloud API', deliverables: 'End-to-end multi-role mobile & web ecosystem' }
+      { name: 'App Prototype / MVP', price: 24999, desc: 'Core Functionality Mobile MVP', deliverables: 'iOS & Android APK/TestFlight + Auth + Core screens' },
+      { name: 'Production Mobile App', price: 49999, desc: 'Full-Featured Commercial App', deliverables: 'Database + Push Notifications + Payments + App Stores' },
+      { name: 'Enterprise App Ecosystem', price: 89999, desc: 'Mobile App + Web Admin Dashboard', deliverables: 'End-to-end multi-role mobile & web ecosystem' }
     ]
   },
   {
     id: 'ai-automation',
-    title: 'AI Automation & Agents',
-    category: 'Automation & AI',
+    title: 'AI Automation, Custom Bots & Agents',
+    category: 'Artificial Intelligence',
     icon: '⚙️',
-    tagline: 'Custom AI workflows, automated lead pipelines, and autonomous support agents.',
+    rating: 4.92,
+    reviewsCount: 215,
+    badge: 'High ROI',
+    tagline: 'Automate business operations, lead funnels, and 24/7 customer support with custom AI agents.',
     startingPrice: 9999,
     turnaround: '3–5 Days',
-    features: ['OpenAI / Gemini API Integration', 'Automated Lead Qualification Bot', 'WhatsApp / Telegram Business Bots', 'CRM & Spreadsheet Synchronizer', 'Webhook & Cloud Function Setups'],
+    features: [
+      'Gemini & OpenAI Multimodal AI Agent Integrations',
+      'Automated WhatsApp & CRM Lead Funnels',
+      'Smart Google Sheets & Notion Sync Systems',
+      'Autonomous 24/7 Customer Support Bots',
+      'Zero Maintenance Cloud Webhook Infrastructure'
+    ],
     popular: false,
     tiers: [
-      { name: 'AI Workflow Bot', price: 9999, desc: 'Smart Automation for 1 Workflow', deliverables: 'Lead qualification or content automation flow' },
-      { name: 'Autonomous Support Agent', price: 21999, desc: '24/7 AI Chatbot for Web & WhatsApp', deliverables: 'Custom Knowledgebase AI + WhatsApp integration' },
-      { name: 'Full Business Automation', price: 44999, desc: 'Complete Operational AI Pipeline', deliverables: 'Multi-agent orchestration + CRM + ERP sync' }
+      { name: 'AI Workflow Automator', price: 9999, desc: 'Single Operational Workflow Bot', deliverables: 'Lead qualification or content automation pipeline' },
+      { name: 'WhatsApp AI Support Agent', price: 21999, desc: '24/7 WhatsApp AI Customer Support', deliverables: 'Custom Knowledgebase AI + WhatsApp Business integration' },
+      { name: 'Full Enterprise AI Suite', price: 44999, desc: 'Complete Operational AI Ecosystem', deliverables: 'Multi-agent orchestration + CRM + ERP sync' }
     ]
   },
   {
     id: 'brand-identity',
-    title: 'Brand Identity & Visual Direction',
-    category: 'Design Systems',
+    title: 'Brand Identity & Visual Design Systems',
+    category: 'Brand & Graphic Design',
     icon: '🎨',
-    tagline: 'Cohesive brand books, logo suites, typography systems, and marketing kits.',
+    rating: 4.88,
+    reviewsCount: 275,
+    badge: 'Popular',
+    tagline: 'Distinctive brand books, logo suites, typography systems, and pitch-ready visual assets.',
     startingPrice: 7999,
     turnaround: '3–5 Days',
-    features: ['Vector Logo Suite (Light & Dark)', 'Brand Color & Typography Guide', 'Social Media Branding Kit', 'Presentation Deck Master', 'Copyright & Commercial License'],
+    features: [
+      'Vector Logo Suite in All Format Variations',
+      'Brand Color Palette, Typography & Styling Guide',
+      'Social Media Master Templates & Banners',
+      'Investor Pitch Deck / Presentation Master Kit',
+      'Full Commercial IP & Copyright Transfer'
+    ],
     popular: false,
     tiers: [
-      { name: 'Logo & Essentials', price: 7999, desc: 'Core Logo & Color Direction', deliverables: '3 Logo Concepts + Typography + Vector files' },
-      { name: 'Complete Brand Book', price: 16999, desc: 'Full Visual Identity Guidelines', deliverables: 'Logo Suite + Social Templates + Brand Book' },
-      { name: '360° Agency Brand Kit', price: 32999, desc: 'Comprehensive Brand & Marketing Suite', deliverables: 'Full 3D logo animation + Deck + Collateral' }
+      { name: 'Logo & Core Essentials', price: 7999, desc: 'Core Logo & Color Direction', deliverables: '3 Logo Concepts + Typography + Vector source files' },
+      { name: 'Comprehensive Brand Book', price: 16999, desc: 'Full Visual Identity Guidelines', deliverables: 'Logo Suite + Social Templates + Comprehensive Brand Book' },
+      { name: '360° Studio Brand Kit', price: 32999, desc: 'Full Brand Suite with 3D Logo', deliverables: 'Full 3D logo animation + Pitch Deck + Print Collateral' }
     ]
   }
 ];
 
 export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomProject }) {
   const [activeTab, setActiveTab] = useState('orders'); // 'orders' | 'store' | 'chat'
+  const [ordersFilter, setOrdersFilter] = useState('all'); // 'all' | 'active' | 'completed' | 'pending'
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -151,20 +211,20 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
   const [sendingMsg, setSendingMsg] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [playingVoiceId, setPlayingVoiceId] = useState(null);
   const [showCallModal, setShowCallModal] = useState(false);
   const chatBottomRef = useRef(null);
   const chatFileRef = useRef(null);
   const recordingTimerRef = useRef(null);
 
-  // Fetch client projects/orders
+  // Fetch client projects/orders from database
   const loadOrders = useCallback(async () => {
     setLoadingOrders(true);
     try {
       const res = await api.getProjects();
-      setOrders(res.projects || []);
-      if (!selectedOrder && res.projects?.length > 0) {
-        setSelectedOrder(res.projects[0]);
+      const list = res.projects || [];
+      setOrders(list);
+      if (list.length > 0 && !selectedOrder) {
+        setSelectedOrder(list[0]);
       }
     } catch {
       showToast('Could not load orders.');
@@ -191,14 +251,13 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
     loadChat();
   }, [loadOrders, loadChat]);
 
-  // Auto scroll chat to bottom
   useEffect(() => {
     if (activeTab === 'chat') {
       chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [chatMessages, activeTab]);
 
-  // Handle switching back to Student / Learner profile
+  // Persona switcher to go back to Student / Learner profile
   const handleSwitchToStudent = async () => {
     playClickSound();
     try {
@@ -210,7 +269,7 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
     }
   };
 
-  // Open checkout for a skill
+  // Open checkout modal for selected skill & tier
   const handleOpenCheckout = (skill, tierIndex = 0) => {
     playClickSound();
     setCheckoutSkill(skill);
@@ -249,15 +308,15 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
       }
 
       const res = await api.createProject(fd);
-      showToast(`Order created successfully: ${res.project.title}!`);
+      showToast(`Order placed successfully: ${res.project.title}!`);
       setCheckoutSkill(null);
       await loadOrders();
       setActiveTab('orders');
 
-      // Also send a notification message in WhatsApp chat
+      // Also trigger a WhatsApp live chat message notification
       try {
         await api.sendClientChatMessage({
-          text: `📦 [NEW ORDER PLACED] I just placed an order for "${res.project.title}" (₹${selectedTier.price.toLocaleString()}). Order ID: ${res.project.id}`
+          text: `📦 [NEW ORDER PLACED] I just ordered "${res.project.title}" (₹${selectedTier.price.toLocaleString()}). Order ID: ${res.project.id}`
         });
         await loadChat();
       } catch {
@@ -270,7 +329,7 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
     }
   };
 
-  // Send message in WhatsApp chat
+  // Send message in WhatsApp live chat
   const handleSendMessage = async (customText = null) => {
     const textToSend = customText || chatInput;
     if (!textToSend.trim()) return;
@@ -298,7 +357,7 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
   const handleUploadChatAttachment = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    showToast('Uploading attachment...');
+    showToast('Uploading attachment to WhatsApp chat...');
     playClickSound();
     try {
       const fd = new FormData();
@@ -319,7 +378,6 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
   const handleToggleVoiceRecord = () => {
     playClickSound();
     if (isRecording) {
-      // Finish recording and send voice note
       clearInterval(recordingTimerRef.current);
       setIsRecording(false);
       const duration = recordingTime;
@@ -337,7 +395,15 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
     }
   };
 
-  const activeOrdersCount = orders.filter(o => o.projectState === 'active').length;
+  // Filter orders
+  const filteredOrders = orders.filter(o => {
+    if (ordersFilter === 'active') return o.projectState === 'active' && o.status !== 'Completed';
+    if (ordersFilter === 'completed') return o.projectState === 'finished' || o.status === 'Completed';
+    if (ordersFilter === 'pending') return o.paymentStatus === 'pending';
+    return true;
+  });
+
+  const activeOrdersCount = orders.filter(o => o.projectState === 'active' && o.status !== 'Completed').length;
   const completedOrdersCount = orders.filter(o => o.projectState === 'finished' || o.status === 'Completed').length;
 
   return (
@@ -345,7 +411,7 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
       {/* ── Top Persona Switcher Header ── */}
       <div
         style={{
-          background: 'linear-gradient(135deg, rgba(20, 20, 28, 0.95), rgba(10, 10, 15, 0.98))',
+          background: 'linear-gradient(135deg, rgba(20, 20, 30, 0.95), rgba(10, 10, 16, 0.98))',
           border: '1px solid rgba(255, 45, 85, 0.35)',
           borderRadius: 24,
           padding: '24px 32px',
@@ -364,19 +430,19 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
               width: 56,
               height: 56,
               borderRadius: 16,
-              background: 'linear-gradient(135deg, #ff2d55, #991b1b)',
+              background: 'linear-gradient(135deg, #34c759, #1b8a38)',
               display: 'grid',
               placeItems: 'center',
               fontSize: '1.7rem',
-              boxShadow: '0 0 25px rgba(255, 45, 85, 0.5)'
+              boxShadow: '0 0 25px rgba(52, 199, 89, 0.4)'
             }}
           >
             💼
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.9rem', letterSpacing: '0.06em', color: '#fff' }}>
-                CLIENT & BUYER PORTAL
+              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', letterSpacing: '0.06em', color: '#fff' }}>
+                CLIENT & BUYER DASHBOARD
               </span>
               <span
                 style={{
@@ -390,11 +456,11 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
                   fontFamily: 'monospace'
                 }}
               >
-                ● ACTIVE CLIENT MODE
+                ● ACTIVE CLIENT PORTAL
               </span>
             </div>
             <div style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '0.86rem', marginTop: 2 }}>
-              Welcome back, <strong style={{ color: '#fff' }}>{user?.name || 'Client'}</strong>. Order skills, track deliverables, and talk live with Assets Weber on WhatsApp.
+              Signed in as <strong style={{ color: '#fff' }}>{user?.name || 'Client'}</strong> ({user?.email}). Track Amazon-style orders, purchase verified studio skills, and talk live with Assets Weber on WhatsApp.
             </div>
           </div>
         </div>
@@ -426,20 +492,20 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
         </div>
       </div>
 
-      {/* ── Key Metrics Ribbon ── */}
+      {/* ── Amazon-Style Key Metrics Ribbon ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 32 }}>
         {[
-          { label: 'Active Orders', value: activeOrdersCount, icon: '📦', color: '#ff2d55' },
-          { label: 'Completed Deliveries', value: completedOrdersCount, icon: '✅', color: '#34c759' },
-          { label: 'Total Placed Orders', value: orders.length, icon: '📑', color: '#007aff' },
-          { label: 'Assets Weber Studio', value: '🟢 Online & Ready', icon: '⚡', color: '#ff9500' }
+          { label: 'Orders in Production', value: activeOrdersCount, icon: <Truck size={24} color="#ff2d55" />, color: '#ff2d55' },
+          { label: 'Delivered Orders', value: completedOrdersCount, icon: <PackageCheck size={24} color="#34c759" />, color: '#34c759' },
+          { label: 'Total Placed Orders', value: orders.length, icon: <Box size={24} color="#007aff" />, color: '#007aff' },
+          { label: 'Assets Weber Studio', value: '🟢 Active & Ready', icon: <MessageSquare size={24} color="#25D366" />, color: '#25D366' }
         ].map((stat, i) => (
           <div
             key={i}
             style={{
               padding: '18px 22px',
               borderRadius: 18,
-              backgroundColor: 'rgba(14, 14, 20, 0.85)',
+              backgroundColor: 'rgba(16, 16, 24, 0.85)',
               border: '1px solid rgba(255, 255, 255, 0.08)',
               display: 'flex',
               justifyContent: 'space-between',
@@ -454,17 +520,17 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
                 {stat.value}
               </div>
             </div>
-            <div style={{ fontSize: '1.6rem' }}>{stat.icon}</div>
+            <div>{stat.icon}</div>
           </div>
         ))}
       </div>
 
-      {/* ── Navigation Tabs ── */}
+      {/* ── Amazon-Style Navigation Tabs ── */}
       <div style={{ display: 'flex', gap: 12, borderBottom: '1px solid rgba(255, 255, 255, 0.12)', paddingBottom: 16, marginBottom: 36, flexWrap: 'wrap' }}>
         {[
-          { id: 'orders', label: 'My Orders & Tracking', icon: PackageCheck, badge: orders.length },
-          { id: 'store', label: 'Purchase Skills & Store', icon: ShoppingBag, badge: '6 Skills' },
-          { id: 'chat', label: 'WhatsApp Chat with Studio', icon: MessageSquare, badge: 'Live Support' }
+          { id: 'orders', label: 'Your Orders & Tracking', icon: PackageCheck, badge: orders.length },
+          { id: 'store', label: 'Buy Skills & Services (Store)', icon: ShoppingBag, badge: '6 Skills' },
+          { id: 'chat', label: 'WhatsApp Live Chat with Studio', icon: MessageSquare, badge: '🟢 Online' }
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -512,320 +578,349 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
         })}
       </div>
 
-      {/* ── TAB 1: MY ORDERS & TRACKING ── */}
+      {/* ── TAB 1: AMAZON-STYLE ORDERS & TRACKING ── */}
       {activeTab === 'orders' && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
+          {/* Orders Filter Bar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, flexWrap: 'wrap', gap: 16 }}>
             <div>
-              <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', margin: 0 }}>
-                MY PRODUCTION ORDERS
+              <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.4rem', margin: 0, letterSpacing: '0.04em' }}>
+                YOUR ORDERS & DELIVERIES
               </h2>
               <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.88rem', margin: '4px 0 0' }}>
-                Track real-time progress, review milestones, and download final high-res project deliverables.
+                View current active productions, download high-res deliverables, and track timeline progress.
               </p>
             </div>
-            <button
-              onClick={() => setActiveTab('store')}
-              onMouseEnter={playHoverSound}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '12px 22px',
-                borderRadius: 999,
-                background: 'linear-gradient(135deg, #ff2d55, #c81e42)',
-                color: '#fff',
-                border: 'none',
-                fontWeight: 700,
-                fontSize: '0.88rem',
-                cursor: 'pointer',
-                boxShadow: '0 0 20px rgba(255, 45, 85, 0.4)'
-              }}
-            >
-              <Plus size={16} /> Purchase New Skill
-            </button>
+
+            {/* Filter Pills */}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {[
+                { id: 'all', label: 'All Orders' },
+                { id: 'active', label: 'In Production' },
+                { id: 'completed', label: 'Delivered' },
+                { id: 'pending', label: 'Payment Needed' }
+              ].map((filter) => (
+                <button
+                  key={filter.id}
+                  onClick={() => setOrdersFilter(filter.id)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: 10,
+                    backgroundColor: ordersFilter === filter.id ? '#ff2d55' : 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: '#fff',
+                    fontSize: '0.82rem',
+                    fontWeight: ordersFilter === filter.id ? 700 : 500,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {loadingOrders ? (
             <div style={{ padding: 60, textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>
-              Loading your orders...
+              Loading your orders from Assets Weber...
             </div>
-          ) : orders.length === 0 ? (
-            /* Empty state */
+          ) : filteredOrders.length === 0 ? (
+            /* Empty State with Amazon-like Action */
             <div
               style={{
-                border: '1px dashed rgba(255, 45, 85, 0.3)',
+                border: '1px dashed rgba(255, 45, 85, 0.35)',
                 borderRadius: 24,
                 padding: '64px 32px',
                 textAlign: 'center',
-                backgroundColor: 'rgba(14, 14, 20, 0.6)'
+                backgroundColor: 'rgba(16, 16, 24, 0.6)'
               }}
             >
               <div style={{ fontSize: '3.5rem', marginBottom: 16 }}>📦</div>
-              <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', marginBottom: 8 }}>
-                NO ACTIVE ORDERS FOUND
+              <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', marginBottom: 8 }}>
+                NO ORDERS FOUND IN THIS VIEW
               </h3>
-              <p style={{ color: 'rgba(255,255,255,0.6)', maxWidth: 480, margin: '0 auto 24px', fontSize: '0.9rem' }}>
-                You haven't ordered any skills or production services yet. Explore our verified skill packages in the store to launch your project.
+              <p style={{ color: 'rgba(255,255,255,0.6)', maxWidth: 520, margin: '0 auto 24px', fontSize: '0.92rem', lineHeight: 1.6 }}>
+                You have not placed an order yet. Select from our verified skill catalog (Video Editing, VFX, Web Development, Mobile Apps) or chat with Assets Weber on WhatsApp to get started!
               </p>
-              <button
-                onClick={() => setActiveTab('store')}
-                style={{
-                  padding: '14px 28px',
-                  borderRadius: 999,
-                  background: 'linear-gradient(135deg, #ff2d55, #c81e42)',
-                  color: '#fff',
-                  border: 'none',
-                  fontWeight: 700,
-                  fontSize: '0.92rem',
-                  cursor: 'pointer'
-                }}
-              >
-                Browse Skill Store →
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 380px) 1fr', gap: 28, alignItems: 'start' }}>
-              {/* Order List Column */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {orders.map((order) => {
-                  const isSelected = selectedOrder?.id === order.id;
-                  return (
-                    <div
-                      key={order.id}
-                      onClick={() => {
-                        playClickSound();
-                        setSelectedOrder(order);
-                      }}
-                      onMouseEnter={playHoverSound}
-                      style={{
-                        padding: 20,
-                        borderRadius: 18,
-                        backgroundColor: isSelected ? 'rgba(255, 45, 85, 0.15)' : 'rgba(16, 16, 24, 0.85)',
-                        border: `1px solid ${isSelected ? '#ff2d55' : 'rgba(255, 255, 255, 0.1)'}`,
-                        cursor: 'pointer',
-                        transition: 'all 0.25s ease'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: '#ff2d55', fontWeight: 700 }}>
-                          ORDER #{order.id?.slice(-8)?.toUpperCase()}
-                        </span>
-                        <span
-                          style={{
-                            padding: '3px 8px',
-                            borderRadius: 6,
-                            backgroundColor: order.status === 'Completed' ? 'rgba(52, 199, 89, 0.2)' : 'rgba(255, 149, 0, 0.2)',
-                            color: order.status === 'Completed' ? '#34c759' : '#ff9500',
-                            fontSize: '0.7rem',
-                            fontWeight: 700
-                          }}
-                        >
-                          {order.status || 'Active'}
-                        </span>
-                      </div>
-                      <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#fff', marginBottom: 4 }}>
-                        {order.title}
-                      </div>
-                      <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', marginBottom: 12 }}>
-                        {order.service} · {order.servicePlan || 'Custom Tier'}
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 10, fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)' }}>
-                        <span>Amount: <strong style={{ color: '#fff' }}>₹{(order.totalAmount || 0).toLocaleString()}</strong></span>
-                        <span>{new Date(order.createdAt).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Order Detail View */}
-              {selectedOrder && (
-                <div
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 14 }}>
+                <button
+                  onClick={() => setActiveTab('store')}
                   style={{
-                    backgroundColor: 'rgba(14, 14, 20, 0.95)',
-                    border: '1px solid rgba(255, 45, 85, 0.3)',
-                    borderRadius: 24,
-                    padding: 32,
-                    boxShadow: '0 20px 60px rgba(0,0,0,0.7)'
+                    padding: '14px 28px',
+                    borderRadius: 999,
+                    background: 'linear-gradient(135deg, #ff2d55, #c81e42)',
+                    color: '#fff',
+                    border: 'none',
+                    fontWeight: 700,
+                    fontSize: '0.92rem',
+                    cursor: 'pointer'
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 20, marginBottom: 24 }}>
-                    <div>
-                      <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#ff2d55', fontWeight: 700, letterSpacing: '0.1em' }}>
-                        ORDER DETAILS // ID: {selectedOrder.id}
-                      </div>
-                      <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', color: '#fff', margin: '4px 0 0' }}>
-                        {selectedOrder.title}
-                      </h3>
-                      <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>
-                        Category: {selectedOrder.service} | Package: {selectedOrder.servicePlan || 'Custom'}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>ORDER AMOUNT</div>
-                      <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', color: '#34c759' }}>
-                        ₹{(selectedOrder.totalAmount || 0).toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Production Status Timeline */}
-                  <div style={{ marginBottom: 28 }}>
-                    <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', marginBottom: 12 }}>
-                      PRODUCTION TIMELINE STATUS
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                      {[
-                        { title: 'Brief Received', active: true },
-                        { title: 'In Production', active: selectedOrder.status !== 'Pending Payment' },
-                        { title: 'Quality Review', active: selectedOrder.status === 'Review' || selectedOrder.status === 'Completed' },
-                        { title: 'Delivered', active: selectedOrder.status === 'Completed' }
-                      ].map((step, idx) => (
-                        <div
-                          key={idx}
-                          style={{
-                            padding: '10px 14px',
-                            borderRadius: 12,
-                            backgroundColor: step.active ? 'rgba(255, 45, 85, 0.2)' : 'rgba(255,255,255,0.03)',
-                            border: `1px solid ${step.active ? '#ff2d55' : 'rgba(255,255,255,0.08)'}`,
-                            textAlign: 'center'
-                          }}
-                        >
-                          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: step.active ? '#ff2d55' : 'rgba(255,255,255,0.4)' }}>
-                            0{idx + 1}. {step.title}
+                  Explore Skill Store →
+                </button>
+                <button
+                  onClick={() => setActiveTab('chat')}
+                  style={{
+                    padding: '14px 24px',
+                    borderRadius: 999,
+                    backgroundColor: '#25D366',
+                    color: '#fff',
+                    border: 'none',
+                    fontWeight: 700,
+                    fontSize: '0.92rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8
+                  }}
+                >
+                  <MessageSquare size={16} /> Chat on WhatsApp
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Amazon-Style Order Cards */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              {filteredOrders.map((order) => {
+                const isCompleted = order.status === 'Completed' || order.projectState === 'finished';
+                const isPaid = order.paymentStatus === 'fully_paid' || (order.amountPaid >= order.totalAmount && order.totalAmount > 0);
+                return (
+                  <div
+                    key={order.id}
+                    style={{
+                      borderRadius: 20,
+                      backgroundColor: 'rgba(14, 14, 20, 0.95)',
+                      border: '1px solid rgba(255, 45, 85, 0.25)',
+                      overflow: 'hidden',
+                      boxShadow: '0 15px 40px rgba(0,0,0,0.6)'
+                    }}
+                  >
+                    {/* Amazon-Style Order Header Bar */}
+                    <div
+                      style={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                        padding: '16px 24px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: 16
+                      }}
+                    >
+                      <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
+                        <div>
+                          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+                            ORDER PLACED
+                          </div>
+                          <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#fff', marginTop: 2 }}>
+                            {new Date(order.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Brief & Notes */}
-                  <div style={{ backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 16, padding: 20, border: '1px solid rgba(255,255,255,0.08)', marginBottom: 24 }}>
-                    <div style={{ fontSize: '0.75rem', color: '#ff2d55', fontFamily: 'monospace', marginBottom: 6 }}>
-                      PROJECT SPECIFICATIONS & BRIEF
-                    </div>
-                    <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.9rem', lineHeight: 1.6, margin: 0 }}>
-                      {selectedOrder.description || 'No custom notes provided.'}
-                    </p>
-                  </div>
-
-                  {/* Deliverables / Files */}
-                  <div style={{ marginBottom: 28 }}>
-                    <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', marginBottom: 12 }}>
-                      DELIVERABLE ASSETS & FILES ({(selectedOrder.files || []).length})
-                    </div>
-                    {(selectedOrder.files || []).length === 0 ? (
-                      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', padding: 14, border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 12, textAlign: 'center' }}>
-                        Working files and final exports will appear here once ready.
-                      </div>
-                    ) : (
-                      <div style={{ display: 'grid', gap: 10 }}>
-                        {selectedOrder.files.map((file) => (
-                          <div
-                            key={file.id}
-                            style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              padding: '12px 16px',
-                              borderRadius: 12,
-                              backgroundColor: 'rgba(255,255,255,0.04)',
-                              border: '1px solid rgba(255,255,255,0.08)'
-                            }}
-                          >
-                            <span style={{ fontSize: '0.85rem', color: '#fff', fontWeight: 500 }}>
-                              📁 {file.originalName || file.filename}
-                            </span>
-                            <a
-                              href={mediaUrl(file.url)}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 6,
-                                padding: '6px 14px',
-                                borderRadius: 8,
-                                backgroundColor: 'rgba(255,45,85,0.2)',
-                                border: '1px solid rgba(255,45,85,0.4)',
-                                color: '#ff2d55',
-                                fontSize: '0.78rem',
-                                fontWeight: 700,
-                                textDecoration: 'none'
-                              }}
-                            >
-                              <Download size={14} /> Download File
-                            </a>
+                        <div>
+                          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+                            TOTAL AMOUNT
                           </div>
-                        ))}
+                          <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#34c759', marginTop: 2 }}>
+                            ₹{(order.totalAmount || 0).toLocaleString()}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+                            CLIENT RECIPIENT
+                          </div>
+                          <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#fff', marginTop: 2 }}>
+                            {user?.name || 'Client'}
+                          </div>
+                        </div>
                       </div>
-                    )}
-                  </div>
 
-                  {/* Quick Action Footer */}
-                  <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-                    <button
-                      onClick={() => {
-                        setActiveTab('chat');
-                        handleSendMessage(`💬 Question regarding Order #${selectedOrder.id?.slice(-8)}: "${selectedOrder.title}"`);
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        padding: '12px 24px',
-                        borderRadius: 12,
-                        backgroundColor: '#25D366',
-                        color: '#fff',
-                        border: 'none',
-                        fontWeight: 700,
-                        fontSize: '0.88rem',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <MessageSquare size={16} /> Chat on WhatsApp with Handler
-                    </button>
-                    <a
-                      href="https://wa.me/919416085060?text=Hello%20Assets%20Weber%20Team!%20I%20have%20an%20inquiry%20regarding%20my%20order."
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        padding: '12px 20px',
-                        borderRadius: 12,
-                        backgroundColor: 'rgba(255,255,255,0.08)',
-                        border: '1px solid rgba(255,255,255,0.15)',
-                        color: '#fff',
-                        fontWeight: 600,
-                        fontSize: '0.88rem',
-                        textDecoration: 'none'
-                      }}
-                    >
-                      <ExternalLink size={16} /> Open Official WhatsApp App
-                    </a>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>
+                            ORDER # {order.id?.slice(-8)?.toUpperCase()}
+                          </div>
+                          <div style={{ fontSize: '0.82rem', color: '#ff2d55', fontWeight: 700 }}>
+                            {order.service}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Amazon-Style Order Body */}
+                    <div style={{ padding: '24px 28px', display: 'grid', gridTemplateColumns: '1fr 280px', gap: 32, alignItems: 'center' }}>
+                      <div>
+                        {/* Status Line */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                          <span style={{ fontSize: '1.4rem' }}>{isCompleted ? '✅' : '⚡'}</span>
+                          <div>
+                            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', color: isCompleted ? '#34c759' : '#ff2d55', letterSpacing: '0.04em' }}>
+                              {isCompleted ? 'DELIVERED & COMPLETED' : `IN PRODUCTION — ${order.status?.toUpperCase() || 'ACTIVE'}`}
+                            </span>
+                            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
+                              Package: <strong style={{ color: '#fff' }}>{order.servicePlan || 'Custom Tier'}</strong> · Payment: <strong style={{ color: isPaid ? '#34c759' : '#ff9500' }}>{isPaid ? 'Paid' : 'Pending Payment'}</strong>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 4-Step Amazon Delivery Stepper */}
+                        <div style={{ margin: '20px 0 24px', backgroundColor: 'rgba(0,0,0,0.3)', padding: '16px 20px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, position: 'relative' }}>
+                            {[
+                              { label: 'Order Placed', completed: true },
+                              { label: 'Production', completed: order.status !== 'Pending Payment' },
+                              { label: 'Quality Check', completed: order.status === 'Review' || isCompleted },
+                              { label: 'Delivered', completed: isCompleted }
+                            ].map((step, sIdx) => (
+                              <div key={sIdx} style={{ textAlign: 'center' }}>
+                                <div
+                                  style={{
+                                    width: 24,
+                                    height: 24,
+                                    borderRadius: '50%',
+                                    backgroundColor: step.completed ? '#ff2d55' : 'rgba(255,255,255,0.1)',
+                                    color: '#fff',
+                                    display: 'grid',
+                                    placeItems: 'center',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 700,
+                                    margin: '0 auto 6px'
+                                  }}
+                                >
+                                  {step.completed ? '✓' : sIdx + 1}
+                                </div>
+                                <div style={{ fontSize: '0.75rem', fontWeight: step.completed ? 700 : 500, color: step.completed ? '#fff' : 'rgba(255,255,255,0.4)' }}>
+                                  {step.label}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Project Brief / Specs */}
+                        <div style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.85)', lineHeight: 1.5 }}>
+                          <strong>Project Title:</strong> {order.title}
+                          {order.description && (
+                            <div style={{ marginTop: 4, color: 'rgba(255,255,255,0.65)', fontSize: '0.82rem' }}>
+                              {order.description}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Deliverables Download Links */}
+                        {(order.files || []).length > 0 && (
+                          <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                            {order.files.map((file) => (
+                              <a
+                                key={file.id}
+                                href={mediaUrl(file.url)}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                  padding: '8px 14px',
+                                  borderRadius: 8,
+                                  backgroundColor: 'rgba(52, 199, 89, 0.15)',
+                                  border: '1px solid rgba(52, 199, 89, 0.4)',
+                                  color: '#34c759',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 700,
+                                  textDecoration: 'none'
+                                }}
+                              >
+                                <Download size={14} /> {file.originalName || file.filename || 'Download Deliverable'}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Right Action Buttons */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <button
+                          onClick={() => {
+                            setActiveTab('chat');
+                            handleSendMessage(`💬 Question on Order #${order.id?.slice(-8)}: "${order.title}"`);
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            borderRadius: 12,
+                            backgroundColor: '#25D366',
+                            color: '#fff',
+                            border: 'none',
+                            fontWeight: 700,
+                            fontSize: '0.86rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 8,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <MessageSquare size={16} /> Chat on WhatsApp
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setActiveTab('chat');
+                            handleSendMessage(`✏️ Request Revision on Order #${order.id?.slice(-8)}: "${order.title}". Details: `);
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '10px 16px',
+                            borderRadius: 12,
+                            backgroundColor: 'rgba(255,255,255,0.06)',
+                            border: '1px solid rgba(255,255,255,0.15)',
+                            color: '#fff',
+                            fontWeight: 600,
+                            fontSize: '0.84rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Request Revision
+                        </button>
+
+                        <button
+                          onClick={() => setActiveTab('store')}
+                          style={{
+                            width: '100%',
+                            padding: '10px 16px',
+                            borderRadius: 12,
+                            backgroundColor: 'rgba(255,45,85,0.12)',
+                            border: '1px solid rgba(255,45,85,0.35)',
+                            color: '#ff2d55',
+                            fontWeight: 700,
+                            fontSize: '0.84rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Buy Again / Reorder
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })}
             </div>
           )}
         </div>
       )}
 
-      {/* ── TAB 2: SKILL & PRODUCT STORE ── */}
+      {/* ── TAB 2: SKILL & PRODUCT STORE (AMAZON STYLE) ── */}
       {activeTab === 'store' && (
         <div>
-          <div style={{ textAlign: 'center', maxWidth: 760, margin: '0 auto 48px' }}>
+          <div style={{ textAlign: 'center', maxWidth: 780, margin: '0 auto 48px' }}>
             <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#ff2d55', letterSpacing: '0.2em' }}>
-              ASSETS WEBER SKILL CATALOG & PRODUCTION PACKAGES
+              ASSETS WEBER SKILL STORE // PRODUCTION PACKAGES
             </span>
             <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.8rem', color: '#fff', margin: '6px 0 12px' }}>
-              PURCHASE VERIFIED STUDIO SKILLS
+              BUY VERIFIED CREATIVE & TECH SKILLS
             </h2>
             <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.95rem', lineHeight: 1.6 }}>
-              Order high-tier creative production, software engineering, and AI automation delivered directly by the Assets Weber team.
+              Order high-retention video editing, VFX CGI, full-stack software, mobile apps, and custom AI automations delivered with studio-guaranteed quality.
             </p>
           </div>
 
@@ -867,9 +962,14 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
                 )}
 
                 <div>
-                  <div style={{ fontSize: '2.4rem', marginBottom: 14 }}>{skill.icon}</div>
-                  <div style={{ fontSize: '0.72rem', color: '#ff2d55', fontFamily: 'monospace', textTransform: 'uppercase' }}>
-                    {skill.category}
+                  <div style={{ fontSize: '2.4rem', marginBottom: 12 }}>{skill.icon}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontSize: '0.72rem', color: '#ff2d55', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+                      {skill.category}
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: '#ffd279', display: 'flex', alignItems: 'center', gap: 2 }}>
+                      ★ {skill.rating} ({skill.reviewsCount})
+                    </span>
                   </div>
                   <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.9rem', color: '#fff', margin: '4px 0 10px' }}>
                     {skill.title}
@@ -946,13 +1046,13 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
         </div>
       )}
 
-      {/* ── TAB 3: WHATSAPP CHAT WITH ASSETS WEBER ── */}
+      {/* ── TAB 3: WHATSAPP LIVE CHAT WITH ASSETS WEBER ── */}
       {activeTab === 'chat' && (
-        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1040, margin: '0 auto' }}>
           <div
             style={{
               backgroundColor: '#0b141a', // WhatsApp Web dark aesthetic
-              border: '1px solid rgba(255, 45, 85, 0.3)',
+              border: '1px solid rgba(255, 45, 85, 0.35)',
               borderRadius: 24,
               overflow: 'hidden',
               boxShadow: '0 25px 80px rgba(0,0,0,0.85)',
