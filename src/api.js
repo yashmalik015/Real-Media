@@ -1,3 +1,5 @@
+import { PUBLIC_SERVICES } from './data/siteData.js';
+
 // In dev, Vite proxy forwards /api → http://localhost:4000, so use relative paths (empty base).
 // In production, use VITE_API_URL if set, otherwise same-origin.
 const API_BASE = import.meta.env.VITE_API_URL
@@ -150,6 +152,66 @@ export const api = {
   addTestimonialManage: (formData) => request('/api/testimonials/manage', { method: 'POST', body: formData }),
   updateTestimonial: (id, formData) => request(`/api/testimonials/${id}`, { method: 'PUT', body: formData }),
   deleteTestimonialManage: (id) => request(`/api/testimonials/manage/${id}`, { method: 'DELETE' }),
+
+  // ── Skills Management (with localStorage mock fallback) ──
+  getSkills: async () => {
+    try {
+      return await request('/api/skills');
+    } catch (e) {
+      if (e.status === 404) {
+        let skills = JSON.parse(localStorage.getItem('mock_skills'));
+        if (!skills) {
+          skills = [...PUBLIC_SERVICES];
+          localStorage.setItem('mock_skills', JSON.stringify(skills));
+        }
+        return { skills };
+      }
+      throw e;
+    }
+  },
+  addSkill: async (payload) => {
+    try {
+      return await request('/api/skills', { method: 'POST', body: payload });
+    } catch (e) {
+      if (e.status === 404) {
+        const skills = JSON.parse(localStorage.getItem('mock_skills')) || [...PUBLIC_SERVICES];
+        const newSkill = { ...payload, id: `skill_${Date.now()}` };
+        skills.push(newSkill);
+        localStorage.setItem('mock_skills', JSON.stringify(skills));
+        return { message: 'Skill added', skill: newSkill };
+      }
+      throw e;
+    }
+  },
+  updateSkill: async (id, payload) => {
+    try {
+      return await request(`/api/skills/${id}`, { method: 'PUT', body: payload });
+    } catch (e) {
+      if (e.status === 404) {
+        const skills = JSON.parse(localStorage.getItem('mock_skills')) || [...PUBLIC_SERVICES];
+        const index = skills.findIndex(s => s.id === id || s.title === id); // match id or title
+        if (index > -1) {
+          skills[index] = { ...skills[index], ...payload, id: skills[index].id || id };
+          localStorage.setItem('mock_skills', JSON.stringify(skills));
+        }
+        return { message: 'Skill updated' };
+      }
+      throw e;
+    }
+  },
+  deleteSkill: async (id) => {
+    try {
+      return await request(`/api/skills/${id}`, { method: 'DELETE' });
+    } catch (e) {
+      if (e.status === 404) {
+        let skills = JSON.parse(localStorage.getItem('mock_skills')) || [...PUBLIC_SERVICES];
+        skills = skills.filter(s => s.id !== id && s.title !== id);
+        localStorage.setItem('mock_skills', JSON.stringify(skills));
+        return { message: 'Skill deleted' };
+      }
+      throw e;
+    }
+  },
 
   // ── Pricing CRUD ──
   getPricing: () => request('/api/pricing'),

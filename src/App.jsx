@@ -1610,6 +1610,7 @@ export default function App() {
   const [portfolioFilter, setPortfolioFilter] = useState("All");
   const [testimonials, setTestimonials] = useState([]);
   const [pricing, setPricing] = useState([]);
+  const [skills, setSkills] = useState([]);
   const [homeCourses, setHomeCourses] = useState([]);
   const [settings, setSettings] = useState({ whatsappNumber: "+919416085060", bookingUrl: "https://calendly.com/" });
   const [dataLoading, setDataLoading] = useState(true);
@@ -1663,22 +1664,24 @@ export default function App() {
     }).catch(() => {});
   }, [showToast]);
 
-  // Load public data (portfolio, testimonials, settings)
+  // Load public data (portfolio, testimonials, settings, skills)
   useEffect(() => {
     const loadPublicData = async () => {
       setDataLoading(true);
       try {
-        const [portRes, testiRes, settingsRes, pricingRes, coursesRes] = await Promise.all([
+        const [portRes, testiRes, settingsRes, pricingRes, coursesRes, skillsRes] = await Promise.all([
           api.getPublicPortfolio().catch(() => ({ portfolio: [] })),
           api.getTestimonials().catch(() => ({ testimonials: [] })),
           api.getSettings().catch(() => ({ settings: {} })),
           api.getPricing().catch(() => ({ pricing: [] })),
           api.getCourses().catch(() => ({ courses: [] })),
+          api.getSkills().catch(() => ({ skills: [] })),
         ]);
         setPortfolio([...(portRes.portfolio || [])].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)));
         setTestimonials(testiRes.testimonials || []);
         setPricing(pricingRes.pricing || pricingRes || []);
         setHomeCourses(coursesRes.courses || []);
+        setSkills(skillsRes.skills || []);
         const s = settingsRes.settings || {};
         setSettings({
           whatsappNumber: s.whatsappNumber || s.whatsapp_number || "+919416085060",
@@ -1702,13 +1705,13 @@ export default function App() {
   useEffect(() => {
     const syncRoute = () => {
       const slug = window.location.pathname.match(/^\/services\/([^/]+)$/)?.[1];
-      const service = PUBLIC_SERVICES.find((item) => serviceSlug(item.title) === slug);
+      const service = skills.find((item) => serviceSlug(item.title) === slug);
       if (service) { setSelectedService(service.title); setPage("service"); }
     };
     syncRoute();
     window.addEventListener("popstate", syncRoute);
     return () => window.removeEventListener("popstate", syncRoute);
-  }, []);
+  }, [skills]);
 
   // Load notifications when session is learner
   useEffect(() => {
@@ -1868,6 +1871,7 @@ export default function App() {
               <ErrorBoundary fallbackTitle="CLIENT PORTAL SYSTEM">
                 <ClientPortal
                   user={session}
+                  skills={skills}
                   onBackToStudent={switchToStudentMode}
                   showToast={showToast}
                   onStartCustomProject={() => setShowInquiry(true)}

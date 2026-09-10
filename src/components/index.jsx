@@ -406,7 +406,8 @@ export function Hero({ onStartProject, onExploreSkills, onBecomeFreelancer }) {
   return <ScrollHero onStartProject={onStartProject} onExploreSkills={onExploreSkills} onBecomeFreelancer={onBecomeFreelancer} />;
 }
 // ─── SERVICES SECTION (landing) ───────────────────────────────────────────────
-export function ServicesSection({onServiceClick}){
+export function ServicesSection({skills, onServiceClick, onStartProject}){
+  const displaySkills = skills?.length > 0 ? skills : SERVICES;
   return(
     <section className="section" id="services">
       <div className="section-inner">
@@ -414,8 +415,8 @@ export function ServicesSection({onServiceClick}){
         <h2 className="section-title">Everything Your Business Needs to Grow</h2>
         <p className="section-sub">From video editing and VFX to full-stack development, we cover every angle of your digital growth.</p>
         <div className="services-grid">
-          {SERVICES.map(s=>(
-            <button className="svc-card" key={s.title} onClick={()=>onServiceClick(s)}>
+          {displaySkills.map(s=>(
+            <button className="svc-card" key={s.title} onClick={() => onStartProject ? onStartProject(s) : onServiceClick(s)}>
               <div className="svc-icon">{s.icon}</div>
               <h3>{s.title}</h3>
               <p>{s.desc}</p>

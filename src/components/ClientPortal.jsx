@@ -168,11 +168,14 @@ const SERVICES = [
 ];
 
 // ── Main Component ───────────────────────────────────────────────────────────
-export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomProject }) {
+export function ClientPortal({ user, skills = [], onBackToStudent, showToast, onStartCustomProject }) {
   const [activeTab, setActiveTab] = useState('orders');
   const [ordersFilter, setOrdersFilter] = useState('all');
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
+
+  // Use dynamic skills if available, fallback to static
+  const displaySkills = skills?.length > 0 ? skills : SERVICES;
 
   // Store checkout
   const [checkoutSkill, setCheckoutSkill] = useState(null);
@@ -611,9 +614,9 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
-            {SERVICES.map(svc => (
-              <div key={svc.id} style={{
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
+            {displaySkills.map(svc => (
+              <div key={svc.id || svc.title} style={{
                 ...card,
                 padding: 24,
                 border: svc.popular ? '1px solid rgba(255,45,85,0.4)' : '1px solid rgba(255,255,255,0.08)',

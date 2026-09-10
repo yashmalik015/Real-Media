@@ -23,6 +23,7 @@ import { RequestCRM } from './pages/RequestCRM.jsx';
 import { MediaLibrary } from './pages/MediaLibrary.jsx';
 import { SettingsPanel } from './pages/SettingsPanel.jsx';
 import { PricingManager } from './pages/PricingManager.jsx';
+import { SkillManager } from './pages/SkillManager.jsx';
 
 import { playClickSound, playHoverSound } from '../../utils/audio.js';
 import { api } from '../../api.js';
@@ -34,6 +35,7 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
   const [courses, setCourses] = useState([]);
   const [inquiries, setInquiries] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
+  const [skills, setSkills] = useState([]);
   const [settings, setSettings] = useState({});
   const [activities, setActivities] = useState([]);
 
@@ -44,14 +46,15 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
 
   const loadAllData = useCallback(async () => {
     try {
-      const [analyticsRes, portfolioRes, testimonialsRes, coursesRes, inquiriesRes, settingsRes, actRes] = await Promise.all([
+      const [analyticsRes, portfolioRes, testimonialsRes, coursesRes, inquiriesRes, settingsRes, actRes, skillsRes] = await Promise.all([
         api.getAnalytics().catch(() => ({ analytics: {} })),
         api.getPublicPortfolio().catch(() => ({ portfolio: [] })),
         api.getAllTestimonials().catch(() => ({ testimonials: [] })),
         api.getAllCourses().catch(() => ({ courses: [] })),
         api.getInquiries().catch(() => ({ inquiries: [] })),
         api.getSettings().catch(() => ({ settings: {} })),
-        api.getActivities().catch(() => ({ activities: [] }))
+        api.getActivities().catch(() => ({ activities: [] })),
+        api.getSkills().catch(() => ({ skills: [] }))
       ]);
 
       setAnalytics(analyticsRes.analytics || {});
@@ -61,6 +64,7 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
       setInquiries(inquiriesRes.inquiries || []);
       setSettings(settingsRes.settings || {});
       setActivities(actRes.activities || []);
+      setSkills(skillsRes.skills || []);
     } catch (e) {
       showToast(e.message || 'Failed to sync with MongoDB database.');
     }
@@ -108,6 +112,7 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
     { id: 'portfolio', label: 'Portfolio CMS', icon: FolderGit2, badge: portfolio.length },
     { id: 'courses', label: 'Courses LMS', icon: BookOpen, badge: courses.length },
     { id: 'testimonials', label: 'Testimonials', icon: Star, badge: testimonials.length },
+    { id: 'skills', label: 'Skills/Services', icon: FolderGit2, badge: skills.length },
     { id: 'pricing', label: 'Pricing', icon: DollarSign },
     { id: 'requests', label: 'Client Requests', icon: Inbox, badge: inquiries.filter((i) => i.status === 'New').length || undefined, badgeColor: '#ff2d55' },
     { id: 'media', label: 'Media Library', icon: ImageIcon },
@@ -391,6 +396,12 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
 
           {activeNav === 'pricing' && (
             <PricingManager
+              showToast={showToast}
+            />
+          )}
+
+          {activeNav === 'skills' && (
+            <SkillManager
               showToast={showToast}
             />
           )}
