@@ -187,8 +187,8 @@ export function FuturisticNavbar({
               {audioMuted ? '🔇' : '🔊'}
             </button>
 
-            {/* Learner Logout */}
-            {session && session.role === 'learner' && (
+            {/* User Logout for Learner / Client */}
+            {session && session.role !== 'team' && (
               <button
                 onClick={() => {
                   playClickSound();
@@ -219,7 +219,7 @@ export function FuturisticNavbar({
               <div
                 onClick={() => {
                   playClickSound();
-                  onNavigate(session.role === 'team' ? 'team' : 'profile');
+                  onNavigate(session.role === 'team' ? 'team' : session.role === 'client' ? 'client-portal' : 'profile');
                 }}
                 onMouseEnter={playHoverSound}
                 style={{
@@ -228,19 +228,20 @@ export function FuturisticNavbar({
                   gap: 8,
                   padding: '6px 14px',
                   borderRadius: 999,
-                  backgroundColor: 'rgba(255, 45, 85, 0.12)',
-                  border: '1px solid rgba(255, 45, 85, 0.4)',
+                  backgroundColor: session.role === 'client' ? 'rgba(52, 199, 89, 0.15)' : 'rgba(255, 45, 85, 0.12)',
+                  border: `1px solid ${session.role === 'client' ? 'rgba(52, 199, 89, 0.4)' : 'rgba(255, 45, 85, 0.4)'}`,
                   color: '#ffffff',
                   fontSize: '0.82rem',
                   cursor: 'pointer'
                 }}
+                title={session.role === 'client' ? 'Open Client Portal' : 'Open Learner Profile'}
               >
                 <div
                   style={{
                     width: 24,
                     height: 24,
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #ff2d55, #9f1111)',
+                    background: session.role === 'client' ? 'linear-gradient(135deg, #34c759, #1b8a38)' : 'linear-gradient(135deg, #ff2d55, #9f1111)',
                     display: 'grid',
                     placeItems: 'center',
                     fontWeight: 700,
@@ -251,6 +252,9 @@ export function FuturisticNavbar({
                 </div>
                 <span style={{ maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {session.name}
+                </span>
+                <span style={{ fontSize: '0.7rem', padding: '1px 6px', borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.1)', color: session.role === 'client' ? '#34c759' : '#ff2d55', fontWeight: 700 }}>
+                  {session.role === 'client' ? 'CLIENT' : session.role === 'team' ? 'TEAM' : 'STUDENT'}
                 </span>
               </div>
             ) : (

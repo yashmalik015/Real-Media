@@ -450,8 +450,8 @@ app.delete('/api/portfolio/:id', requireAuth, async (req, res) => {
 })
 
 app.post('/api/projects', requireAuth, upload.array('files', 20), async (req, res) => {
-  if (req.user.role !== 'client') {
-    return res.status(403).json({ message: 'Only clients can start projects.' })
+  if (req.user.role !== 'client' && req.user.role !== 'learner') {
+    return res.status(403).json({ message: 'User authorization required to place project order.' })
   }
 
   const { service, title, description, answers = '{}', servicePlan = 'Custom', totalAmount = 0 } = req.body

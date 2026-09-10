@@ -171,6 +171,12 @@ export const api = {
   bulkDelete: (collection, ids) => request('/api/bulk/delete', { method: 'POST', body: { collection, ids } }),
   bulkPublish: (collection, ids, published) => request('/api/bulk/publish', { method: 'POST', body: { collection, ids, published } }),
   updatePortfolio: (id, formData) => request(`/api/portfolio/${id}`, { method: 'PUT', body: formData }),
+
+  // ── Persona Mode Switch & WhatsApp Client Chat ──
+  switchMode: (targetRole) => request('/api/auth/switch-mode', { method: 'POST', body: { targetRole } }),
+  getClientChat: (userId) => request(`/api/client-chat${userId ? `?userId=${userId}` : ''}`),
+  sendClientChatMessage: (payload) => request('/api/client-chat', { method: 'POST', body: payload }),
+  uploadClientChatFile: (formData) => request('/api/client-chat/upload', { method: 'POST', body: formData }),
 }
 
 export function mediaUrl(url) {

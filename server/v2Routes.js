@@ -963,4 +963,159 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
       res.status(500).json({ message: err.message })
     }
   })
+
+  // ── Persona Mode Switcher (Student/Learner ↔ Client) ──
+  app.post('/api/auth/switch-mode', requireAuth, async (req, res) => {
+    try {
+      const { targetRole = 'client' } = req.body
+      if (targetRole !== 'client' && targetRole !== 'learner') {
+        return res.status(400).json({ success: false, message: 'Invalid target role. Must be client or learner.' })
+      }
+      const userId = req.user.sub || req.user.id
+      let user = await repository.findUserById(userId)
+      if (!user) return res.status(404).json({ success: false, message: 'User not found.' })
+
+      await repository.updateUserRole(userId, targetRole)
+      user = await repository.findUserById(userId)
+
+      const sessionRes = await createAuthResponse(user)
+      res.json({
+        success: true,
+        user: sessionRes.user,
+        accessToken: sessionRes.accessToken,
+        token: sessionRes.accessToken,
+      })
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message })
+    }
+  })
+
+  // ── Client WhatsApp-Style Live Chat ──
+  app.get('/api/client-chat', requireAuth, async (req, res) => {
+    try {
+      const userId = req.user.sub || req.user.id
+      const targetUserId = req.user.role === 'team' && req.query.userId ? req.query.userId : userId
+      const messages = await repository.clientChatMessages(targetUserId)
+      await repository.markClientChatRead(targetUserId)
+      res.json({ success: true, messages })
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message })
+    }
+  })
+
+  app.post('/api/client-chat', requireAuth, async (req, res) => {
+    try {
+      const { text = '', isVoice = false, voiceDuration = null, audioUrl = null, targetUserId = null } = req.body
+      const currentUserId = req.user.sub || req.user.id
+      const isTeam = req.user.role === 'team'
+      const chatUserId = isTeam && targetUserId ? targetUserId : currentUserId
+      const senderRole = isTeam ? 'team' : 'client'
+      const senderName = req.user.name || (isTeam ? 'Assets Weber Studio' : 'Client')
+
+      if (!text.trim() && !audioUrl) {
+        return res.status(400).json({ success: false, message: 'Message content is required.' })
+      }
+
+      const msg = await repository.addClientChatMessage({
+        id: id('cmsg'),
+        userId: chatUserId,
+        senderId: currentUserId,
+        senderName,
+        senderRole,
+        text: text.trim(),
+        audioUrl,
+        isVoice,
+        voiceDuration,
+        read: isTeam ? false : true,
+        createdAt: now(),
+      })
+
+      // Intelligent instant auto-responses for quick client actions
+      let autoReply = null
+      const lowerText = text.toLowerCase()
+      if (!isTeam) {
+        if (lowerText.includes('status') || lowerText.includes('track') || lowerText.includes('order')) {
+          const userProjects = await repository.visibleProjects({ id: chatUserId, role: 'client' })
+          const activeProj = userProjects.find((p) => p.projectState === 'active')
+          const replyText = activeProj
+            ? `👋 Hi ${req.user.name}! Your order "${activeProj.title}" (${activeProj.service}) is currently: ${activeProj.status}. Our team is working on your deliverables.`
+            : `👋 Hi ${req.user.name}! You have no active orders in production. Browse our Skill Store or click "Start Project" to launch your order!`
+          autoReply = await repository.addClientChatMessage({
+            id: id('cmsg'),
+            userId: chatUserId,
+            senderId: 'assetsweber_bot',
+            senderName: 'Assets Weber Studio Support',
+            senderRole: 'system',
+            text: replyText,
+            createdAt: now(),
+          })
+        } else if (lowerText.includes('call') || lowerText.includes('contact') || lowerText.includes('number') || lowerText.includes('phone')) {
+          autoReply = await repository.addClientChatMessage({
+            id: id('cmsg'),
+            userId: chatUserId,
+            senderId: 'assetsweber_bot',
+            senderName: 'Assets Weber Studio Support',
+            senderRole: 'system',
+            text: '📞 You can connect with our studio lead directly on WhatsApp or Call: +91 94160 85060 (24/7 dedicated client line).',
+            createdAt: now(),
+          })
+        } else if (lowerText.includes('revision') || lowerText.includes('change')) {
+          autoReply = await repository.addClientChatMessage({
+            id: id('cmsg'),
+            userId: chatUserId,
+            senderId: 'assetsweber_bot',
+            senderName: 'Assets Weber Studio Support',
+            senderRole: 'system',
+            text: '✏️ Revision request logged! Please send any reference links, timestamps, or specific notes here so our lead editor/developer can apply them right away.',
+            createdAt: now(),
+          })
+        }
+      }
+
+      res.status(201).json({ success: true, message: msg, autoReply })
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message })
+    }
+  })
+
+  app.post('/api/client-chat/upload', requireAuth, upload.single('file'), async (req, res) => {
+    try {
+      const currentUserId = req.user.sub || req.user.id
+      const isTeam = req.user.role === 'team'
+      const targetUserId = req.body.targetUserId
+      const chatUserId = isTeam && targetUserId ? targetUserId : currentUserId
+      const senderRole = isTeam ? 'team' : 'client'
+      const senderName = req.user.name || (isTeam ? 'Assets Weber Studio' : 'Client')
+
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: 'No file uploaded.' })
+      }
+
+      const uploaded = await uploadFile(req.file, `client-chat/${chatUserId}`)
+      const fileType = req.file.mimetype.startsWith('image/') ? 'image'
+        : req.file.mimetype.startsWith('audio/') ? 'audio'
+        : req.file.mimetype.startsWith('video/') ? 'video'
+        : 'document'
+
+      const msg = await repository.addClientChatMessage({
+        id: id('cmsg'),
+        userId: chatUserId,
+        senderId: currentUserId,
+        senderName,
+        senderRole,
+        text: req.body.text || '',
+        fileUrl: uploaded.url,
+        fileName: req.file.originalname,
+        fileType,
+        audioUrl: fileType === 'audio' ? uploaded.url : null,
+        isVoice: fileType === 'audio',
+        read: isTeam ? false : true,
+        createdAt: now(),
+      })
+
+      res.status(201).json({ success: true, message: msg })
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message })
+    }
+  })
 }

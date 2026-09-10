@@ -64,6 +64,7 @@ export async function createDatabase() {
   // New Media & Activities Collections
   const media = db.collection('media')
   const activities = db.collection('activities')
+  const clientChatMessages = db.collection('client_chat_messages')
 
   // Automatic migration for outdated team_id_1_role_1 index & data backfill
   try {
@@ -120,6 +121,8 @@ export async function createDatabase() {
 
     // Pricing Index
     pricing.createIndex({ category: 1 }),
+    // Client Chat Index
+    clientChatMessages.createIndex({ user_id: 1, created_at: 1 }),
   ])
 
   await seedDefaultSettings(siteSettings)
@@ -264,6 +267,9 @@ function makeRepository(client, collections) {
     learningProgress,
     lessonLikes,
     pricing,
+    media,
+    activities,
+    clientChatMessages,
   } = collections
 
   async function hydrateProject(row) {
@@ -346,6 +352,10 @@ function makeRepository(client, collections) {
       const set = { google_id: googleId }
       if (avatar) set.avatar = avatar
       await users.updateOne({ id: userId }, { $set: set })
+      return userRow(await users.findOne({ id: userId }))
+    },
+    updateUserRole: async (userId, newRole) => {
+      await users.updateOne({ id: userId }, { $set: { role: newRole, active_mode: newRole, updated_at: now() } })
       return userRow(await users.findOne({ id: userId }))
     },
     ensureTeamUser: async (defaults) => {
@@ -641,6 +651,37 @@ function makeRepository(client, collections) {
       const payload = { ...msg, _id: msg.id }
       await teamChatMessages.insertOne(payload)
       return teamChatRow(await teamChatMessages.findOne({ id: msg.id }))
+    },
+
+    // ── Client WhatsApp-Style Chat ──
+    clientChatMessages: async (userId) => {
+      const query = userId ? { user_id: userId } : {}
+      const list = await clientChatMessages.find(query).sort({ created_at: 1 }).toArray()
+      return list.map(clientChatRow)
+    },
+    addClientChatMessage: async (msg) => {
+      const payload = {
+        ...msg,
+        _id: msg.id,
+        user_id: msg.userId,
+        sender_id: msg.senderId,
+        sender_name: msg.senderName,
+        sender_role: msg.senderRole || 'client',
+        text: msg.text || '',
+        file_url: msg.fileUrl || null,
+        file_name: msg.fileName || null,
+        file_type: msg.fileType || null,
+        audio_url: msg.audioUrl || null,
+        is_voice: Boolean(msg.isVoice),
+        voice_duration: msg.voiceDuration || null,
+        read: Boolean(msg.read),
+        created_at: msg.createdAt || now(),
+      }
+      await clientChatMessages.insertOne(payload)
+      return clientChatRow(await clientChatMessages.findOne({ id: msg.id }))
+    },
+    markClientChatRead: async (userId) => {
+      await clientChatMessages.updateMany({ user_id: userId, sender_role: { $ne: 'client' } }, { $set: { read: true } })
     },
 
     // ── Settings (V2) ──
@@ -1282,6 +1323,26 @@ function teamChatRow(doc) {
     text: doc.text,
     fileUrl: doc.file_url || doc.fileUrl || null,
     fileName: doc.file_name || doc.fileName || null,
+    createdAt: doc.created_at || doc.createdAt || null,
+  }
+}
+
+function clientChatRow(doc) {
+  if (!doc) return null
+  return {
+    id: doc.id || doc._id,
+    userId: doc.user_id || doc.userId,
+    senderId: doc.sender_id || doc.senderId,
+    senderName: doc.sender_name || doc.senderName,
+    senderRole: doc.sender_role || doc.senderRole || 'client',
+    text: doc.text || '',
+    fileUrl: doc.file_url || doc.fileUrl || null,
+    fileName: doc.file_name || doc.fileName || null,
+    fileType: doc.file_type || doc.fileType || null,
+    audioUrl: doc.audio_url || doc.audioUrl || null,
+    isVoice: Boolean(doc.is_voice || doc.isVoice),
+    voiceDuration: doc.voice_duration || doc.voiceDuration || null,
+    read: Boolean(doc.read),
     createdAt: doc.created_at || doc.createdAt || null,
   }
 }

@@ -19,6 +19,7 @@ import { FuturisticPricing } from "./components/futuristic/FuturisticPricing.jsx
 import { CommandCenterContact } from "./components/futuristic/CommandCenterContact.jsx";
 import { FuturisticFooter } from "./components/futuristic/FuturisticFooter.jsx";
 import { TeamDashboard } from "./components/dashboard/TeamDashboard.jsx";
+import { ClientPortal } from "./components/ClientPortal.jsx";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function uid(prefix) {
@@ -290,7 +291,7 @@ function LoginModal({ onLogin, onGoogleLogin, onClose }) {
 }
 
 // ── Learner Profile Page ──────────────────────────────────────────────────────
-function LearnerProfilePage({ user, onBack, showToast }) {
+function LearnerProfilePage({ user, onBack, onSwitchToClient, showToast }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -362,6 +363,66 @@ function LearnerProfilePage({ user, onBack, showToast }) {
       <div className="section-inner">
         <button className="service-page-back" onClick={onBack}>← Back</button>
         <SectionHeader label="LEARNER PROFILE" title="Your Profile" sub="Build your professional identity. Verified profiles get matched with real client opportunities." />
+
+        {/* ── Student ↔ Client Persona Switcher Banner ── */}
+        <div
+          style={{
+            marginTop: 28,
+            background: "linear-gradient(135deg, rgba(255,45,85,0.12), rgba(18,18,24,0.92))",
+            border: "1px solid rgba(255,45,85,0.4)",
+            borderRadius: 20,
+            padding: "20px 28px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 16,
+            boxShadow: "0 10px 30px rgba(0,0,0,0.5)"
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 14,
+                background: "linear-gradient(135deg, rgba(255,45,85,0.3), rgba(255,45,85,0.1))",
+                border: "1px solid #ff2d55",
+                display: "grid",
+                placeItems: "center",
+                fontSize: "1.5rem"
+              }}
+            >
+              🎓
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontWeight: 700, fontSize: "1.1rem", color: "#fff" }}>Current Persona: Student / Learner</span>
+                <span style={{ padding: "3px 10px", borderRadius: 999, backgroundColor: "rgba(255,45,85,0.2)", color: "#ff2d55", fontSize: ".72rem", fontWeight: 700, fontFamily: "monospace" }}>ACADEMY MODE</span>
+              </div>
+              <div style={{ color: "var(--muted)", fontSize: ".86rem", marginTop: 3 }}>
+                Want to hire Assets Weber, purchase creative/software skills, or track client orders & chat on WhatsApp?
+              </div>
+            </div>
+          </div>
+
+          <button
+            className="btn-primary"
+            style={{
+              padding: "12px 24px",
+              fontSize: ".9rem",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              boxShadow: "0 0 25px rgba(255,45,85,0.45)",
+              cursor: "pointer"
+            }}
+            onClick={onSwitchToClient}
+          >
+            <span>Switch to Client Portal 💼</span>
+            <span style={{ fontSize: "1.1rem" }}>➔</span>
+          </button>
+        </div>
 
         {loading ? (
           <div style={{ display: "grid", gap: 16, marginTop: 40 }}>
@@ -1633,6 +1694,34 @@ export default function App() {
     } catch { /* silent */ }
   };
 
+  const switchToClientMode = async () => {
+    try {
+      const res = await api.switchMode('client');
+      if (res?.user) setSession(res.user);
+      if (res?.accessToken) setToken(res.accessToken);
+      setPage("client-portal");
+      showToast("Switched to Client Portal! Browse skills and track orders.");
+    } catch (e) {
+      if (session) setSession({ ...session, role: 'client' });
+      setPage("client-portal");
+      showToast("Switched to Client Portal.");
+    }
+  };
+
+  const switchToStudentMode = async () => {
+    try {
+      const res = await api.switchMode('learner');
+      if (res?.user) setSession(res.user);
+      if (res?.accessToken) setToken(res.accessToken);
+      setPage("profile");
+      showToast("Switched to Student Profile.");
+    } catch (e) {
+      if (session) setSession({ ...session, role: 'learner' });
+      setPage("profile");
+      showToast("Switched to Student Profile.");
+    }
+  };
+
   const requestPage = (target) => {
     setPage(target);
     if (window.location.pathname.startsWith("/services/")) window.history.pushState({}, "", "/");
@@ -1705,10 +1794,29 @@ export default function App() {
             />
             <FuturisticFooter onNavigate={requestPage} />
           </div>
+        ) : page === "client-portal" || page === "orders" || (page === "profile" && session?.role === "client") ? (
+          <div className="page" style={{ paddingTop: 100 }}>
+            {session ? (
+              <ClientPortal
+                user={session}
+                onBackToStudent={switchToStudentMode}
+                showToast={showToast}
+                onStartCustomProject={() => setShowInquiry(true)}
+              />
+            ) : (
+              <div className="section">
+                <div className="section-inner">
+                  <p style={{ color: "var(--muted)" }}>Please login to access the Client Portal.</p>
+                  <button className="btn-primary" style={{ marginTop: 16 }} onClick={() => setShowAuth(true)}>Login</button>
+                </div>
+              </div>
+            )}
+            <FuturisticFooter onNavigate={requestPage} />
+          </div>
         ) : page === "profile" ? (
           <div className="page" style={{ paddingTop: 100 }}>
             {session?.role === "learner" ? (
-              <LearnerProfilePage user={session} onBack={() => requestPage("home")} showToast={showToast} />
+              <LearnerProfilePage user={session} onSwitchToClient={switchToClientMode} onBack={() => requestPage("home")} showToast={showToast} />
             ) : (
               <div className="section"><div className="section-inner"><p style={{ color: "var(--muted)" }}>Please login as a learner to view your profile.</p><button className="btn-primary" style={{ marginTop: 16 }} onClick={() => setShowAuth(true)}>Login</button></div></div>
             )}
