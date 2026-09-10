@@ -29,7 +29,7 @@ export function FuturisticNavbar({
     { label: 'Home', value: 'home' },
     { label: 'Services', value: 'services' },
     { label: 'Portfolio', value: 'portfolio' },
-    ...(session?.role === 'client' ? [{ label: 'Orders & Hub 📦', value: 'client-portal' }] : [{ label: 'Learning', value: 'learning' }]),
+    { label: 'Learning', value: 'learning' },
     { label: 'Pipeline', value: 'process' },
     { label: 'Reviews', value: 'testimonials' },
     { label: 'Pricing', value: 'pricing' },

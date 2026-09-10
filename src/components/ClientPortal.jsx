@@ -407,11 +407,11 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
   const completedOrdersCount = orders.filter(o => o.projectState === 'finished' || o.status === 'Completed').length;
 
   return (
-    <div style={{ maxWidth: 1440, margin: '0 auto', padding: '120px 24px 80px', color: '#fff', fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ maxWidth: 1440, margin: '0 auto', padding: '30px 24px 80px', color: '#fff', fontFamily: "'Inter', sans-serif", position: 'relative', zIndex: 10 }}>
       {/* ── Top Persona Switcher Header ── */}
       <div
         style={{
-          background: 'linear-gradient(135deg, rgba(20, 20, 30, 0.95), rgba(10, 10, 16, 0.98))',
+          background: 'linear-gradient(135deg, rgba(20, 20, 30, 0.96), rgba(12, 12, 18, 0.98))',
           border: '1px solid rgba(255, 45, 85, 0.35)',
           borderRadius: 24,
           padding: '24px 32px',
@@ -420,7 +420,7 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: 20,
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6), inset 0 0 30px rgba(255, 45, 85, 0.1)',
+          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.7), inset 0 0 30px rgba(255, 45, 85, 0.1)',
           marginBottom: 32
         }}
       >
@@ -442,7 +442,7 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', letterSpacing: '0.06em', color: '#fff' }}>
-                CLIENT & BUYER DASHBOARD
+                CLIENT PROFILE & ORDERS HUB
               </span>
               <span
                 style={{
@@ -456,11 +456,11 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
                   fontFamily: 'monospace'
                 }}
               >
-                ● ACTIVE CLIENT PORTAL
+                ● ACTIVE CLIENT PERSONA
               </span>
             </div>
-            <div style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '0.86rem', marginTop: 2 }}>
-              Signed in as <strong style={{ color: '#fff' }}>{user?.name || 'Client'}</strong> ({user?.email}). Track Amazon-style orders, purchase verified studio skills, and talk live with Assets Weber on WhatsApp.
+            <div style={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: '0.88rem', marginTop: 2 }}>
+              Signed in as <strong style={{ color: '#fff' }}>{user?.name || 'Client'}</strong> ({user?.email}). Track orders in Amazon style, purchase creative skills, and talk with Assets Weber on WhatsApp.
             </div>
           </div>
         </div>
@@ -474,19 +474,20 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
               display: 'flex',
               alignItems: 'center',
               gap: 10,
-              padding: '12px 22px',
-              borderRadius: 14,
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
+              padding: '14px 26px',
+              borderRadius: 999,
+              background: 'linear-gradient(135deg, #ff2d55, #c81e42)',
+              border: 'none',
               color: '#fff',
-              fontSize: '0.88rem',
-              fontWeight: 600,
+              fontSize: '0.92rem',
+              fontWeight: 700,
               cursor: 'pointer',
+              boxShadow: '0 0 25px rgba(255, 45, 85, 0.45)',
               transition: 'all 0.25s ease'
             }}
             title="Switch back to Student / Learner view"
           >
-            <ArrowRightLeft size={16} color="#ff2d55" />
+            <ArrowRightLeft size={16} color="#fff" />
             <span>Switch to Student Profile 🎓</span>
           </button>
         </div>
