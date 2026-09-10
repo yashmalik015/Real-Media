@@ -177,16 +177,40 @@ function ServiceDetail({ title, onBack, onInquiry, portfolio, loading }) {
 }
 
 // ── Inquiry / Start Project Modal ─────────────────────────────────────────────
-function InquiryModal({ initialService, onClose, settings, showToast }) {
-  const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", service: initialService || "", budget: "", description: "" });
+function InquiryModal({ initialService, onClose, settings, showToast, session }) {
+  const [form, setForm] = useState({ name: session?.name || "", email: session?.email || "", phone: "", company: "", service: initialService || "", budget: "", description: "" });
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [orderCreated, setOrderCreated] = useState(false);
 
   const submit = async () => {
     if (!form.name || !form.email) { showToast("Please enter your name and email."); return; }
     setLoading(true);
     try {
       await api.submitInquiry(form);
+
+      // If user is logged in, also create a project/order in their Client Portal
+      if (session) {
+        try {
+          const fd = new FormData();
+          fd.append('service', form.service || 'General');
+          fd.append('title', `${form.service || 'Project'} — ${form.name}`);
+          fd.append('description', form.description || 'Submitted via project inquiry form');
+          fd.append('servicePlan', 'Custom');
+          fd.append('totalAmount', form.budget ? parseInt(form.budget.replace(/\D/g, ''), 10) || 0 : 0);
+          fd.append('answers', JSON.stringify({
+            name: form.name,
+            email: form.email,
+            phone: form.phone,
+            company: form.company,
+            budget: form.budget,
+            description: form.description
+          }));
+          await api.createProject(fd);
+          setOrderCreated(true);
+        } catch { /* silent – inquiry still succeeded */ }
+      }
+
       setDone(true);
     } catch (e) {
       showToast(e.message || "Failed to submit. Please try WhatsApp.");
@@ -201,9 +225,14 @@ function InquiryModal({ initialService, onClose, settings, showToast }) {
         <div className="msf-modal" style={{ textAlign: "center", maxWidth: 520 }}>
           <div style={{ fontSize: "3.5rem", marginBottom: 16 }}>✅</div>
           <h2 className="bn" style={{ fontSize: "2rem", marginBottom: 12 }}>Inquiry Received!</h2>
-          <p style={{ color: "var(--muted)", lineHeight: 1.75, marginBottom: 28 }}>
+          <p style={{ color: "var(--muted)", lineHeight: 1.75, marginBottom: 12 }}>
             Thank you, {form.name}. We'll review your project requirements and get back to you within 24 hours.
           </p>
+          {orderCreated && (
+            <p style={{ color: "#34c759", fontSize: ".88rem", marginBottom: 20, lineHeight: 1.5 }}>
+              ✅ An order has been created in your Client Portal. You can track it there!
+            </p>
+          )}
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
             <a className="btn-ghost" href={settings?.bookingUrl || "https://calendly.com/"} target="_blank" rel="noreferrer">📅 Book Discovery Call</a>
             <a className="btn-primary" href={`https://wa.me/${(settings?.whatsappNumber || "+919416085060").replace(/\D/g, "")}`} target="_blank" rel="noreferrer">💬 Chat on WhatsApp</a>
@@ -1937,7 +1966,7 @@ export default function App() {
 
       {/* Modals */}
       {showSearch && <GlobalSearch onClose={() => setShowSearch(false)} onNavigate={requestPage} />}
-      {showInquiry && <InquiryModal initialService={selectedService || ""} onClose={() => setShowInquiry(false)} settings={settings} showToast={showToast} />}
+      {showInquiry && <InquiryModal initialService={selectedService || ""} onClose={() => setShowInquiry(false)} settings={settings} showToast={showToast} session={session} />}
       {showAuth && <LoginModal onLogin={onLogin} onGoogleLogin={onGoogleLogin} onClose={() => setShowAuth(false)} />}
     </>
   );
