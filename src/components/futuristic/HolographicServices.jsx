@@ -42,16 +42,17 @@ export function HolographicServices({ onPickService }) {
     const ctx = gsap.context(() => {
       gsap.fromTo(
         '.holo-card',
-        { y: 60, opacity: 0 },
+        { y: 30, opacity: 0.8 },
         {
           y: 0,
           opacity: 1,
-          duration: 0.8,
-          stagger: 0.1,
-          ease: 'power3.out',
+          duration: 0.6,
+          stagger: 0.08,
+          ease: 'power2.out',
+          clearProps: 'opacity,transform',
           scrollTrigger: {
             trigger: '#services-grid',
-            start: 'top 85%',
+            start: 'top 90%',
           }
         }
       );

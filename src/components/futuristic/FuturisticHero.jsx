@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { COMPANY_NAME, LOGO_URL } from '../../data/siteData.js';
 import { playClickSound, playHoverSound } from '../../utils/audio.js';
@@ -6,48 +6,57 @@ import { AnimatedHeroTitle, AnimatedParagraph, AnimatedButtonText, AnimatedCount
 
 export function FuturisticHero({ onStartProject, onExploreServices, onLearningClick }) {
   const containerRef = useRef(null);
+  const gridRef = useRef(null);
   const coreCanvasRef = useRef(null);
   const ctaBtnRef = useRef(null);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
 
-  // Mouse perspective movement
+  // Smooth throttled mouse tilt using direct DOM transform (zero React re-renders)
   useEffect(() => {
+    let animFrame = null;
     const handleMouseMove = (e) => {
-      const { innerWidth, innerHeight } = window;
-      const x = (e.clientX / innerWidth - 0.5) * 20;
-      const y = (e.clientY / innerHeight - 0.5) * -20;
-      setTilt({ x, y });
+      if (animFrame) return;
+      animFrame = requestAnimationFrame(() => {
+        animFrame = null;
+        if (!gridRef.current) return;
+        const { innerWidth, innerHeight } = window;
+        const x = (e.clientX / innerWidth - 0.5) * 12;
+        const y = (e.clientY / innerHeight - 0.5) * -12;
+        gridRef.current.style.transform = `rotateY(${x}deg) rotateX(${y}deg)`;
+      });
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      if (animFrame) cancelAnimationFrame(animFrame);
+    };
   }, []);
 
-  // 3D HUD Core Canvas Effect
+  // 3D HUD Core Canvas Effect (Optimized 60FPS)
   useEffect(() => {
     const canvas = coreCanvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let width = (canvas.width = canvas.parentElement.clientWidth);
-    let height = (canvas.height = canvas.parentElement.clientHeight);
+    const ctx = canvas.getContext('2d', { alpha: true });
+    let width = (canvas.width = canvas.parentElement.clientWidth || 400);
+    let height = (canvas.height = canvas.parentElement.clientHeight || 400);
 
     const handleResize = () => {
       if (!canvas.parentElement) return;
       width = canvas.width = canvas.parentElement.clientWidth;
       height = canvas.height = canvas.parentElement.clientHeight;
     };
-    window.addEventListener('resize', handleResize);
+    window.addEventListener('resize', handleResize, { passive: true });
 
-    // 3D Glass Ring Particles
+    // 3D Glass Ring Particles (Reduced to 45 for smooth 60FPS without CPU lag)
     const particles = [];
-    const num = 120;
+    const num = 45;
     for (let i = 0; i < num; i++) {
       particles.push({
         angle: (i / num) * Math.PI * 2,
-        radius: 120 + Math.random() * 60,
-        speed: 0.005 + Math.random() * 0.008,
-        size: Math.random() * 2.5 + 1,
-        z: Math.random() * 200 - 100
+        radius: 120 + Math.random() * 50,
+        speed: 0.006 + Math.random() * 0.006,
+        size: Math.random() * 2 + 1,
+        z: Math.random() * 160 - 80
       });
     }
 
@@ -61,17 +70,7 @@ export function FuturisticHero({ onStartProject, onExploreServices, onLearningCl
       const centerX = width / 2;
       const centerY = height / 2;
 
-      // Draw glowing central orb
-      const orbGrad = ctx.createRadialGradient(centerX, centerY, 10, centerX, centerY, 140);
-      orbGrad.addColorStop(0, 'rgba(255, 45, 85, 0.4)');
-      orbGrad.addColorStop(0.5, 'rgba(255, 45, 85, 0.1)');
-      orbGrad.addColorStop(1, 'transparent');
-      ctx.fillStyle = orbGrad;
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, 140, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Render rotating 3D particle torus ring
+      // Render rotating 3D particle torus ring (crisp, zero shadowBlur overhead)
       particles.forEach((p) => {
         p.angle += p.speed;
         const currentAngle = p.angle + rotation;
@@ -86,9 +85,7 @@ export function FuturisticHero({ onStartProject, onExploreServices, onLearningCl
 
         ctx.beginPath();
         ctx.arc(px, py, p.size * scale, 0, Math.PI * 2);
-        ctx.fillStyle = z3d > 0 ? '#ff2d55' : 'rgba(255, 255, 255, 0.4)';
-        ctx.shadowBlur = z3d > 0 ? 12 : 0;
-        ctx.shadowColor = '#ff2d55';
+        ctx.fillStyle = z3d > 0 ? '#ff2d55' : 'rgba(255, 255, 255, 0.45)';
         ctx.fill();
       });
 
@@ -111,8 +108,8 @@ export function FuturisticHero({ onStartProject, onExploreServices, onLearningCl
     const y = (rect.top + rect.height / 2) / window.innerHeight;
 
     confetti({
-      particleCount: 60,
-      spread: 70,
+      particleCount: 40,
+      spread: 60,
       origin: { x, y },
       colors: ['#ff2d55', '#ffffff', '#c81e42', '#ff6b8b'],
       disableForReducedMotion: true
@@ -135,6 +132,7 @@ export function FuturisticHero({ onStartProject, onExploreServices, onLearningCl
       }}
     >
       <div
+        ref={gridRef}
         style={{
           maxWidth: 1440,
           margin: '0 auto',
@@ -143,8 +141,8 @@ export function FuturisticHero({ onStartProject, onExploreServices, onLearningCl
           gridTemplateColumns: '1fr 0.9fr',
           gap: 60,
           alignItems: 'center',
-          transform: `rotateY(${tilt.x * 0.3}deg) rotateX(${tilt.y * 0.3}deg)`,
-          transition: 'transform 0.15s ease-out'
+          transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+          willChange: 'transform'
         }}
       >
         {/* Left Headline & Action Content */}
@@ -184,18 +182,18 @@ export function FuturisticHero({ onStartProject, onExploreServices, onLearningCl
           {/* Animated Paragraph */}
           <AnimatedParagraph
             style={{
-              color: 'rgba(255, 255, 255, 0.65)',
+              color: 'rgba(255, 255, 255, 0.7)',
               fontSize: '1.1rem',
               lineHeight: 1.8,
               maxWidth: 620,
               marginBottom: 40
             }}
-            delay={250}
+            delay={100}
           >
             Assets Weber builds high-end web applications, mobile software, 3D experiences, VFX content, and AI automation systems designed for industry leaders who demand perfection.
           </AnimatedParagraph>
 
-          {/* Magnetic Action Buttons with Animated Hover Text */}
+          {/* Action Buttons */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'center' }}>
             <button
               ref={ctaBtnRef}
@@ -210,9 +208,9 @@ export function FuturisticHero({ onStartProject, onExploreServices, onLearningCl
                 fontWeight: 700,
                 fontSize: '1rem',
                 border: 'none',
-                boxShadow: '0 0 50px rgba(255, 45, 85, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.25)',
+                boxShadow: '0 0 40px rgba(255, 45, 85, 0.45)',
                 cursor: 'pointer',
-                transition: 'transform 0.2s, boxShadow 0.2s',
+                transition: 'transform 0.2s, box-shadow 0.2s',
                 overflow: 'hidden'
               }}
             >
@@ -228,11 +226,12 @@ export function FuturisticHero({ onStartProject, onExploreServices, onLearningCl
               style={{
                 padding: '17px 32px',
                 borderRadius: 999,
-                backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 255, 255, 0.18)',
-                color: 'rgba(255, 255, 255, 0.85)',
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: 'rgba(255, 255, 255, 0.9)',
                 fontSize: '0.95rem',
                 fontWeight: 600,
+                cursor: 'pointer',
                 transition: 'all 0.25s ease'
               }}
             >
@@ -278,8 +277,7 @@ export function FuturisticHero({ onStartProject, onExploreServices, onLearningCl
               border: '1px solid rgba(255, 45, 85, 0.45)',
               borderRadius: 28,
               backdropFilter: 'blur(30px)',
-              boxShadow: '0 30px 80px rgba(0,0,0,0.9), 0 0 50px rgba(255, 45, 85, 0.2)',
-              transform: 'translateZ(40px)',
+              boxShadow: '0 30px 80px rgba(0,0,0,0.9), 0 0 40px rgba(255, 45, 85, 0.15)',
               animation: 'levitate 5s ease-in-out infinite'
             }}
           >
@@ -316,7 +314,7 @@ export function FuturisticHero({ onStartProject, onExploreServices, onLearningCl
       <style>{`
         @keyframes levitate {
           0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-14px) rotate(1deg); }
+          50% { transform: translateY(-12px) rotate(0.8deg); }
         }
         @media (max-width: 900px) {
           section { padding-top: 80px !important; }

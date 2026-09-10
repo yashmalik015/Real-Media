@@ -119,16 +119,17 @@ export function FuturisticPortfolio({ portfolio = [], isStandalone = false, onNa
     const ctx = gsap.context(() => {
       gsap.fromTo(
         '.port-card',
-        { x: 100, opacity: 0 },
+        { x: 40, opacity: 0.8 },
         {
           x: 0,
           opacity: 1,
-          duration: 0.8,
-          stagger: 0.15,
-          ease: 'power3.out',
+          duration: 0.6,
+          stagger: 0.1,
+          ease: 'power2.out',
+          clearProps: 'opacity,transform',
           scrollTrigger: {
             trigger: scrollContainerRef.current,
-            start: 'top 85%',
+            start: 'top 90%',
           }
         }
       );

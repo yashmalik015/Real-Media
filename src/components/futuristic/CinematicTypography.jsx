@@ -1,33 +1,26 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-// ── 1. HERO TITLE: 3D Character Assembly + Light Sweep + Mouse Perspective ──
+// ── 1. HERO TITLE: 3D Character Assembly + Light Sweep + High Performance ──
 export function AnimatedHeroTitle({ text = "WE ENGINEER THE DIGITAL FUTURE" }) {
   const containerRef = useRef(null);
-  const [mouseOffset, setMouseOffset] = useState({ x: 0, y: 0 });
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
+    // Safety guarantee: Ensure title is always visible
+    const timer = setTimeout(() => setIsVisible(true), 150);
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsVisible(true);
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.05 }
     );
     if (containerRef.current) observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      const { innerWidth, innerHeight } = window;
-      const x = (e.clientX / innerWidth - 0.5) * 20;
-      const y = (e.clientY / innerHeight - 0.5) * -20;
-      setMouseOffset({ x, y });
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
     };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
   const words = text.split(' ');
@@ -38,15 +31,12 @@ export function AnimatedHeroTitle({ text = "WE ENGINEER THE DIGITAL FUTURE" }) {
       ref={containerRef}
       style={{
         fontFamily: "'Bebas Neue', sans-serif",
-        fontSize: 'clamp(4.2rem, 7.8vw, 8rem)',
+        fontSize: 'clamp(3.8rem, 7.5vw, 7.8rem)',
         lineHeight: 0.92,
         letterSpacing: '0.03em',
         color: '#ffffff',
         margin: '0 0 28px 0',
-        perspective: 1000,
-        transform: `rotateY(${mouseOffset.x * 0.4}deg) rotateX(${mouseOffset.y * 0.4}deg)`,
-        transition: 'transform 0.15s ease-out',
-        willChange: 'transform'
+        perspective: 1000
       }}
     >
       {words.map((word, wordIdx) => {
@@ -64,7 +54,7 @@ export function AnimatedHeroTitle({ text = "WE ENGINEER THE DIGITAL FUTURE" }) {
           >
             <span style={{ display: 'inline-block' }}>
               {word.split('').map((char, charIdx) => {
-                const delay = globalCharIndex * 35;
+                const delay = globalCharIndex * 25;
                 globalCharIndex++;
 
                 return (
@@ -76,13 +66,12 @@ export function AnimatedHeroTitle({ text = "WE ENGINEER THE DIGITAL FUTURE" }) {
                       textShadow: isHighlight
                         ? '0 0 35px rgba(255, 45, 85, 0.8), 0 0 15px rgba(255, 45, 85, 0.4)'
                         : '0 10px 30px rgba(0,0,0,0.8)',
-                      opacity: isVisible ? 1 : 0,
-                      filter: isVisible ? 'blur(0px)' : 'blur(20px)',
+                      opacity: isVisible ? 1 : 0.85,
+                      filter: isVisible ? 'blur(0px)' : 'none',
                       transform: isVisible
-                        ? 'translate3d(0, 0, 0) rotateX(0deg) scale(1)'
-                        : 'translate3d(0, 80px, 0) rotateX(-90deg) scale(0.8)',
-                      transition: `opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms, filter 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms`,
-                      willChange: 'transform, opacity, filter'
+                        ? 'translate3d(0, 0, 0)'
+                        : 'translate3d(0, 20px, 0)',
+                      transition: `opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms`
                     }}
                     className="hero-letter"
                   >
@@ -101,33 +90,36 @@ export function AnimatedHeroTitle({ text = "WE ENGINEER THE DIGITAL FUTURE" }) {
 // ── 2. SECTION TITLES: Unique Animation Reveal Style per Section ──
 export function AnimatedSectionTitle({ label, title, sub, animationStyle = 'services' }) {
   const titleRef = useRef(null);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
+    const timer = setTimeout(() => setIsVisible(true), 200);
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsVisible(true);
         }
       },
-      { threshold: 0.15 }
+      { threshold: 0.05 }
     );
     if (titleRef.current) observer.observe(titleRef.current);
-    return () => observer.disconnect();
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
   }, []);
 
   const renderAnimatedTitle = () => {
     const chars = title.split('');
 
-    // Style 1: Vertical Mask Reveal (Services)
     if (animationStyle === 'services') {
       return (
         <div style={{ overflow: 'hidden', paddingBottom: 6 }}>
           <div
             style={{
-              opacity: isVisible ? 1 : 0,
-              transform: isVisible ? 'translateY(0)' : 'translateY(100%)',
-              transition: 'all 0.8s cubic-bezier(0.16, 1, 0.3, 1)'
+              opacity: isVisible ? 1 : 0.8,
+              transform: isVisible ? 'translateY(0)' : 'translateY(15px)',
+              transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
           >
             {title}
@@ -136,21 +128,19 @@ export function AnimatedSectionTitle({ label, title, sub, animationStyle = 'serv
       );
     }
 
-    // Style 2: Split-Word Flip (Portfolio)
     if (animationStyle === 'portfolio') {
       const words = title.split(' ');
       return (
-        <div style={{ perspective: 800 }}>
+        <div>
           {words.map((word, wIdx) => (
             <span
               key={wIdx}
               style={{
                 display: 'inline-block',
                 marginRight: '0.25em',
-                opacity: isVisible ? 1 : 0,
-                transform: isVisible ? 'rotateY(0deg) translateY(0)' : 'rotateY(45deg) translateY(40px)',
-                filter: isVisible ? 'blur(0px)' : 'blur(10px)',
-                transition: `all 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${wIdx * 120}ms`
+                opacity: isVisible ? 1 : 0.8,
+                transform: isVisible ? 'translateY(0)' : 'translateY(10px)',
+                transition: `all 0.5s ease-out ${wIdx * 50}ms`
               }}
             >
               {word}
@@ -160,95 +150,40 @@ export function AnimatedSectionTitle({ label, title, sub, animationStyle = 'serv
       );
     }
 
-    // Style 3: Character Wave Ripple (Learning)
     if (animationStyle === 'learning') {
       return (
-        <div>
-          {chars.map((char, cIdx) => (
-            <span
-              key={cIdx}
-              style={{
-                display: 'inline-block',
-                whiteSpace: char === ' ' ? 'pre' : 'normal',
-                opacity: isVisible ? 1 : 0,
-                transform: isVisible ? 'translateY(0) scale(1)' : 'translateY(-30px) scale(1.4)',
-                color: isVisible ? (cIdx % 7 === 0 ? '#ff2d55' : '#ffffff') : '#ffffff',
-                transition: `all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) ${cIdx * 25}ms`
-              }}
-            >
-              {char}
-            </span>
-          ))}
+        <div
+          style={{
+            opacity: isVisible ? 1 : 0.8,
+            transform: isVisible ? 'translateX(0)' : 'translateX(-20px)',
+            transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}
+        >
+          {title}
         </div>
       );
     }
 
-    // Style 4: 3D RotateX Flip (Pipeline / Process)
     if (animationStyle === 'pipeline') {
       return (
-        <div style={{ perspective: 900 }}>
-          <div
-            style={{
-              opacity: isVisible ? 1 : 0,
-              transform: isVisible ? 'rotateX(0deg) translateY(0)' : 'rotateX(-90deg) translateY(50px)',
-              transformOrigin: 'bottom center',
-              transition: 'all 0.8s cubic-bezier(0.16, 1, 0.3, 1)'
-            }}
-          >
-            {title}
-          </div>
+        <div
+          style={{
+            opacity: isVisible ? 1 : 0.8,
+            transform: isVisible ? 'scale(1)' : 'scale(0.95)',
+            transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}
+        >
+          {title}
         </div>
       );
     }
 
-    // Style 5: Character Blur Assembly (Testimonials)
-    if (animationStyle === 'testimonials') {
-      return (
-        <div>
-          {chars.map((char, cIdx) => (
-            <span
-              key={cIdx}
-              style={{
-                display: 'inline-block',
-                whiteSpace: char === ' ' ? 'pre' : 'normal',
-                opacity: isVisible ? 1 : 0,
-                filter: isVisible ? 'blur(0px)' : 'blur(16px)',
-                transform: isVisible ? 'scale(1)' : 'scale(0.7)',
-                transition: `all 0.6s ease-out ${cIdx * 20}ms`
-              }}
-            >
-              {char}
-            </span>
-          ))}
-        </div>
-      );
-    }
-
-    // Style 6: 3D Perspective Roll (Pricing)
-    if (animationStyle === 'pricing') {
-      return (
-        <div style={{ perspective: 1000 }}>
-          <div
-            style={{
-              opacity: isVisible ? 1 : 0,
-              transform: isVisible ? 'translateZ(0) rotateX(0deg)' : 'translateZ(-150px) rotateX(60deg)',
-              transition: 'all 0.8s cubic-bezier(0.16, 1, 0.3, 1)'
-            }}
-          >
-            {title}
-          </div>
-        </div>
-      );
-    }
-
-    // Style 7: Blur-to-Sharp Liquid Reveal (Contact)
     return (
       <div
         style={{
-          opacity: isVisible ? 1 : 0,
-          filter: isVisible ? 'blur(0px)' : 'blur(24px)',
-          transform: isVisible ? 'scale(1)' : 'scale(1.08)',
-          transition: 'all 0.9s cubic-bezier(0.16, 1, 0.3, 1)'
+          opacity: isVisible ? 1 : 0.8,
+          transform: isVisible ? 'translateY(0)' : 'translateY(10px)',
+          transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)'
         }}
       >
         {title}
@@ -272,9 +207,9 @@ export function AnimatedSectionTitle({ label, title, sub, animationStyle = 'serv
             fontFamily: 'monospace',
             fontSize: '0.75rem',
             letterSpacing: '0.2em',
-            opacity: isVisible ? 1 : 0,
-            transform: isVisible ? 'translateY(0)' : 'translateY(15px)',
-            transition: 'all 0.6s ease'
+            opacity: isVisible ? 1 : 0.8,
+            transform: isVisible ? 'translateY(0)' : 'translateY(10px)',
+            transition: 'all 0.5s ease'
           }}
         >
           {label}
@@ -297,15 +232,14 @@ export function AnimatedSectionTitle({ label, title, sub, animationStyle = 'serv
       {sub && (
         <p
           style={{
-            color: 'rgba(255, 255, 255, 0.6)',
+            color: 'rgba(255, 255, 255, 0.65)',
             maxWidth: 640,
             margin: '0 auto',
             fontSize: '1rem',
             lineHeight: 1.7,
-            opacity: isVisible ? 1 : 0,
-            transform: isVisible ? 'translateY(0)' : 'translateY(20px)',
-            filter: isVisible ? 'blur(0px)' : 'blur(6px)',
-            transition: 'all 0.8s cubic-bezier(0.16, 1, 0.3, 1) 200ms'
+            opacity: isVisible ? 1 : 0.8,
+            transform: isVisible ? 'translateY(0)' : 'translateY(10px)',
+            transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
         >
           {sub}
@@ -315,30 +249,33 @@ export function AnimatedSectionTitle({ label, title, sub, animationStyle = 'serv
   );
 }
 
-// ── 3. PARAGRAPH: Line-by-Line / Word Mask Reveal ──
+// ── 3. PARAGRAPH: Smooth Reveal ──
 export function AnimatedParagraph({ children, delay = 0, style = {} }) {
   const pRef = useRef(null);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
+    const timer = setTimeout(() => setIsVisible(true), 200);
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) setIsVisible(true);
       },
-      { threshold: 0.1 }
+      { threshold: 0.05 }
     );
     if (pRef.current) observer.observe(pRef.current);
-    return () => observer.disconnect();
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
   }, []);
 
   return (
     <p
       ref={pRef}
       style={{
-        opacity: isVisible ? 1 : 0,
-        transform: isVisible ? 'translateY(0)' : 'translateY(25px)',
-        filter: isVisible ? 'blur(0px)' : 'blur(8px)',
-        transition: `opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms, filter 0.8s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms`,
+        opacity: isVisible ? 1 : 0.85,
+        transform: isVisible ? 'translateY(0)' : 'translateY(15px)',
+        transition: `opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms`,
         ...style
       }}
     >
@@ -368,7 +305,7 @@ export function AnimatedButtonText({ label }) {
         style={{
           display: 'block',
           transform: hovered ? 'translateY(-100%)' : 'translateY(0)',
-          transition: 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)'
+          transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
         }}
       >
         {label}
@@ -381,7 +318,7 @@ export function AnimatedButtonText({ label }) {
           display: 'block',
           color: '#ff2d55',
           transform: hovered ? 'translateY(-100%)' : 'translateY(0)',
-          transition: 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)'
+          transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
         }}
       >
         {label}
@@ -394,17 +331,21 @@ export function AnimatedButtonText({ label }) {
 export function AnimatedCounter({ value, suffix = '', label }) {
   const [count, setCount] = useState(0);
   const ref = useRef(null);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
+    const timer = setTimeout(() => setIsVisible(true), 200);
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) setIsVisible(true);
       },
-      { threshold: 0.1 }
+      { threshold: 0.05 }
     );
     if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -413,8 +354,8 @@ export function AnimatedCounter({ value, suffix = '', label }) {
     if (isNaN(num)) return;
 
     let start = 0;
-    const duration = 1500;
-    const stepTime = 20;
+    const duration = 1200;
+    const stepTime = 25;
     const steps = duration / stepTime;
     const increment = num / steps;
 
@@ -439,16 +380,16 @@ export function AnimatedCounter({ value, suffix = '', label }) {
           fontSize: '2.4rem',
           color: '#ff2d55',
           letterSpacing: '0.05em',
-          transform: isVisible ? 'scale(1)' : 'scale(0.7)',
-          opacity: isVisible ? 1 : 0,
-          transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)'
+          transform: isVisible ? 'scale(1)' : 'scale(0.85)',
+          opacity: isVisible ? 1 : 0.85,
+          transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
         }}
       >
         {typeof value === 'number' || !isNaN(parseInt(value, 10)) ? count : value}
         {suffix}
       </div>
       {label && (
-        <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', marginTop: 4 }}>
+        <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', marginTop: 4 }}>
           {label}
         </div>
       )}

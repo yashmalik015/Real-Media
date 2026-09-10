@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo, Component } from "react";
 import { styles } from "./styles/globalStyles.js";
 import { COMPANY_NAME, LOGO_URL, PUBLIC_SERVICES, SERVICE_OPTIONS } from "./data/siteData.js";
 import { Hero, Footer, Toast, ProcessSection } from "./components/index.jsx";
@@ -20,6 +20,45 @@ import { CommandCenterContact } from "./components/futuristic/CommandCenterConta
 import { FuturisticFooter } from "./components/futuristic/FuturisticFooter.jsx";
 import { TeamDashboard } from "./components/dashboard/TeamDashboard.jsx";
 import { ClientPortal } from "./components/ClientPortal.jsx";
+
+// ── Error Boundary ──────────────────────────────────────────────────────────
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("UI Error Caught:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '80px 24px', textAlign: 'center', maxWidth: 640, margin: '0 auto', color: '#fff' }}>
+          <div style={{ fontSize: '3.5rem', marginBottom: 16 }}>⚠️</div>
+          <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', color: '#ff2d55' }}>
+            {this.props.fallbackTitle || 'UNEXPECTED VIEW ERROR'}
+          </h3>
+          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.92rem', margin: '12px 0 24px', lineHeight: 1.6 }}>
+            {this.state.error?.message || 'An error occurred while rendering this module. Click below to recover.'}
+          </p>
+          <button
+            className="btn-primary"
+            onClick={() => {
+              this.setState({ hasError: false });
+              window.location.reload();
+            }}
+          >
+            Reload Module
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function uid(prefix) {
@@ -1797,12 +1836,14 @@ export default function App() {
         ) : page === "client-portal" || page === "orders" || (page === "profile" && session?.role === "client") ? (
           <div className="page" style={{ paddingTop: 100 }}>
             {session ? (
-              <ClientPortal
-                user={session}
-                onBackToStudent={switchToStudentMode}
-                showToast={showToast}
-                onStartCustomProject={() => setShowInquiry(true)}
-              />
+              <ErrorBoundary fallbackTitle="CLIENT PORTAL SYSTEM">
+                <ClientPortal
+                  user={session}
+                  onBackToStudent={switchToStudentMode}
+                  showToast={showToast}
+                  onStartCustomProject={() => setShowInquiry(true)}
+                />
+              </ErrorBoundary>
             ) : (
               <div className="section">
                 <div className="section-inner">

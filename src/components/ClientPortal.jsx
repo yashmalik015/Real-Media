@@ -625,57 +625,271 @@ export function ClientPortal({ user, onBackToStudent, showToast, onStartCustomPr
               Loading your orders from Assets Weber...
             </div>
           ) : filteredOrders.length === 0 ? (
-            /* Empty State with Amazon-like Action */
-            <div
-              style={{
-                border: '1px dashed rgba(255, 45, 85, 0.35)',
-                borderRadius: 24,
-                padding: '64px 32px',
-                textAlign: 'center',
-                backgroundColor: 'rgba(16, 16, 24, 0.6)'
-              }}
-            >
-              <div style={{ fontSize: '3.5rem', marginBottom: 16 }}>📦</div>
-              <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', marginBottom: 8 }}>
-                NO ORDERS FOUND IN THIS VIEW
-              </h3>
-              <p style={{ color: 'rgba(255,255,255,0.6)', maxWidth: 520, margin: '0 auto 24px', fontSize: '0.92rem', lineHeight: 1.6 }}>
-                You have not placed an order yet. Select from our verified skill catalog (Video Editing, VFX, Web Development, Mobile Apps) or chat with Assets Weber on WhatsApp to get started!
-              </p>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 14 }}>
-                <button
-                  onClick={() => setActiveTab('store')}
+            /* Live Demo Preview + Quick Store Banner */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              {/* Interactive Demo Order Card */}
+              <div
+                style={{
+                  borderRadius: 20,
+                  backgroundColor: 'rgba(14, 14, 20, 0.95)',
+                  border: '1px solid rgba(255, 45, 85, 0.35)',
+                  overflow: 'hidden',
+                  boxShadow: '0 15px 40px rgba(0,0,0,0.6)'
+                }}
+              >
+                {/* Amazon-Style Order Header Bar */}
+                <div
                   style={{
-                    padding: '14px 28px',
-                    borderRadius: 999,
-                    background: 'linear-gradient(135deg, #ff2d55, #c81e42)',
-                    color: '#fff',
-                    border: 'none',
-                    fontWeight: 700,
-                    fontSize: '0.92rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Explore Skill Store →
-                </button>
-                <button
-                  onClick={() => setActiveTab('chat')}
-                  style={{
-                    padding: '14px 24px',
-                    borderRadius: 999,
-                    backgroundColor: '#25D366',
-                    color: '#fff',
-                    border: 'none',
-                    fontWeight: 700,
-                    fontSize: '0.92rem',
-                    cursor: 'pointer',
+                    backgroundColor: 'rgba(255, 45, 85, 0.08)',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                    padding: '16px 24px',
                     display: 'flex',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
-                    gap: 8
+                    flexWrap: 'wrap',
+                    gap: 16
                   }}
                 >
-                  <MessageSquare size={16} /> Chat on WhatsApp
-                </button>
+                  <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+                        LIVE DEMO PREVIEW
+                      </div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#ff2d55', marginTop: 2 }}>
+                        ★ Sample Client Tracking
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+                        ORDER PLACED
+                      </div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#fff', marginTop: 2 }}>
+                        {new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+                        TOTAL AMOUNT
+                      </div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#34c759', marginTop: 2 }}>
+                        ₹12,999
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+                        CLIENT RECIPIENT
+                      </div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#fff', marginTop: 2 }}>
+                        {user?.name || 'Client'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>
+                      ORDER # AW-2045-PREVIEW
+                    </div>
+                    <div style={{ fontSize: '0.82rem', color: '#ff2d55', fontWeight: 700 }}>
+                      Video Editing
+                    </div>
+                  </div>
+                </div>
+
+                {/* Amazon-Style Order Body */}
+                <div style={{ padding: '24px 28px', display: 'grid', gridTemplateColumns: '1fr 280px', gap: 32, alignItems: 'center' }}>
+                  <div>
+                    {/* Status Line */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                      <span style={{ fontSize: '1.4rem' }}>⚡</span>
+                      <div>
+                        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', color: '#ff2d55', letterSpacing: '0.04em' }}>
+                          IN PRODUCTION — STUDIO EDITING & SOUND FX
+                        </span>
+                        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
+                          Package: <strong style={{ color: '#fff' }}>YouTube Pro Suite</strong> · Payment: <strong style={{ color: '#34c759' }}>Paid</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 4-Step Amazon Delivery Stepper */}
+                    <div style={{ margin: '20px 0 24px', backgroundColor: 'rgba(0,0,0,0.3)', padding: '16px 20px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, position: 'relative' }}>
+                        {[
+                          { label: 'Order Placed', completed: true },
+                          { label: 'Production', completed: true },
+                          { label: 'Quality Check', completed: false },
+                          { label: 'Delivered', completed: false }
+                        ].map((step, sIdx) => (
+                          <div key={sIdx} style={{ textAlign: 'center' }}>
+                            <div
+                              style={{
+                                width: 24,
+                                height: 24,
+                                borderRadius: '50%',
+                                backgroundColor: step.completed ? '#ff2d55' : 'rgba(255,255,255,0.1)',
+                                color: '#fff',
+                                display: 'grid',
+                                placeItems: 'center',
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                margin: '0 auto 6px'
+                              }}
+                            >
+                              {step.completed ? '✓' : sIdx + 1}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', fontWeight: step.completed ? 700 : 500, color: step.completed ? '#fff' : 'rgba(255,255,255,0.4)' }}>
+                              {step.label}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Project Brief */}
+                    <div style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.85)', lineHeight: 1.5 }}>
+                      <strong>Project Title:</strong> Cinematic 4K YouTube Video + Thumbnail + Sound FX
+                      <div style={{ marginTop: 4, color: 'rgba(255,255,255,0.65)', fontSize: '0.82rem' }}>
+                        Includes 4K 60FPS delivery, cinematic Foley sound mix, dynamic animated captions, color grading, and source project files.
+                      </div>
+                    </div>
+
+                    {/* Deliverables Demo */}
+                    <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      <span
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '8px 14px',
+                          borderRadius: 8,
+                          backgroundColor: 'rgba(52, 199, 89, 0.15)',
+                          border: '1px solid rgba(52, 199, 89, 0.4)',
+                          color: '#34c759',
+                          fontSize: '0.8rem',
+                          fontWeight: 700
+                        }}
+                      >
+                        <Download size={14} /> Sample_Rough_Cut_Preview.mp4 (Ready)
+                      </span>
+                      <span
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '8px 14px',
+                          borderRadius: 8,
+                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.12)',
+                          color: 'rgba(255,255,255,0.7)',
+                          fontSize: '0.8rem'
+                        }}
+                      >
+                        <Clock size={14} /> Final_Master_4K.zip (Rendering)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Right Actions */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <button
+                      onClick={() => {
+                        setActiveTab('chat');
+                        handleSendMessage('💬 Hello Assets Weber Studio! I would like to inquire about placing an order.');
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        borderRadius: 12,
+                        backgroundColor: '#25D366',
+                        color: '#fff',
+                        border: 'none',
+                        fontWeight: 700,
+                        fontSize: '0.86rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <MessageSquare size={16} /> Chat on WhatsApp
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('store')}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        borderRadius: 12,
+                        background: 'linear-gradient(135deg, #ff2d55, #c81e42)',
+                        color: '#fff',
+                        border: 'none',
+                        fontWeight: 700,
+                        fontSize: '0.86rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <ShoppingBag size={16} /> Buy Verified Skill Now
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Banner */}
+              <div
+                style={{
+                  border: '1px dashed rgba(255, 45, 85, 0.35)',
+                  borderRadius: 20,
+                  padding: '32px',
+                  textAlign: 'center',
+                  backgroundColor: 'rgba(16, 16, 24, 0.6)'
+                }}
+              >
+                <h4 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.8rem', marginBottom: 6 }}>
+                  READY TO LAUNCH YOUR NEXT BUILD?
+                </h4>
+                <p style={{ color: 'rgba(255,255,255,0.6)', maxWidth: 520, margin: '0 auto 20px', fontSize: '0.88rem' }}>
+                  Choose from our verified Skill Store or discuss custom requirements directly with our senior studio engineers.
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 14 }}>
+                  <button
+                    onClick={() => setActiveTab('store')}
+                    style={{
+                      padding: '12px 24px',
+                      borderRadius: 999,
+                      backgroundColor: 'rgba(255, 45, 85, 0.15)',
+                      border: '1px solid #ff2d55',
+                      color: '#fff',
+                      fontWeight: 700,
+                      fontSize: '0.88rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Browse 6 Verified Skills →
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('chat')}
+                    style={{
+                      padding: '12px 22px',
+                      borderRadius: 999,
+                      backgroundColor: '#25D366',
+                      color: '#fff',
+                      border: 'none',
+                      fontWeight: 700,
+                      fontSize: '0.88rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8
+                    }}
+                  >
+                    <MessageSquare size={16} /> WhatsApp Studio (+91 94160 85060)
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
