@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Search, ExternalLink, Mail, MessageSquare, Check, X, FileText, IndianRupee, Clock, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { io } from 'socket.io-client';
+import { Search, ExternalLink, Mail, MessageSquare, Check, X, FileText, IndianRupee, Clock, CheckCircle, Send } from 'lucide-react';
 import { GlassModal } from '../ui/GlassModal.jsx';
 import { playClickSound, playHoverSound } from '../../../utils/audio.js';
 import { api } from '../../../api.js';
@@ -8,6 +9,56 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
   const [activeTab, setActiveTab] = useState('All');
   const [selectedProject, setSelectedProject] = useState(null);
   const [deliveryLinkInput, setDeliveryLinkInput] = useState('');
+
+  // Chat State
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [sendingMsg, setSendingMsg] = useState(false);
+  const chatBottomRef = useRef(null);
+
+  useEffect(() => {
+    if (selectedProject) {
+      setChatLoading(true);
+      api.getClientChat(selectedProject.clientId)
+        .then(res => setChatMessages(res.messages || []))
+        .catch(() => showToast('Failed to load chat history.'))
+        .finally(() => setChatLoading(false));
+    } else {
+      setChatMessages([]);
+      setChatInput('');
+    }
+  }, [selectedProject, showToast]);
+
+  useEffect(() => {
+    const socket = io(window.location.origin);
+    socket.on('clientChatMessage', (msg) => {
+      if (selectedProject && msg.userId === selectedProject.clientId) {
+        setChatMessages(prev => {
+          if (prev.some(m => m.id === msg.id)) return prev;
+          return [...prev, msg];
+        });
+      }
+    });
+    return () => socket.disconnect();
+  }, [selectedProject]);
+
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || !selectedProject) return;
+    setSendingMsg(true);
+    try {
+      await api.sendClientChatMessage({ text: chatInput.trim(), targetUserId: selectedProject.clientId });
+      setChatInput('');
+    } catch {
+      showToast('Failed to send message.');
+    } finally {
+      setSendingMsg(false);
+    }
+  };
 
   // Default status for projects might be null if they didn't have one initially.
   // We'll treat null/empty as 'Placed' for display purposes.
@@ -289,6 +340,62 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
                     </button>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Chat Section */}
+            <div style={{ padding: 20, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>CLIENT CHAT LOG</div>
+              
+              <div style={{ height: 300, overflowY: 'auto', paddingRight: 10, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {chatLoading ? (
+                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center', padding: 20 }}>Loading messages...</div>
+                ) : chatMessages.length === 0 ? (
+                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center', padding: 20 }}>No messages yet.</div>
+                ) : (
+                  chatMessages.map((msg, i) => {
+                    const isTeam = msg.senderRole === 'team' || msg.senderRole === 'system';
+                    return (
+                      <div key={msg.id || i} style={{ alignSelf: isTeam ? 'flex-end' : 'flex-start', maxWidth: '80%' }}>
+                        <div style={{
+                          backgroundColor: isTeam ? 'rgba(255,45,85,0.15)' : 'rgba(255,255,255,0.08)',
+                          border: `1px solid ${isTeam ? 'rgba(255,45,85,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                          padding: '10px 14px', borderRadius: 12, color: '#fff', fontSize: '0.9rem', lineHeight: 1.4
+                        }}>
+                          {!isTeam && <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>{msg.senderName}</div>}
+                          {isTeam && <div style={{ fontSize: '0.75rem', color: '#ff2d55', marginBottom: 4 }}>{msg.senderName}</div>}
+                          <div>{msg.text}</div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={chatBottomRef} />
+              </div>
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={e => setChatInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Type a message to the client..."
+                  style={{
+                    flex: 1, padding: '12px 16px', borderRadius: 8, background: 'rgba(0,0,0,0.5)',
+                    border: '1px solid rgba(255,255,255,0.2)', color: '#fff', fontSize: '0.95rem', outline: 'none'
+                  }}
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={!chatInput.trim() || sendingMsg}
+                  style={{
+                    width: 48, borderRadius: 8, background: '#ff2d55', color: '#fff', border: 'none',
+                    display: 'grid', placeItems: 'center', cursor: !chatInput.trim() ? 'not-allowed' : 'pointer',
+                    opacity: !chatInput.trim() ? 0.5 : 1
+                  }}
+                >
+                  <Send size={18} />
+                </button>
               </div>
             </div>
 

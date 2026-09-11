@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { io } from 'socket.io-client';
 import {
   ShoppingBag,
   PackageCheck,
@@ -227,6 +228,25 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
   useEffect(() => { loadOrders(); loadChat(); }, [loadOrders, loadChat]);
 
   useEffect(() => {
+    const socket = io(window.location.origin);
+    socket.on('clientChatMessage', (msg) => {
+      // Only append if it's not already in the list
+      setChatMessages(prev => {
+        if (prev.some(m => m.id === msg.id)) return prev;
+        
+        // Auto-mark as read if we are on the chat tab, otherwise show notification
+        if (activeTab !== 'chat') {
+          showToast(`New message: ${msg.text.substring(0, 30)}...`);
+        }
+        
+        return [...prev, msg];
+      });
+    });
+
+    return () => socket.disconnect();
+  }, [activeTab, showToast]);
+
+  useEffect(() => {
     if (activeTab === 'chat') chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, activeTab]);
 
@@ -309,8 +329,9 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
     setSendingMsg(true);
     try {
       const res = await api.sendClientChatMessage({ text: text.trim() });
-      if (res.message) setChatMessages(prev => [...prev, res.message]);
-      if (res.autoReply) setTimeout(() => setChatMessages(prev => [...prev, res.autoReply]), 600);
+      if (res.message) {
+         // message will be appended by socket event
+      }
       setChatInput('');
     } catch { showToast('Could not send message.'); } finally { setSendingMsg(false); }
   };
@@ -411,7 +432,6 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
       <div style={{ display: 'flex', gap: 10, marginBottom: 32, flexWrap: 'wrap' }}>
         {[
           { id: 'orders', label: 'My Orders', icon: PackageCheck, badge: orders.length || null },
-          { id: 'store', label: 'Services', icon: ShoppingBag, badge: null },
           { id: 'chat', label: 'Chat', icon: MessageSquare, badge: '🟢' }
         ].map(tab => {
           const Icon = tab.icon;
@@ -604,85 +624,7 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
         </div>
       )}
 
-      {/* ══ TAB: SERVICES (STORE) ══ */}
-      {activeTab === 'store' && (
-        <div>
-          <div style={{ textAlign: 'center', maxWidth: 600, margin: '0 auto 40px' }}>
-            <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', margin: '0 0 8px' }}>Our Services</h2>
-            <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.9rem', lineHeight: 1.5 }}>
-              Choose a service, pick a plan, and place your order. We'll start working on it right away.
-            </p>
-          </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
-            {displaySkills.map(svc => (
-              <div key={svc.id || svc.title} style={{
-                ...card,
-                padding: 24,
-                border: svc.popular ? '1px solid rgba(255,45,85,0.4)' : '1px solid rgba(255,255,255,0.08)',
-                position: 'relative',
-                display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
-              }}>
-                {svc.popular && (
-                  <span style={{
-                    position: 'absolute', top: 14, right: 14, padding: '3px 10px',
-                    borderRadius: 999, backgroundColor: '#ff2d55', color: '#fff',
-                    fontSize: '0.68rem', fontWeight: 700
-                  }}>Popular</span>
-                )}
-
-                <div>
-                  <div style={{ fontSize: '2rem', marginBottom: 10 }}>{svc.icon}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>{svc.category}</span>
-                    <span style={{ fontSize: '0.72rem', color: '#ffd279' }}>★ {svc.rating} ({svc.reviews})</span>
-                  </div>
-                  <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', margin: '0 0 8px' }}>{svc.title}</h3>
-                  <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.84rem', lineHeight: 1.4, marginBottom: 16 }}>{svc.desc}</p>
-
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 16 }}>
-                    <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>from</span>
-                    <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem' }}>₹{svc.startingPrice.toLocaleString()}</span>
-                    <span style={{ fontSize: '0.76rem', color: '#34c759', fontWeight: 600 }}>⚡ {svc.turnaround}</span>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
-                    {svc.features.map((f, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.82rem', color: 'rgba(255,255,255,0.75)' }}>
-                        <span style={{ color: '#ff2d55', fontWeight: 700 }}>✓</span> {f}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 12 }}>
-                    {svc.tiers.map((tier, idx) => (
-                      <button key={idx} onClick={() => handleOpenCheckout(svc, idx)} style={{
-                        padding: '7px 4px', borderRadius: 8,
-                        backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                        color: '#fff', fontSize: '0.72rem', cursor: 'pointer', textAlign: 'center'
-                      }}>
-                        <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tier.name}</div>
-                        <div style={{ color: '#ff2d55', fontWeight: 700 }}>₹{(tier.price / 1000).toFixed(0)}k</div>
-                      </button>
-                    ))}
-                  </div>
-
-                  <button onClick={() => handleOpenCheckout(svc, 0)} style={{
-                    width: '100%', padding: '12px', borderRadius: 12,
-                    background: svc.popular ? 'linear-gradient(135deg, #ff2d55, #c81e42)' : 'rgba(255,255,255,0.06)',
-                    border: svc.popular ? 'none' : '1px solid rgba(255,45,85,0.3)',
-                    color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer'
-                  }}>
-                    Order Now →
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* ══ TAB: CHAT ══ */}
       {activeTab === 'chat' && (

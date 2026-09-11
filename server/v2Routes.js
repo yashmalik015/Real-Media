@@ -18,7 +18,7 @@ function parseJsonSafely(val, fallback = []) {
   }
 }
 
-export function registerV2Routes(app, { repository, v2, upload, requireAuth, hashPassword, verifyPassword, createSessionResponse: createAuthResponse, uploadFile, TEAM_ACCESS_ID, TEAM_ACCESS_PASSWORD }) {
+export function registerV2Routes(app, { repository, v2, upload, requireAuth, hashPassword, verifyPassword, createSessionResponse: createAuthResponse, uploadFile, TEAM_ACCESS_ID, TEAM_ACCESS_PASSWORD, io }) {
 
   // ── Learner auth ──
   app.post('/api/auth/learner', async (req, res) => {
@@ -1111,7 +1111,10 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
           })
         }
       }
-
+      if (io) {
+        io.emit('clientChatMessage', msg)
+        if (autoReply) io.emit('clientChatMessage', autoReply)
+      }
       res.status(201).json({ success: true, message: msg, autoReply })
     } catch (err) {
       res.status(500).json({ success: false, message: err.message })
@@ -1153,6 +1156,7 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
         createdAt: now(),
       })
 
+      if (io) io.emit('clientChatMessage', msg)
       res.status(201).json({ success: true, message: msg })
     } catch (err) {
       res.status(500).json({ success: false, message: err.message })
