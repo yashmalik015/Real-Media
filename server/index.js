@@ -606,43 +606,87 @@ app.get('/api/payment/key', (req, res) => {
   res.json({ key: process.env.RAZORPAY_KEY_ID || null })
 })
 
-// New: create a standalone package order (no project required yet)
-app.post('/api/payment/create-package-order', async (req, res) => {
+// Handler: Create Razorpay Order (Standard Web Checkout)
+const createOrderHandler = async (req, res) => {
   const { amount, currency = 'INR', receipt } = req.body
-  if (!amount || amount < 100) {
-    return res.status(400).json({ message: 'Amount must be at least ₹1 (100 paise).' })
+  const numAmount = Number(amount)
+  
+  if (isNaN(numAmount) || numAmount < 100) {
+    return res.status(400).json({ message: 'Amount must be at least 100 paise (₹1).' })
   }
-  if (!razorpay) {
-    // Dev/test mode: return mock order
-    return res.json({ order_id: `order_mock_${Date.now()}`, amount, currency })
-  }
-  try {
-    const order = await razorpay.orders.create({
-      amount: Math.round(amount),
-      currency,
-      receipt: receipt || `pkg_${Date.now()}`,
-    })
-    res.json({ order_id: order.id, amount: order.amount, currency: order.currency })
-  } catch (err) {
-    res.status(500).json({ message: err?.error?.description || 'Failed to create payment order.' })
-  }
-})
 
-// New: verify a standalone package payment (no project required)
-app.post('/api/payment/verify-package', async (req, res) => {
-  const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body
-  if (!razorpay_payment_id || !razorpay_order_id) {
-    return res.status(400).json({ message: 'Missing payment fields.' })
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    return res.status(401).json({ message: 'Razorpay API credentials missing from environment.' })
   }
-  if (razorpay && razorpay_signature) {
-    const body = razorpay_order_id + '|' + razorpay_payment_id
-    const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).update(body).digest('hex')
-    if (expectedSignature !== razorpay_signature) {
-      return res.status(400).json({ message: 'Invalid payment signature.' })
+
+  try {
+    if (razorpay) {
+      const order = await razorpay.orders.create({
+        amount: Math.round(numAmount),
+        currency: currency || 'INR',
+        receipt: receipt || `receipt_${Date.now()}`,
+      })
+      return res.json({
+        order_id: order.id,
+        id: order.id,
+        amount: order.amount,
+        currency: order.currency,
+      })
+    } else {
+      const mockOrderId = `order_mock_${Date.now()}`
+      return res.json({
+        order_id: mockOrderId,
+        id: mockOrderId,
+        amount: Math.round(numAmount),
+        currency: currency || 'INR',
+      })
     }
+  } catch (err) {
+    console.error('[Razorpay Create Order Error]:', err)
+    return res.status(500).json({ message: err?.error?.description || err?.message || 'Failed to create payment order.' })
   }
-  res.json({ ok: true, payment_id: razorpay_payment_id })
-})
+}
+
+// Handler: Verify Razorpay Signature (HMAC-SHA256)
+const verifyPaymentHandler = async (req, res) => {
+  const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body
+
+  if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+    return res.status(400).json({ message: 'Missing required payment verification fields (razorpay_payment_id, razorpay_order_id, razorpay_signature).' })
+  }
+
+  if (!process.env.RAZORPAY_KEY_SECRET) {
+    return res.status(401).json({ message: 'Razorpay secret key missing from environment.' })
+  }
+
+  try {
+    const body = razorpay_order_id + '|' + razorpay_payment_id
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(body.toString())
+      .digest('hex')
+
+    if (expectedSignature !== razorpay_signature) {
+      return res.status(400).json({ success: false, message: 'Invalid payment signature.' })
+    }
+
+    return res.json({
+      success: true,
+      ok: true,
+      message: 'Payment verified successfully.',
+      payment_id: razorpay_payment_id,
+      order_id: razorpay_order_id,
+    })
+  } catch (err) {
+    console.error('[Razorpay Verify Error]:', err)
+    return res.status(500).json({ success: false, message: 'Failed to verify payment signature.' })
+  }
+}
+
+app.post('/api/create-order', createOrderHandler)
+app.post('/api/payment/create-package-order', createOrderHandler)
+app.post('/api/verify-payment', verifyPaymentHandler)
+app.post('/api/payment/verify-package', verifyPaymentHandler)
 
 app.post('/api/payment/create-order', requireAuth, async (req, res) => {
   const { projectId, amount } = req.body

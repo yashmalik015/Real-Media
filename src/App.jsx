@@ -345,18 +345,18 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
     if (!form.phone) { showToast("Please enter your phone number."); return; }
     setLoading(true);
     try {
-      // Step 1: Get Razorpay key
-      const keyRes = await api.getPaymentKey();
-      const rzpKey = keyRes.key;
-      if (!rzpKey) throw new Error('Payment system not configured. Please contact us on WhatsApp.');
+      // Step 1: Get Razorpay key from backend or env
+      const keyRes = await api.getPaymentKey().catch(() => ({ key: null }));
+      const rzpKey = keyRes?.key || import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_TaoMw0lsJ25hzS';
+      if (!rzpKey) throw new Error('Payment gateway not configured. Please contact support.');
 
       let orderRes;
       if (!isCustom) {
-        // Step 2: Create standalone package order
+        // Step 2: Create Razorpay order via backend
         orderRes = await api.createPackageOrder({ amount: priceInPaise, currency: 'INR', receipt: `pkg_${Date.now()}` });
       }
 
-      // Step 3: Launch Razorpay checkout
+      // Step 3: Launch Razorpay standard checkout modal
       const launchCheckout = (orderId) => new Promise((resolve, reject) => {
         const options = {
           key: rzpKey,
@@ -367,18 +367,24 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
           order_id: orderId,
           prefill: { name: form.name, email: form.email, contact: form.phone },
           theme: { color: '#ff2d55' },
-          modal: { backdropclose: false, escape: false },
+          modal: {
+            backdropclose: false,
+            escape: false,
+            ondismiss: function () {
+              reject(new Error('Payment cancelled by user.'));
+            },
+          },
           handler: resolve,
         };
-        if (!window.Razorpay) { reject(new Error('Razorpay SDK not loaded. Check your network connection.')); return; }
+        if (!window.Razorpay) { reject(new Error('Razorpay SDK not loaded. Please check your network connection.')); return; }
         const rzp = new window.Razorpay(options);
-        rzp.on('payment.failed', (resp) => reject(new Error(resp.error?.description || 'Payment failed')));
+        rzp.on('payment.failed', (resp) => reject(new Error(resp.error?.description || 'Payment failed. Please try again.')));
         rzp.open();
       });
 
-      const paymentResult = await launchCheckout(orderRes?.order_id);
+      const paymentResult = await launchCheckout(orderRes?.order_id || orderRes?.id);
 
-      // Step 4: Verify payment signature
+      // Step 4: Verify payment signature with backend
       await api.verifyPackagePayment({
         razorpay_payment_id: paymentResult.razorpay_payment_id,
         razorpay_order_id: paymentResult.razorpay_order_id,
@@ -402,8 +408,10 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
       setPaymentDone(true);
       setDone(true);
     } catch (e) {
-      if (e.message && !e.message.includes('cancelled')) {
+      if (e.message && !e.message.toLowerCase().includes('cancelled')) {
         showToast(e.message || 'Payment failed. Please try again.');
+      } else if (e.message) {
+        showToast('Payment window closed.');
       }
     } finally {
       setLoading(false);
