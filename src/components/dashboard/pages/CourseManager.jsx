@@ -387,7 +387,7 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 28, padding: 24 }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 20 }}>
         <div>
           <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#ff2d55', letterSpacing: '0.15em' }}>
@@ -468,12 +468,19 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
               }}
             >
               <div>
-                <div style={{ position: 'relative', height: 180, overflow: 'hidden' }}>
+                <div style={{ position: 'relative', height: 180, overflow: 'hidden', background: 'linear-gradient(135deg, #1a1a2e, #16213e, #0f3460)' }}>
                   <img
                     src={mediaUrl(crs.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=600&q=80')}
                     alt={crs.title}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => { e.target.style.display = 'none'; }}
                   />
+                  {/* Category badge */}
+                  {crs.category && (
+                    <span style={{ position: 'absolute', top: 12, left: 12, padding: '4px 10px', borderRadius: 8, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', color: '#fff', fontSize: '0.68rem', fontWeight: 600 }}>
+                      {crs.category}
+                    </span>
+                  )}
                   <span style={{ position: 'absolute', top: 12, right: 12, padding: '4px 10px', borderRadius: 8, backgroundColor: crs.published ? 'rgba(52, 199, 89, 0.9)' : 'rgba(255, 149, 0, 0.9)', color: '#fff', fontSize: '0.7rem', fontWeight: 700 }}>
                     {crs.published ? 'PUBLISHED' : 'DRAFT'}
                   </span>
@@ -483,13 +490,23 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
                   <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', color: '#fff', margin: '0 0 6px 0' }}>
                     {crs.title}
                   </h3>
-                  <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', margin: '0 0 14px 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', margin: '0 0 14px 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.5 }}>
                     {crs.description || 'Add a description when editing this course.'}
                   </p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>
-                    <span>{sectionCount} Sections • {lessonCount} Videos</span>
-                    <span style={{ color: '#ff2d55', fontWeight: 700 }}>{crs.price ? `$${crs.price}` : 'FREE'}</span>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+                    <span style={{ padding: '4px 10px', borderRadius: 8, backgroundColor: 'rgba(255,45,85,0.1)', border: '1px solid rgba(255,45,85,0.2)', color: '#ff2d55', fontSize: '0.75rem', fontWeight: 600 }}>
+                      {sectionCount} {sectionCount === 1 ? 'Section' : 'Sections'}
+                    </span>
+                    <span style={{ padding: '4px 10px', borderRadius: 8, backgroundColor: 'rgba(0,122,255,0.1)', border: '1px solid rgba(0,122,255,0.2)', color: '#007aff', fontSize: '0.75rem', fontWeight: 600 }}>
+                      {lessonCount} {lessonCount === 1 ? 'Video' : 'Videos'}
+                    </span>
+                    <span style={{ padding: '4px 10px', borderRadius: 8, backgroundColor: 'rgba(52,199,89,0.1)', border: '1px solid rgba(52,199,89,0.2)', color: '#34c759', fontSize: '0.75rem', fontWeight: 600 }}>
+                      {crs.price ? `₹${crs.price}` : 'FREE'}
+                    </span>
                   </div>
+                  {crs.instructor && (
+                    <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem' }}>by {crs.instructor}</div>
+                  )}
                 </div>
               </div>
 

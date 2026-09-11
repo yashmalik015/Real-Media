@@ -158,12 +158,19 @@ export const api = {
     try {
       return await request('/api/skills');
     } catch (e) {
-      if (e.status === 404) {
+      if (e.status === 404 || e.message?.includes('Cannot reach')) {
         let skills = JSON.parse(localStorage.getItem('mock_skills'));
         if (!skills) {
-          skills = [...PUBLIC_SERVICES];
+          skills = PUBLIC_SERVICES.map((s, i) => ({ ...s, id: `skill_${i}_${s.title.replace(/\s+/g, '_').toLowerCase()}`, startingPrice: s.startingPrice || 0, features: s.features || s.details || [], tiers: s.tiers || [], category: s.category || 'General', popular: s.popular || false }));
           localStorage.setItem('mock_skills', JSON.stringify(skills));
         }
+        // Ensure all skills have ids
+        let needsSave = false;
+        skills = skills.map((s, i) => {
+          if (!s.id) { needsSave = true; return { ...s, id: `skill_${i}_${Date.now()}` }; }
+          return s;
+        });
+        if (needsSave) localStorage.setItem('mock_skills', JSON.stringify(skills));
         return { skills };
       }
       throw e;
@@ -173,7 +180,7 @@ export const api = {
     try {
       return await request('/api/skills', { method: 'POST', body: payload });
     } catch (e) {
-      if (e.status === 404) {
+      if (e.status === 404 || e.message?.includes('Cannot reach')) {
         const skills = JSON.parse(localStorage.getItem('mock_skills')) || [...PUBLIC_SERVICES];
         const newSkill = { ...payload, id: `skill_${Date.now()}` };
         skills.push(newSkill);
@@ -187,7 +194,7 @@ export const api = {
     try {
       return await request(`/api/skills/${id}`, { method: 'PUT', body: payload });
     } catch (e) {
-      if (e.status === 404) {
+      if (e.status === 404 || e.message?.includes('Cannot reach')) {
         const skills = JSON.parse(localStorage.getItem('mock_skills')) || [...PUBLIC_SERVICES];
         const index = skills.findIndex(s => s.id === id || s.title === id); // match id or title
         if (index > -1) {
@@ -203,7 +210,7 @@ export const api = {
     try {
       return await request(`/api/skills/${id}`, { method: 'DELETE' });
     } catch (e) {
-      if (e.status === 404) {
+      if (e.status === 404 || e.message?.includes('Cannot reach')) {
         let skills = JSON.parse(localStorage.getItem('mock_skills')) || [...PUBLIC_SERVICES];
         skills = skills.filter(s => s.id !== id && s.title !== id);
         localStorage.setItem('mock_skills', JSON.stringify(skills));
@@ -213,11 +220,61 @@ export const api = {
     }
   },
 
-  // ── Pricing CRUD ──
-  getPricing: () => request('/api/pricing'),
-  createPricing: (payload) => request('/api/pricing', { method: 'POST', body: payload }),
-  updatePricing: (id, payload) => request(`/api/pricing/${id}`, { method: 'PUT', body: payload }),
-  deletePricing: (id) => request(`/api/pricing/${id}`, { method: 'DELETE' }),
+  // ── Pricing CRUD (with localStorage mock fallback) ──
+  getPricing: async () => {
+    try {
+      return await request('/api/pricing');
+    } catch (e) {
+      if (e.status === 404 || e.message?.includes('Cannot reach')) {
+        const pricing = JSON.parse(localStorage.getItem('mock_pricing')) || [];
+        return { pricing };
+      }
+      throw e;
+    }
+  },
+  createPricing: async (payload) => {
+    try {
+      return await request('/api/pricing', { method: 'POST', body: payload });
+    } catch (e) {
+      if (e.status === 404 || e.message?.includes('Cannot reach')) {
+        const pricing = JSON.parse(localStorage.getItem('mock_pricing')) || [];
+        const newPlan = { ...payload, id: `price_${Date.now()}` };
+        pricing.push(newPlan);
+        localStorage.setItem('mock_pricing', JSON.stringify(pricing));
+        return { message: 'Plan created', pricing: newPlan };
+      }
+      throw e;
+    }
+  },
+  updatePricing: async (id, payload) => {
+    try {
+      return await request(`/api/pricing/${id}`, { method: 'PUT', body: payload });
+    } catch (e) {
+      if (e.status === 404 || e.message?.includes('Cannot reach')) {
+        const pricing = JSON.parse(localStorage.getItem('mock_pricing')) || [];
+        const idx = pricing.findIndex(p => (p.id || p._id) === id);
+        if (idx > -1) {
+          pricing[idx] = { ...pricing[idx], ...payload };
+          localStorage.setItem('mock_pricing', JSON.stringify(pricing));
+        }
+        return { message: 'Plan updated' };
+      }
+      throw e;
+    }
+  },
+  deletePricing: async (id) => {
+    try {
+      return await request(`/api/pricing/${id}`, { method: 'DELETE' });
+    } catch (e) {
+      if (e.status === 404 || e.message?.includes('Cannot reach')) {
+        let pricing = JSON.parse(localStorage.getItem('mock_pricing')) || [];
+        pricing = pricing.filter(p => (p.id || p._id) !== id);
+        localStorage.setItem('mock_pricing', JSON.stringify(pricing));
+        return { message: 'Plan deleted' };
+      }
+      throw e;
+    }
+  },
 
   // ── Media Library ──
   getMedia: () => request('/api/media'),

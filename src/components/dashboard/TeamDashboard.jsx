@@ -12,7 +12,8 @@ import {
   Bell,
   LogOut,
   ArrowLeft,
-  DollarSign
+  DollarSign,
+  Wrench
 } from 'lucide-react';
 
 import { DashboardOverview } from './pages/DashboardOverview.jsx';
@@ -112,7 +113,7 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
     { id: 'portfolio', label: 'Portfolio CMS', icon: FolderGit2, badge: portfolio.length },
     { id: 'courses', label: 'Courses LMS', icon: BookOpen, badge: courses.length },
     { id: 'testimonials', label: 'Testimonials', icon: Star, badge: testimonials.length },
-    { id: 'skills', label: 'Skills/Services', icon: FolderGit2, badge: skills.length },
+    { id: 'skills', label: 'Skills/Services', icon: Wrench, badge: skills.length },
     { id: 'pricing', label: 'Pricing', icon: DollarSign },
     { id: 'requests', label: 'Client Requests', icon: Inbox, badge: inquiries.filter((i) => i.status === 'New').length || undefined, badgeColor: '#ff2d55' },
     { id: 'media', label: 'Media Library', icon: ImageIcon },

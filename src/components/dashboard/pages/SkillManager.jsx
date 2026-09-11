@@ -210,7 +210,7 @@ export function SkillManager({ showToast }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 16 }}>
                 <div>
                   <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)' }}>STARTING AT</div>
-                  <div style={{ fontWeight: 700, color: '#34c759' }}>₹{skill.startingPrice.toLocaleString()}</div>
+                  <div style={{ fontWeight: 700, color: '#34c759' }}>₹{(skill.startingPrice || 0).toLocaleString()}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)' }}>TIERS</div>
