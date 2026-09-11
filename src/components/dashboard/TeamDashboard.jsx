@@ -385,7 +385,7 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
         </header>
 
         {/* Dynamic Page Rendering */}
-        <div style={{ padding: 32, flex: 1 }}>
+        <div style={{ padding: 32, flex: 1, position: 'relative', zIndex: 1 }}>
           {activeNav === 'dashboard' && (
             <DashboardOverview
               analytics={analytics}

@@ -176,7 +176,7 @@ export function PricingManager({ showToast }) {
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 28, padding: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 28, padding: 24, position: 'relative', zIndex: 1 }}>
       {/* Header */}
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 20 }}>
         <div>

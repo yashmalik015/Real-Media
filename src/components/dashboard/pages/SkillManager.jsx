@@ -407,7 +407,7 @@ export function SkillManager({ showToast }) {
   const filteredSkills = filterCategory === 'All' ? skills : skills.filter((s) => s.category === filterCategory);
 
   return (
-    <div style={{ padding: 24, animation: 'fadeIn 0.3s ease-out' }}>
+    <div style={{ padding: 24, animation: 'fadeIn 0.3s ease-out', position: 'relative', zIndex: 1 }}>
       {/* Top Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
         <div>
