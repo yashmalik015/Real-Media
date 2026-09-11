@@ -14,17 +14,13 @@ export async function createDatabase() {
     await testClient.connect()
     await testClient.close()
   } catch (err) {
-    if (isProd) {
-      console.error(`[MongoDB Error] Failed to connect to MongoDB in production (${err.message})`)
-      throw new Error(`MongoDB connection failed: ${err.message}`)
-    }
-    console.warn(`Original MongoDB connection failed (${err.message}), falling back to mongodb-memory-server for local dev...`)
+    console.warn(`Primary MongoDB connection failed (${err.message}). Attempting memory server fallback...`)
     try {
       const mongod = await MongoMemoryServer.create()
       activeUri = mongod.getUri()
     } catch (memErr) {
-      console.error('[MongoDB Error] Could not start memory server fallback:', memErr.message)
-      throw err
+      console.error('[MongoDB Error] Memory server fallback failed:', memErr.message)
+      if (isProd) throw err
     }
   }
 

@@ -45,7 +45,10 @@ try {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
-const PORT = Number(process.env.PORT || process.env.API_PORT || 4000)
+const rawPort = process.env.PORT || process.env.API_PORT || 4000
+const PORT = (typeof rawPort === 'string' && isNaN(Number(rawPort)))
+  ? rawPort
+  : (Number(rawPort) || 4000)
 const TEAM_ACCESS_ID = process.env.TEAM_ACCESS_ID || '1234567890'
 const TEAM_ACCESS_PASSWORD = process.env.TEAM_ACCESS_PASSWORD || 'admin123'
 const MAX_UPLOAD_GB = Number(process.env.MAX_UPLOAD_GB || 3)
@@ -937,26 +940,18 @@ async function startServer() {
 
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
-      console.error(`[Server Error] Port ${PORT} is already in use by an old process.`)
-      console.log(`Auto-clearing old process on port ${PORT}...`)
-      import('child_process').then(({ execSync }) => {
-        try {
-          execSync(`npx -y kill-port ${PORT}`)
-          setTimeout(() => {
-            server.listen(PORT)
-          }, 400)
-        } catch (_killErr) {
-          process.exit(1)
-        }
-      })
+      console.error(`[Server Error] Port/Socket ${PORT} is in use by another process. Retrying in 1.5s...`)
+      setTimeout(() => {
+        try { server.close() } catch {}
+        server.listen(PORT)
+      }, 1500)
     } else {
-      console.error('[Server Error]:', err)
-      process.exit(1)
+      console.error('[Server Error]:', err.message || err)
     }
   })
 
   server.listen(PORT, () => {
-    console.log(`Buildbig backend running on http://localhost:${PORT}`)
+    console.log(`Buildbig backend running on ${typeof PORT === 'string' ? PORT : 'http://localhost:' + PORT}`)
     console.log(`MongoDB database: ${process.env.MONGODB_DB || 'assetsweber'}`)
     console.log(`Team login ID: ${TEAM_ACCESS_ID}`)
     if (!dbAvailable) console.warn('Warning: database not connected — API endpoints will return 503.')
@@ -971,8 +966,7 @@ process.on('unhandledRejection', (reason) => {
 })
 
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error)
-  process.exit(1)
+  console.error('Uncaught Exception:', error.message || error)
 })
 
 startServer()
