@@ -45,6 +45,133 @@ const DEFAULT_STARTER_TIERS = [
   }
 ];
 
+const DEFAULT_INITIAL_SKILLS = [
+  {
+    id: 'skill_video_editing',
+    title: 'Video Editing',
+    category: 'Video & Film',
+    icon: '🎬',
+    desc: 'Cinematic edits, reels, ads, trailers, and brand films built for retention.',
+    startingPrice: 4999,
+    turnaround: '48-72 hrs',
+    popular: true,
+    features: ['Dynamic cuts & pacing', 'Color grading & sound design', '4K & Social exports'],
+    tiers: DEFAULT_STARTER_TIERS
+  },
+  {
+    id: 'skill_web_development',
+    title: 'Web Development',
+    category: 'Engineering',
+    icon: '🌐',
+    desc: 'High-converting websites, landing pages, portals, and scalable web applications.',
+    startingPrice: 24999,
+    turnaround: '5-7 days',
+    popular: true,
+    features: ['Responsive UI/UX', 'SEO Optimization', 'CMS & Backend Integration'],
+    tiers: [
+      { name: 'Business Website', price: 24999, deliveryTime: '5-7 days', inclusions: 'Responsive Design, Up to 5 Pages, SEO Basics, Contact Form', features: 'Clean Modern UI, Mobile Optimized', desc: 'Professional website for businesses.', highlight: false },
+      { name: 'Premium Website', price: 59999, deliveryTime: '7-14 days', inclusions: 'Custom UI/UX, Advanced Animations, CMS Dashboard, SEO Optimization', features: 'Full CMS, Speed Optimization, 3 Revisions', desc: 'Custom website with animations.', highlight: true },
+      { name: 'Ecommerce Store', price: 99999, deliveryTime: '14-21 days', inclusions: 'Payment Gateway, Admin Dashboard, Product Management, Auth System', features: 'Full E-Commerce, Inventory System', desc: 'Full-featured online store ready to sell.', highlight: false }
+    ]
+  },
+  {
+    id: 'skill_app_development',
+    title: 'App Development',
+    category: 'Engineering',
+    icon: '📱',
+    desc: 'Reliable mobile apps with a clean user experience for growing businesses.',
+    startingPrice: 199999,
+    turnaround: '2-4 weeks',
+    popular: false,
+    features: ['iOS & Android', 'Cross-Platform Speed', 'Backend API Architecture'],
+    tiers: [
+      { name: 'MVP App', price: 199999, deliveryTime: '2-4 weeks', inclusions: 'Android/iOS Support, Authentication, API Integration', features: 'Cross-platform, Core Features', desc: 'Minimum viable mobile app for startups.', highlight: false },
+      { name: 'Full App', price: 349999, deliveryTime: '4-8 weeks', inclusions: 'Real-time Systems, Push Notifications, Admin Panel', features: 'Production Ready, Backend Included', desc: 'Full-featured app with custom backend.', highlight: true },
+      { name: 'Enterprise App', price: 599999, deliveryTime: '8-12 weeks', inclusions: 'Advanced Backend, Multi-role System, Analytics Dashboard', features: 'Security Audit, Dedicated Team', desc: 'Complex enterprise-grade application.', highlight: false }
+    ]
+  },
+  {
+    id: 'skill_digital_marketing',
+    title: 'Digital Marketing',
+    category: 'Marketing',
+    icon: '📈',
+    desc: 'Campaigns and social strategy that turn attention into measurable growth.',
+    startingPrice: 12999,
+    turnaround: 'Monthly',
+    popular: true,
+    features: ['Content Strategy', 'Ad Creatives', 'Monthly Reporting'],
+    tiers: [
+      { name: 'Starter Growth', price: 12999, deliveryTime: 'Monthly Retainer', inclusions: '8 Reels/mo, Basic Editing, Content Calendar', features: '3-day turnaround, Social Planning', desc: 'Perfect for local businesses building presence.', highlight: false },
+      { name: 'Business Growth', price: 24999, deliveryTime: 'Monthly Retainer', inclusions: '16 Reels/mo, Advanced Editing, Thumbnail Design', features: 'Monthly Strategy Call, Motion Graphics', desc: 'All-inclusive social media management.', highlight: true },
+      { name: 'Domination', price: 49999, deliveryTime: 'Monthly Retainer', inclusions: '30 Reels/mo, Cinematic Production, Ad Creatives', features: 'Dedicated Manager, Analytics Reports', desc: 'Full-scale social domination.', highlight: false }
+    ]
+  },
+  {
+    id: 'skill_graphic_design',
+    title: 'Graphic Design',
+    category: 'Design',
+    icon: '🎨',
+    desc: 'Distinctive visual assets that keep every customer touchpoint polished.',
+    startingPrice: 4999,
+    turnaround: '48 hrs',
+    popular: false,
+    features: ['Social Media Assets', 'Brand Kits & Logos', 'Print & Campaign Design'],
+    tiers: [
+      { name: 'Basic Design', price: 4999, deliveryTime: '48 hrs', inclusions: '5 Social Designs, PNG & Vector Delivery', features: 'Social Assets, Clean Polish', desc: 'Essential design assets for campaigns.', highlight: false },
+      { name: 'Brand Kit', price: 14999, deliveryTime: '3-5 days', inclusions: '15 Social Designs, Logo Direction, Brand Style Guide', features: 'Brand Assets, Source Files', desc: 'Complete brand identity kit.', highlight: true },
+      { name: 'Agency Retainer', price: 34999, deliveryTime: 'Ongoing', inclusions: 'Unlimited Designs, Full Brand Strategy, Merch & Packaging', features: 'Priority Turnaround, Direct Access', desc: 'Full design support on monthly retainer.', highlight: false }
+    ]
+  },
+  {
+    id: 'skill_ui_ux_design',
+    title: 'UI/UX Design',
+    category: 'Design',
+    icon: '✨',
+    desc: 'Intuitive digital experiences shaped around user needs and business outcomes.',
+    startingPrice: 19999,
+    turnaround: '3-5 days',
+    popular: true,
+    features: ['User Journeys', 'Figma Prototypes', 'Design Systems'],
+    tiers: [
+      { name: 'Wireframes & UX', price: 19999, deliveryTime: '3-5 days', inclusions: 'User Flow, Wireframes, Interactive Prototype', features: 'Figma File, User Research', desc: 'UX structure and clickable wireframes.', highlight: false },
+      { name: 'Full UI/UX System', price: 49999, deliveryTime: '7-14 days', inclusions: 'Custom UI Design, Design System, Component Library', features: 'Desktop & Mobile, Figma Tokens', desc: 'Complete polished UI/UX design.', highlight: true },
+      { name: 'App UI & System', price: 89999, deliveryTime: '14-21 days', inclusions: 'Full App UI, Design System, Micro-animations', features: 'Unlimited Screens, Design Tokens', desc: 'Comprehensive app UI design & system.', highlight: false }
+    ]
+  },
+  {
+    id: 'skill_game_development',
+    title: 'Game Development',
+    category: 'Gaming',
+    icon: '🎮',
+    desc: 'Memorable interactive experiences for brands, publishers, and products.',
+    startingPrice: 79999,
+    turnaround: '2-4 weeks',
+    popular: false,
+    features: ['2D & 3D Mechanics', 'Multiplayer & Backend', 'Cross-Platform Build'],
+    tiers: [
+      { name: 'Promotional Game', price: 79999, deliveryTime: '2-4 weeks', inclusions: 'Simple Gameplay, Brand Integration', features: 'Lead Gen Game, Web & Mobile', desc: 'Branded mobile game for marketing.', highlight: false },
+      { name: '2D Game', price: 299999, deliveryTime: '4-8 weeks', inclusions: '2D Assets, Multiplayer Systems, Leaderboard', features: 'Cross-Platform, Backend Integration', desc: 'Full 2D game with backend.', highlight: true },
+      { name: '3D Game', price: 499999, deliveryTime: '8-16 weeks', inclusions: '3D Assets, Multiplayer Systems, Backend Cloud', features: 'Full Production, Dedicated Team', desc: 'Multiplayer 3D game with full backend.', highlight: false }
+    ]
+  },
+  {
+    id: 'skill_vfx',
+    title: 'VFX',
+    category: 'Visual Effects',
+    icon: '🌌',
+    desc: 'High-impact visual effects and compositing for content that stands out.',
+    startingPrice: 2999,
+    turnaround: '48 hrs',
+    popular: true,
+    features: ['Clean Compositing', '3D Motion Tracking', 'CGI Integration'],
+    tiers: [
+      { name: 'Basic VFX', price: 2999, deliveryTime: '48 hrs', inclusions: 'Object Removal, Screen Replacement, Clean Compositing', features: 'Per Shot, HD Output', desc: 'Essential visual effects.', highlight: false },
+      { name: 'Advanced VFX', price: 9999, deliveryTime: '3-5 days', inclusions: 'Motion Tracking, CGI Integration, Particle Effects', features: 'Per Shot, 4K Output', desc: 'Cinematic VFX with motion tracking.', highlight: true },
+      { name: 'Cinematic VFX', price: 49999, deliveryTime: '7-14 days', inclusions: '3D Asset Integration, Full Scene Compositing, Matchmoving', features: 'Per Project, Film Grade', desc: 'Full VFX pipeline for film productions.', highlight: false }
+    ]
+  }
+];
+
 const EMPTY_FORM = {
   title: '',
   category: 'General',
@@ -71,9 +198,14 @@ export function SkillManager({ showToast }) {
     setLoading(true);
     try {
       const res = await api.getSkills();
-      setSkills(res.skills || []);
+      const loaded = res.skills || [];
+      if (loaded.length > 0) {
+        setSkills(loaded);
+      } else {
+        setSkills(DEFAULT_INITIAL_SKILLS);
+      }
     } catch (_e) {
-      showToast('Could not load skills.');
+      setSkills(DEFAULT_INITIAL_SKILLS);
     } finally {
       setLoading(false);
     }

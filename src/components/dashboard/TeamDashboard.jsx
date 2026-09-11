@@ -29,6 +29,40 @@ import { SkillManager } from './pages/SkillManager.jsx';
 import { playClickSound, playHoverSound } from '../../utils/audio.js';
 import { api } from '../../api.js';
 
+class DashboardErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('[Dashboard Tab Error]', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 40, textAlign: 'center', backgroundColor: 'rgba(255,45,85,0.05)', borderRadius: 20, border: '1px solid rgba(255,45,85,0.3)', margin: 20 }}>
+          <h3 style={{ color: '#ff2d55', fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', margin: '0 0 8px' }}>
+            {this.props.title || 'SECTION ERROR'}
+          </h3>
+          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', margin: '0 0 16px' }}>
+            {this.state.error?.message || 'Something went wrong loading this tab.'}
+          </p>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            style={{ padding: '10px 24px', borderRadius: 10, background: '#ff2d55', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer' }}
+          >
+            Retry Loading
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
   const [activeNav, setActiveNav] = useState('dashboard');
   const [analytics, setAnalytics] = useState({});
@@ -396,15 +430,15 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
           )}
 
           {activeNav === 'pricing' && (
-            <PricingManager
-              showToast={showToast}
-            />
+            <DashboardErrorBoundary title="PRICING MANAGER">
+              <PricingManager showToast={showToast} />
+            </DashboardErrorBoundary>
           )}
 
           {activeNav === 'skills' && (
-            <SkillManager
-              showToast={showToast}
-            />
+            <DashboardErrorBoundary title="SKILLS / SERVICES MANAGER">
+              <SkillManager showToast={showToast} />
+            </DashboardErrorBoundary>
           )}
 
           {activeNav === 'media' && (

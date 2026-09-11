@@ -1110,7 +1110,22 @@ function makeRepository(client, collections) {
 
     // ── Skills CRUD ──
     getSkills: async (query = {}) => {
-      return (await skills.find(query).toArray()).map(skillRow)
+      let list = await skills.find(query).toArray()
+      if (list.length === 0 && Object.keys(query).length === 0) {
+        // Auto-seed default initial skills
+        for (const item of DEFAULT_INITIAL_SKILLS) {
+          await skills.insertOne({
+            ...item,
+            _id: item.id,
+            rating: item.rating || 5.0,
+            reviews: item.reviews || 0,
+            created_at: now(),
+            updated_at: now(),
+          }).catch(() => {})
+        }
+        list = await skills.find(query).toArray()
+      }
+      return list.map(skillRow)
     },
     createSkill: async (data) => {
       const item = {
@@ -1649,3 +1664,134 @@ function skillRow(doc) {
     updatedAt: doc.updated_at || null,
   }
 }
+
+const DEFAULT_INITIAL_SKILLS = [
+  {
+    id: 'skill_video_editing',
+    title: 'Video Editing',
+    category: 'Video & Film',
+    icon: '🎬',
+    desc: 'Cinematic edits, reels, ads, trailers, and brand films built for retention.',
+    startingPrice: 4999,
+    turnaround: '48-72 hrs',
+    popular: true,
+    features: ['Dynamic cuts & pacing', 'Color grading & sound design', '4K & Social exports'],
+    tiers: [
+      { id: 'price_video_starter', name: 'Starter', price: 4999, deliveryTime: '3-5 days', inclusions: ['Normal cuts', 'Color grading', 'Sound FX', '4K Export'], features: ['1 Deliverable', '2 Revisions'], desc: 'Essential editing for short-form social reels.', highlight: false },
+      { id: 'price_video_pro', name: 'Professional', price: 14999, deliveryTime: '48-72 hrs', inclusions: ['Custom cuts', 'Advanced color grading', 'Sound design', 'Motion graphics'], features: ['3 Deliverables', 'Unlimited Revisions', 'Raw Files Included'], desc: 'High-retention editing with custom motion graphics.', highlight: true },
+      { id: 'price_video_premium', name: 'Premium', price: 29999, deliveryTime: '24-48 hrs', inclusions: ['Full production', 'VFX compositing', 'Sound FX mixing', 'Priority delivery'], features: ['Full Campaign Bundle', 'Dedicated Editor'], desc: 'Commercial-grade production for brand campaigns.', highlight: false }
+    ]
+  },
+  {
+    id: 'skill_web_development',
+    title: 'Web Development',
+    category: 'Engineering',
+    icon: '🌐',
+    desc: 'High-converting websites, landing pages, portals, and scalable web applications.',
+    startingPrice: 24999,
+    turnaround: '5-7 days',
+    popular: true,
+    features: ['Responsive UI/UX', 'SEO Optimization', 'CMS & Backend Integration'],
+    tiers: [
+      { id: 'price_web_biz', name: 'Business Website', price: 24999, deliveryTime: '5-7 days', inclusions: ['Responsive Design', 'Up to 5 Pages', 'SEO Basics', 'Contact Form'], features: ['Clean Modern UI', 'Mobile Optimized'], desc: 'Professional website for businesses and service providers.', highlight: false },
+      { id: 'price_web_premium', name: 'Premium Website', price: 59999, deliveryTime: '7-14 days', inclusions: ['Custom UI/UX', 'Advanced Animations', 'CMS Dashboard', 'SEO Optimization'], features: ['Full CMS', 'Speed Optimization', '3 Revisions'], desc: 'Custom website with animations and CMS.', highlight: true },
+      { id: 'price_web_ecom', name: 'Ecommerce Store', price: 99999, deliveryTime: '14-21 days', inclusions: ['Payment Gateway', 'Admin Dashboard', 'Product Management', 'Auth System'], features: ['Full E-Commerce', 'Inventory System'], desc: 'Full-featured online store ready to sell.', highlight: false }
+    ]
+  },
+  {
+    id: 'skill_app_development',
+    title: 'App Development',
+    category: 'Engineering',
+    icon: '📱',
+    desc: 'Reliable mobile apps with a clean user experience for growing businesses.',
+    startingPrice: 199999,
+    turnaround: '2-4 weeks',
+    popular: false,
+    features: ['iOS & Android', 'Cross-Platform Speed', 'Backend API Architecture'],
+    tiers: [
+      { id: 'price_app_mvp', name: 'MVP App', price: 199999, deliveryTime: '2-4 weeks', inclusions: ['Android/iOS Support', 'Authentication', 'API Integration', 'Clean UI'], features: ['Cross-platform', 'Core Features'], desc: 'Minimum viable mobile app for startups.', highlight: false },
+      { id: 'price_app_full', name: 'Full App', price: 349999, deliveryTime: '4-8 weeks', inclusions: ['Real-time Systems', 'Push Notifications', 'Admin Panel', 'Scalable Architecture'], features: ['Production Ready', 'Backend Included'], desc: 'Full-featured app with custom backend.', highlight: true },
+      { id: 'price_app_ent', name: 'Enterprise App', price: 599999, deliveryTime: '8-12 weeks', inclusions: ['Advanced Backend', 'Multi-role System', 'Analytics Dashboard', 'Custom APIs'], features: ['Security Audit', 'Dedicated Team'], desc: 'Complex enterprise-grade application.', highlight: false }
+    ]
+  },
+  {
+    id: 'skill_digital_marketing',
+    title: 'Digital Marketing',
+    category: 'Marketing',
+    icon: '📈',
+    desc: 'Campaigns and social strategy that turn attention into measurable growth.',
+    startingPrice: 12999,
+    turnaround: 'Monthly',
+    popular: true,
+    features: ['Content Strategy', 'Ad Creatives', 'Monthly Reporting'],
+    tiers: [
+      { id: 'price_mktg_starter', name: 'Starter Growth', price: 12999, deliveryTime: 'Monthly Retainer', inclusions: ['8 Reels/mo', 'Basic Editing', 'Content Calendar', 'Post Designs'], features: ['3-day turnaround', 'Social Planning'], desc: 'Perfect for local businesses building online presence.', highlight: false },
+      { id: 'price_mktg_biz', name: 'Business Growth', price: 24999, deliveryTime: 'Monthly Retainer', inclusions: ['16 Reels/mo', 'Advanced Editing', 'Thumbnail Design', 'Instagram Management'], features: ['Monthly Strategy Call', 'Motion Graphics'], desc: 'All-inclusive social media management for growing brands.', highlight: true },
+      { id: 'price_mktg_dom', name: 'Domination', price: 49999, deliveryTime: 'Monthly Retainer', inclusions: ['30 Reels/mo', 'Cinematic Production', 'Ad Creatives', 'Full Social Management'], features: ['Dedicated Manager', 'Analytics Reports'], desc: 'Full-scale social domination for fast-growing brands.', highlight: false }
+    ]
+  },
+  {
+    id: 'skill_graphic_design',
+    title: 'Graphic Design',
+    category: 'Design',
+    icon: '🎨',
+    desc: 'Distinctive visual assets that keep every customer touchpoint polished.',
+    startingPrice: 4999,
+    turnaround: '48 hrs',
+    popular: false,
+    features: ['Social Media Assets', 'Brand Kits & Logos', 'Print & Campaign Design'],
+    tiers: [
+      { id: 'price_design_basic', name: 'Basic Design', price: 4999, deliveryTime: '48 hrs', inclusions: ['5 Social Designs', 'PNG & Vector Delivery', '2 Revision Rounds'], features: ['Social Assets', 'Clean Polish'], desc: 'Essential design assets for campaigns.', highlight: false },
+      { id: 'price_design_brand', name: 'Brand Kit', price: 14999, deliveryTime: '3-5 days', inclusions: ['15 Social Designs', 'Logo Direction', 'Brand Style Guide', 'Print Ready'], features: ['Brand Assets', 'Source Files'], desc: 'Complete brand identity kit.', highlight: true },
+      { id: 'price_design_agency', name: 'Agency Retainer', price: 34999, deliveryTime: 'Ongoing', inclusions: ['Unlimited Designs', 'Full Brand Strategy', 'Merch & Packaging', 'Dedicated Designer'], features: ['Priority Turnaround', 'Direct Access'], desc: 'Full design support on monthly retainer.', highlight: false }
+    ]
+  },
+  {
+    id: 'skill_ui_ux_design',
+    title: 'UI/UX Design',
+    category: 'Design',
+    icon: '✨',
+    desc: 'Intuitive digital experiences shaped around user needs and business outcomes.',
+    startingPrice: 19999,
+    turnaround: '3-5 days',
+    popular: true,
+    features: ['User Journeys', 'Figma Prototypes', 'Design Systems'],
+    tiers: [
+      { id: 'price_uiux_wire', name: 'Wireframes & UX', price: 19999, deliveryTime: '3-5 days', inclusions: ['User Flow', 'Wireframes', 'Interactive Prototype', 'Feedback Iteration'], features: ['Figma File', 'User Research'], desc: 'UX structure and clickable wireframes.', highlight: false },
+      { id: 'price_uiux_system', name: 'Full UI/UX System', price: 49999, deliveryTime: '7-14 days', inclusions: ['Custom UI Design', 'Design System', 'Component Library', 'Dev Handoff'], features: ['Desktop & Mobile', 'Figma Tokens'], desc: 'Complete polished UI/UX design ready for code.', highlight: true },
+      { id: 'price_uiux_app', name: 'App UI & Design System', price: 89999, deliveryTime: '14-21 days', inclusions: ['Full App UI', 'Design System', 'Micro-animations', 'Developer Guidelines'], features: ['Unlimited Screens', 'Design Tokens'], desc: 'Comprehensive app UI design & system.', highlight: false }
+    ]
+  },
+  {
+    id: 'skill_game_development',
+    title: 'Game Development',
+    category: 'Gaming',
+    icon: '🎮',
+    desc: 'Memorable interactive experiences for brands, publishers, and products.',
+    startingPrice: 79999,
+    turnaround: '2-4 weeks',
+    popular: false,
+    features: ['2D & 3D Mechanics', 'Multiplayer & Backend', 'Cross-Platform Build'],
+    tiers: [
+      { id: 'price_game_promo', name: 'Promotional Game', price: 79999, deliveryTime: '2-4 weeks', inclusions: ['Simple Gameplay', 'Brand Integration', 'Mobile Optimized'], features: ['Lead Gen Game', 'Web & Mobile'], desc: 'Branded mobile game for marketing campaigns.', highlight: false },
+      { id: 'price_game_2d', name: '2D Game', price: 299999, deliveryTime: '4-8 weeks', inclusions: ['2D Assets', 'Multiplayer Systems', 'Leaderboard', 'In-App Purchases'], features: ['Cross-Platform', 'Backend Integration'], desc: 'Full 2D game with backend and multiplayer.', highlight: true },
+      { id: 'price_game_3d', name: '3D Game', price: 499999, deliveryTime: '8-16 weeks', inclusions: ['3D Assets', 'Multiplayer Systems', 'Backend & Cloud', 'Cross-Platform'], features: ['Full Production', 'Dedicated Team'], desc: 'Multiplayer 3D game with full backend.', highlight: false }
+    ]
+  },
+  {
+    id: 'skill_vfx',
+    title: 'VFX',
+    category: 'Visual Effects',
+    icon: '🌌',
+    desc: 'High-impact visual effects and compositing for content that stands out.',
+    startingPrice: 2999,
+    turnaround: '48 hrs',
+    popular: true,
+    features: ['Clean Compositing', '3D Motion Tracking', 'CGI Integration'],
+    tiers: [
+      { id: 'price_vfx_basic', name: 'Basic VFX', price: 2999, deliveryTime: '48 hrs', inclusions: ['Object Removal', 'Screen Replacement', 'Clean Compositing', 'Color Matching'], features: ['Per Shot', 'HD Output'], desc: 'Essential visual effects for clean compositing.', highlight: false },
+      { id: 'price_vfx_adv', name: 'Advanced VFX', price: 9999, deliveryTime: '3-5 days', inclusions: ['Motion Tracking', 'CGI Integration', 'Particle Effects', 'Environment Extensions'], features: ['Per Shot', '4K Output'], desc: 'Cinematic VFX with motion tracking and layered compositing.', highlight: true },
+      { id: 'price_vfx_cine', name: 'Cinematic VFX', price: 49999, deliveryTime: '7-14 days', inclusions: ['3D Asset Integration', 'Full Scene Compositing', 'Matchmoving', 'Color Pipeline'], features: ['Per Project', 'Film Grade'], desc: 'Full VFX pipeline for film-grade productions.', highlight: false }
+    ]
+  }
+];
