@@ -18,6 +18,31 @@ import { registerV2Routes } from './v2Routes.js';
 import { verifyJwt, requireRoles, firebaseLoginHandler } from './middleware/auth.js';
 import { signAccessToken, signRefreshToken, hashRefreshToken, verifyToken } from './utils/jwt.js';
 
+// Safely load .env file if it exists locally, without crashing if absent (e.g. production host environments)
+try {
+  const envPath = path.resolve(process.cwd(), '.env')
+  if (fs.existsSync(envPath)) {
+    const envConfig = fs.readFileSync(envPath, 'utf8')
+    for (const line of envConfig.split('\n')) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#')) continue
+      const eqIdx = trimmed.indexOf('=')
+      if (eqIdx > 0) {
+        const key = trimmed.substring(0, eqIdx).trim()
+        let val = trimmed.substring(eqIdx + 1).trim()
+        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+          val = val.slice(1, -1)
+        }
+        if (key && !process.env[key]) {
+          process.env[key] = val
+        }
+      }
+    }
+  }
+} catch (_envErr) {
+  // Ignore env file errors in production
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
 const PORT = Number(process.env.PORT || process.env.API_PORT || 4000)
