@@ -293,6 +293,7 @@ function makeRepository(client, collections) {
       projectState: row.project_state,
       razorpayOrderId: row.razorpay_order_id,
       razorpayPaymentId: row.razorpay_payment_id,
+      deliveryLink: row.delivery_link || '',
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }
@@ -577,6 +578,7 @@ function makeRepository(client, collections) {
         project_state: project.projectState,
         razorpay_order_id: project.razorpayOrderId,
         razorpay_payment_id: project.razorpayPaymentId,
+        delivery_link: '',
         created_at: project.createdAt,
         updated_at: project.updatedAt,
       }
@@ -597,6 +599,10 @@ function makeRepository(client, collections) {
       }
       await projectMessages.insertOne({ ...initialMessage, _id: initialMessage.id, project_id: initialMessage.projectId })
       return hydrateProject(await projects.findOne({ id: project.id }))
+    },
+    updateProjectDeliveryLink: async (projectId, deliveryLink) => {
+      await projects.updateOne({ id: projectId }, { $set: { delivery_link: deliveryLink, updated_at: now() } })
+      return hydrateProject(await projects.findOne({ id: projectId }))
     },
     addMessage: async (projectId, message) => {
       await projectMessages.insertOne({ ...message, _id: message.id, project_id: projectId })

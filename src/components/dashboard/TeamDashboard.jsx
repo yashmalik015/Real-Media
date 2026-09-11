@@ -73,6 +73,7 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
   const [skills, setSkills] = useState([]);
   const [settings, setSettings] = useState({});
   const [activities, setActivities] = useState([]);
+  const [projects, setProjects] = useState([]);
 
   // Global Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -89,7 +90,8 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
         api.getInquiries().catch(() => ({ inquiries: [] })),
         api.getSettings().catch(() => ({ settings: {} })),
         api.getActivities().catch(() => ({ activities: [] })),
-        api.getSkills().catch(() => ({ skills: [] }))
+        api.getSkills().catch(() => ({ skills: [] })),
+        api.getProjects().catch(() => ({ projects: [] }))
       ]);
 
       setAnalytics(analyticsRes.analytics || {});
@@ -100,6 +102,7 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
       setSettings(settingsRes.settings || {});
       setActivities(actRes.activities || []);
       setSkills(skillsRes.skills || []);
+      setProjects(projectsRes.projects || []);
     } catch (e) {
       showToast(e.message || 'Failed to sync with MongoDB database.');
     }
@@ -422,7 +425,7 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
 
           {activeNav === 'requests' && (
             <RequestCRM
-              inquiries={inquiries}
+              projects={projects}
               onLoad={loadAllData}
               showToast={showToast}
               settings={settings}

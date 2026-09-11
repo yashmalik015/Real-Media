@@ -589,6 +589,20 @@ app.patch('/api/projects/:id/status', requireAuth, async (req, res) => {
   res.json({ project })
 })
 
+app.patch('/api/projects/:id/delivery-link', requireAuth, async (req, res) => {
+  if (req.user.role !== 'team') return res.status(403).json({ message: 'Only team can update delivery link.' })
+  const { deliveryLink = '' } = req.body
+
+  const existingProject = await repository.visibleProject(req.user, req.params.id)
+  if (!existingProject) return res.status(404).json({ message: 'Project not found.' })
+
+  const project = await repository.updateProjectDeliveryLink(req.params.id, deliveryLink.trim())
+  if (deliveryLink.trim()) {
+    await repository.notify(project.clientId, project.id, 'Delivery Link Provided', `Your order "${project.title}" has a delivery link.`)
+  }
+  res.json({ project })
+})
+
 app.post('/api/projects/:id/stop', requireAuth, async (req, res) => {
   const project = await repository.visibleProject(req.user, req.params.id)
   if (!project) return res.status(404).json({ message: 'Project not found.' })
