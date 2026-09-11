@@ -424,12 +424,14 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
           )}
 
           {activeNav === 'requests' && (
-            <RequestCRM
-              projects={projects}
-              onLoad={loadAllData}
-              showToast={showToast}
-              settings={settings}
-            />
+            <DashboardErrorBoundary title="CLIENT REQUESTS">
+              <RequestCRM
+                projects={projects}
+                onLoad={loadAllData}
+                showToast={showToast}
+                settings={settings}
+              />
+            </DashboardErrorBoundary>
           )}
 
           {activeNav === 'pricing' && (
