@@ -137,19 +137,24 @@ function ServiceGrid({ onPick }) {
 }
 
 // ── Service detail ────────────────────────────────────────────────────────────
-const SERVICE_PRICING = {
-  "Video Editing": [{ name: "Short Form — Basic", price: "₹1,500" }, { name: "Short Form — Professional", price: "₹2,500" }, { name: "Short Form — Cinematic", price: "₹5,000+" }, { name: "Long Form — Podcast Editing", price: "₹2,000+" }, { name: "Long Form — Documentary", price: "₹6,000+" }, { name: "Commercial Ads", price: "Custom Quote" }],
-  "Web Development": [{ name: "Landing Page", price: "₹24,999+" }, { name: "Business Website", price: "₹49,999+" }, { name: "Ecommerce Store", price: "₹99,999+" }],
-  "App Development": [{ name: "MVP App", price: "₹1,99,999+" }, { name: "Production App", price: "₹3,49,999+" }, { name: "Enterprise App", price: "Custom Quote" }],
-};
-
-function ServiceDetail({ title, onBack, onInquiry, portfolio, loading }) {
+function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricingData }) {
   const service = PUBLIC_SERVICES.find((s) => s.title === title);
   const work = useMemo(() => portfolio.filter((item) => item.service === title), [portfolio, title]);
+  // Filter DB plans for this service; fall back to a generic placeholder if none exist yet
+  const plans = useMemo(() => {
+    const dbPlans = pricingData.filter((p) => p.service === title);
+    if (dbPlans.length > 0) return dbPlans;
+    return [
+      { _id: `fallback_1_${title}`, name: "Starter", price: "Custom Quote", features: [], deliveryTime: "TBD", inclusions: [] },
+      { _id: `fallback_2_${title}`, name: "Professional", price: "Custom Quote", features: [], deliveryTime: "TBD", inclusions: [] },
+      { _id: `fallback_3_${title}`, name: "Premium", price: "Custom Quote", features: [], deliveryTime: "TBD", inclusions: [] },
+    ];
+  }, [pricingData, title]);
+
   return (
     <section className="section" style={{ paddingTop: 120 }}>
       <div className="section-inner">
-        <button className="service-page-back" onClick={onBack}>← Back</button>
+        <button className="service-page-back" onClick={onBack}>← Back to Services</button>
         <SectionHeader label={service?.title?.toUpperCase() || "SERVICE"} title={service?.title || title} sub={service?.desc || ""} />
         <div className="why-grid" style={{ marginTop: 40 }}>
           {(service?.details || [
@@ -160,82 +165,264 @@ function ServiceDetail({ title, onBack, onInquiry, portfolio, loading }) {
             <div className="why-card" key={d}><p>{d}</p></div>
           ))}
         </div>
-        <button className="btn-primary" style={{ marginTop: 24 }} onClick={() => onInquiry(title)}>Project Requirement Form</button>
+
+        {/* Pricing Plans — DB driven */}
         <div style={{ marginTop: 72 }}>
           <SectionHeader label="PRICING" title={`${title} Plans`} sub="Transparent starting points. Every scope is confirmed before production begins." />
-          <div className="pricing-grid" style={{ marginTop: 36 }}>
-            {(SERVICE_PRICING[title] || [{ name: "Starter", price: "Custom Quote" }, { name: "Professional", price: "Custom Quote" }, { name: "Premium", price: "Custom Quote" }]).map((plan) => <div className="pricing-card" key={plan.name}><div className="pricing-plan">{title}</div><div className="pricing-name">{plan.name}</div><div className="pricing-price"><div className="pricing-amount">{plan.price}</div></div><button className="pricing-cta secondary" onClick={() => onInquiry(title)}>Get Started</button></div>)}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+            gap: 24,
+            marginTop: 36
+          }}>
+            {plans.map((plan) => {
+              const featureList = Array.isArray(plan.features) ? plan.features : String(plan.features || '').split(',').map(f => f.trim()).filter(Boolean);
+              const inclusionList = Array.isArray(plan.inclusions) ? plan.inclusions : String(plan.inclusions || '').split(',').map(i => i.trim()).filter(Boolean);
+              const rawPrice = Number(String(plan.price).replace(/[^\d]/g, ''));
+              const isCustom = !rawPrice || String(plan.price).toLowerCase().includes('custom');
+              return (
+                <div key={plan._id || plan.id || plan.name} style={{
+                  borderRadius: 20,
+                  backgroundColor: plan.highlight ? 'rgba(255,45,85,0.08)' : 'rgba(12,12,16,0.82)',
+                  border: `1px solid ${plan.highlight ? 'rgba(255,45,85,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                  padding: 28,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 0,
+                  boxShadow: plan.highlight ? '0 0 50px rgba(255,45,85,0.15)' : '0 12px 32px rgba(0,0,0,0.5)',
+                  position: 'relative',
+                  backdropFilter: 'blur(16px)',
+                }}>
+                  {plan.highlight && (
+                    <div style={{ position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)', padding: '4px 18px', borderRadius: 999, background: 'linear-gradient(90deg,#ff2d55,#bd1c3c)', color: '#fff', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', whiteSpace: 'nowrap' }}>✦ MOST POPULAR</div>
+                  )}
+                  <div style={{ fontSize: '0.7rem', color: '#ff2d55', fontFamily: 'monospace', letterSpacing: '0.12em', marginBottom: 6 }}>{title.toUpperCase()}</div>
+                  <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.9rem', color: '#fff', margin: '0 0 12px', letterSpacing: '0.03em' }}>{plan.name}</h3>
+                  <div style={{ marginBottom: 20 }}>
+                    <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.8rem', color: plan.highlight ? '#ff2d55' : '#fff' }}>
+                      {isCustom ? 'CUSTOM' : `₹${Number(rawPrice).toLocaleString('en-IN')}`}
+                    </span>
+                    {!isCustom && plan.period && <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', marginLeft: 4 }}>{plan.period}</span>}
+                  </div>
+
+                  {/* Delivery Time */}
+                  {plan.deliveryTime && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, padding: '8px 12px', borderRadius: 10, backgroundColor: 'rgba(255,45,85,0.08)', border: '1px solid rgba(255,45,85,0.2)' }}>
+                      <span style={{ fontSize: '0.75rem', color: '#ff2d55', fontFamily: 'monospace' }}>⏱ DELIVERY</span>
+                      <span style={{ fontSize: '0.85rem', color: '#fff', fontWeight: 600 }}>{plan.deliveryTime}</span>
+                    </div>
+                  )}
+
+                  {/* Inclusions */}
+                  {inclusionList.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', fontFamily: 'monospace', marginBottom: 8, letterSpacing: '0.1em' }}>INCLUDES</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {inclusionList.map((inc, i) => (
+                          <span key={i} style={{ padding: '3px 10px', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.8)', fontSize: '0.78rem' }}>{inc}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Feature list */}
+                  {featureList.length > 0 && (
+                    <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+                      {featureList.map((f, i) => (
+                        <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.85rem', color: 'rgba(255,255,255,0.75)' }}>
+                          <span style={{ color: '#34c759', marginTop: 1, flexShrink: 0 }}>✓</span> {f}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <button
+                    className="pricing-cta"
+                    style={{ marginTop: 'auto', width: '100%', padding: '13px', borderRadius: 12, background: plan.highlight ? 'linear-gradient(135deg,#ff2d55,#bd1c3c)' : 'rgba(255,45,85,0.12)', color: plan.highlight ? '#fff' : '#ff2d55', border: plan.highlight ? 'none' : '1px solid rgba(255,45,85,0.3)', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', letterSpacing: '0.05em' }}
+                    onClick={() => onSelectPlan(plan, title)}
+                  >
+                    {isCustom ? 'Get Custom Quote' : 'Get Started'}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
+
+        {/* Portfolio work */}
         <div style={{ marginTop: 72 }}>
           <SectionHeader label="OUR WORK" title={`Selected ${title} Work`} sub="Projects are published directly by our team." />
-          {loading ? <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20, marginTop: 36 }}><Skeleton h={280} /><Skeleton h={280} /><Skeleton h={280} /></div> : work.length ? <div className="portfolio-grid" style={{ marginTop: 36 }}>{work.map((item) => <PortfolioCard key={item.id} item={item} onStartProject={() => onInquiry(title)} />)}</div> : <div style={{ display: "grid", marginTop: 36 }}><EmptyState icon="🎬" title={`No ${title} projects published yet.`} sub="Check back soon for new work from our team." /></div>}
+          {loading ? <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20, marginTop: 36 }}><Skeleton h={280} /><Skeleton h={280} /><Skeleton h={280} /></div> : work.length ? <div className="portfolio-grid" style={{ marginTop: 36 }}>{work.map((item) => <PortfolioCard key={item.id} item={item} onStartProject={() => onSelectPlan(null, title)} />)}</div> : <div style={{ display: "grid", marginTop: 36 }}><EmptyState icon="🎬" title={`No ${title} projects published yet.`} sub="Check back soon for new work from our team." /></div>}
         </div>
       </div>
     </section>
   );
 }
 
-// ── Inquiry / Start Project Modal ─────────────────────────────────────────────
-function InquiryModal({ initialService, onClose, settings, showToast, session }) {
-  const [form, setForm] = useState({ name: session?.name || "", email: session?.email || "", phone: "", company: "", service: initialService || "", budget: "", description: "" });
+// ── FAQ data per service ───────────────────────────────────────────────────────
+const SERVICE_FAQS = {
+  "Video Editing": [
+    { q: "What formats do you deliver?", a: "We deliver in MP4 (H.264/H.265), MOV, and any format you need for your platform. Resolution from 1080p to 4K." },
+    { q: "How do I share raw footage?", a: "Upload a Google Drive / Dropbox link below. Ensure the folder is set to 'Anyone with link can view'." },
+    { q: "How many revisions are included?", a: "Revision rounds are specified per package. Additional rounds are available at ₹500/round." },
+    { q: "Do you add subtitles or captions?", a: "Yes — SRT files and burned-in captions are included in Professional and above packages." },
+  ],
+  "Web Development": [
+    { q: "Will the website be mobile responsive?", a: "Absolutely. Every site we build is fully responsive across mobile, tablet, and desktop." },
+    { q: "Do you provide hosting?", a: "We can set up and configure hosting for you (additional cost), or deploy to your existing provider." },
+    { q: "What CMS do you use?", a: "We build on Next.js, React, or use headless CMS options like Sanity or Contentful based on your needs." },
+    { q: "How long does development take?", a: "Landing pages: 5–7 days. Business websites: 2–4 weeks. Custom apps: 4–12 weeks." },
+  ],
+  "Digital Marketing": [
+    { q: "Which platforms do you manage?", a: "Instagram, Facebook, Google Ads, YouTube, LinkedIn, and Twitter/X based on your target audience." },
+    { q: "How are results reported?", a: "You get weekly/monthly performance reports with impressions, clicks, conversions, and ROAS." },
+    { q: "Do you create ad creatives?", a: "Yes — static and video ad creatives are included with every marketing package." },
+    { q: "Can I control the ad budget?", a: "You control ad spend directly in your ad account. Our fee covers strategy and management." },
+  ],
+  default: [
+    { q: "How does the process work?", a: "After payment, our team reviews your requirements, assigns a dedicated specialist, and starts work within 24–48 hours." },
+    { q: "What if I need changes after delivery?", a: "Every package includes revision rounds. We work until you're satisfied with the result." },
+    { q: "How do I contact my project manager?", a: "Via the Client Portal chat after your order is created. You'll receive login credentials by email." },
+    { q: "Is my payment secure?", a: "Payments are processed via Razorpay, India's most trusted payment gateway, with full SSL encryption." },
+  ]
+};
+
+// ── Package Project Modal (replaces InquiryModal) ──────────────────────────────
+function PackageProjectModal({ plan, service, onClose, settings, showToast, session }) {
+  const [form, setForm] = useState({
+    name: session?.name || "",
+    email: session?.email || "",
+    phone: session?.phone || "",
+    company: "",
+    driveLink: "",
+    description: "",
+  });
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const [orderCreated, setOrderCreated] = useState(false);
+  const [paymentDone, setPaymentDone] = useState(false);
+  const [openFaq, setOpenFaq] = useState(null);
 
-  const submit = async () => {
+  const faqs = SERVICE_FAQS[service] || SERVICE_FAQS.default;
+  const featureList = plan ? (Array.isArray(plan.features) ? plan.features : String(plan.features || '').split(',').map(f => f.trim()).filter(Boolean)) : [];
+  const inclusionList = plan ? (Array.isArray(plan.inclusions) ? plan.inclusions : String(plan.inclusions || '').split(',').map(i => i.trim()).filter(Boolean)) : [];
+  const rawPrice = plan ? Number(String(plan.price).replace(/[^\d]/g, '')) : 0;
+  const isCustom = !rawPrice || String(plan?.price || '').toLowerCase().includes('custom');
+  const priceInPaise = rawPrice * 100;
+
+  const handleRazorpay = async () => {
     if (!form.name || !form.email) { showToast("Please enter your name and email."); return; }
+    if (!form.phone) { showToast("Please enter your phone number."); return; }
     setLoading(true);
     try {
-      await api.submitInquiry(form);
+      // Step 1: Get Razorpay key
+      const keyRes = await api.getPaymentKey();
+      const rzpKey = keyRes.key;
+      if (!rzpKey) throw new Error('Payment system not configured. Please contact us on WhatsApp.');
 
-      // If user is logged in, also create a project/order in their Client Portal
-      if (session) {
-        try {
-          const fd = new FormData();
-          fd.append('service', form.service || 'General');
-          fd.append('title', `${form.service || 'Project'} — ${form.name}`);
-          fd.append('description', form.description || 'Submitted via project inquiry form');
-          fd.append('servicePlan', 'Custom');
-          fd.append('totalAmount', form.budget ? parseInt(form.budget.replace(/\D/g, ''), 10) || 0 : 0);
-          fd.append('answers', JSON.stringify({
-            name: form.name,
-            email: form.email,
-            phone: form.phone,
-            company: form.company,
-            budget: form.budget,
-            description: form.description
-          }));
-          await api.createProject(fd);
-          setOrderCreated(true);
-        } catch { /* silent – inquiry still succeeded */ }
+      let orderRes;
+      if (!isCustom) {
+        // Step 2: Create standalone package order
+        orderRes = await api.createPackageOrder({ amount: priceInPaise, currency: 'INR', receipt: `pkg_${Date.now()}` });
       }
 
+      // Step 3: Launch Razorpay checkout
+      const launchCheckout = (orderId) => new Promise((resolve, reject) => {
+        const options = {
+          key: rzpKey,
+          amount: priceInPaise,
+          currency: 'INR',
+          name: 'Assets Weber',
+          description: `${service} — ${plan?.name || 'Package'}`,
+          order_id: orderId,
+          prefill: { name: form.name, email: form.email, contact: form.phone },
+          theme: { color: '#ff2d55' },
+          modal: { backdropclose: false, escape: false },
+          handler: resolve,
+        };
+        if (!window.Razorpay) { reject(new Error('Razorpay SDK not loaded. Check your network connection.')); return; }
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', (resp) => reject(new Error(resp.error?.description || 'Payment failed')));
+        rzp.open();
+      });
+
+      const paymentResult = await launchCheckout(orderRes?.order_id);
+
+      // Step 4: Verify payment signature
+      await api.verifyPackagePayment({
+        razorpay_payment_id: paymentResult.razorpay_payment_id,
+        razorpay_order_id: paymentResult.razorpay_order_id,
+        razorpay_signature: paymentResult.razorpay_signature,
+      });
+
+      // Step 5: Create project in portal
+      const fd = new FormData();
+      fd.append('service', service || 'General');
+      fd.append('title', `${service} — ${plan?.name || 'Package'} — ${form.name}`);
+      fd.append('description', `${form.description || 'Package project'}${form.driveLink ? `\n\nRaw files: ${form.driveLink}` : ''}`);
+      fd.append('servicePlan', plan?.name || 'Custom');
+      fd.append('totalAmount', rawPrice || 0);
+      fd.append('answers', JSON.stringify({
+        name: form.name, email: form.email, phone: form.phone,
+        company: form.company, driveLink: form.driveLink,
+        paymentId: paymentResult.razorpay_payment_id,
+      }));
+      await api.createProject(fd).catch(() => {});
+
+      setPaymentDone(true);
       setDone(true);
     } catch (e) {
-      showToast(e.message || "Failed to submit. Please try WhatsApp.");
+      if (e.message && !e.message.includes('cancelled')) {
+        showToast(e.message || 'Payment failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const handleCustomInquiry = async () => {
+    if (!form.name || !form.email) { showToast("Please enter your name and email."); return; }
+    setLoading(true);
+    try {
+      await api.submitInquiry({
+        name: form.name, email: form.email, phone: form.phone,
+        company: form.company, service, description: form.description,
+        budget: 'Custom Quote', driveLink: form.driveLink,
+      });
+      setDone(true);
+    } catch (e) {
+      showToast(e.message || 'Submission failed. Please try WhatsApp.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Ensure Razorpay script is loaded
+  useEffect(() => {
+    if (!window.Razorpay && !isCustom) {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      document.body.appendChild(script);
+    }
+  }, [isCustom]);
+
   if (done) {
     return (
       <div className="msf-backdrop">
-        <div className="msf-modal" style={{ textAlign: "center", maxWidth: 520 }}>
-          <div style={{ fontSize: "3.5rem", marginBottom: 16 }}>✅</div>
-          <h2 className="bn" style={{ fontSize: "2rem", marginBottom: 12 }}>Inquiry Received!</h2>
-          <p style={{ color: "var(--muted)", lineHeight: 1.75, marginBottom: 12 }}>
-            Thank you, {form.name}. We'll review your project requirements and get back to you within 24 hours.
+        <div className="msf-modal" style={{ textAlign: 'center', maxWidth: 520 }}>
+          <div style={{ fontSize: '3.5rem', marginBottom: 16 }}>{paymentDone ? '🎉' : '✅'}</div>
+          <h2 className="bn" style={{ fontSize: '2rem', marginBottom: 12 }}>
+            {paymentDone ? 'Payment Successful!' : 'Inquiry Received!'}
+          </h2>
+          <p style={{ color: 'var(--muted)', lineHeight: 1.75, marginBottom: 20 }}>
+            {paymentDone
+              ? `Thank you, ${form.name}! Your project has been created in the Client Portal. Our team will begin work within 24 hours.`
+              : `Thank you, ${form.name}. We'll review your custom project requirements and send a quote within 24 hours.`
+            }
           </p>
-          {orderCreated && (
-            <p style={{ color: "#34c759", fontSize: ".88rem", marginBottom: 20, lineHeight: 1.5 }}>
-              ✅ An order has been created in your Client Portal. You can track it there!
-            </p>
-          )}
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
-            <a className="btn-ghost" href={settings?.bookingUrl || "https://calendly.com/"} target="_blank" rel="noreferrer">📅 Book Discovery Call</a>
-            <a className="btn-primary" href={`https://wa.me/${(settings?.whatsappNumber || "+919416085060").replace(/\D/g, "")}`} target="_blank" rel="noreferrer">💬 Chat on WhatsApp</a>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <a className="btn-ghost" href={settings?.bookingUrl || 'https://calendly.com/'} target="_blank" rel="noreferrer">📅 Book Discovery Call</a>
+            <a className="btn-primary" href={`https://wa.me/${(settings?.whatsappNumber || '+919416085060').replace(/\D/g, '')}`} target="_blank" rel="noreferrer">💬 Chat on WhatsApp</a>
           </div>
           <button className="service-page-back" style={{ marginTop: 24 }} onClick={onClose}>Close ✕</button>
         </div>
@@ -244,36 +431,136 @@ function InquiryModal({ initialService, onClose, settings, showToast, session })
   }
 
   return (
-    <div className="msf-backdrop">
-      <div className="msf-modal">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <h2 className="bn" style={{ fontSize: "1.8rem" }}>Start Your Project</h2>
+    <div className="msf-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="msf-modal" style={{ maxWidth: 660, maxHeight: '92vh', overflowY: 'auto' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+          <div>
+            <div style={{ fontSize: '0.7rem', color: '#ff2d55', fontFamily: 'monospace', letterSpacing: '0.14em', marginBottom: 4 }}>{service?.toUpperCase()} // START PROJECT</div>
+            <h2 className="bn" style={{ fontSize: '1.8rem', margin: 0 }}>{plan?.name || 'Custom Project'}</h2>
+            {!isCustom && (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 6 }}>
+                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', color: '#ff2d55' }}>₹{Number(rawPrice).toLocaleString('en-IN')}</span>
+                {plan?.period && <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>{plan.period}</span>}
+              </div>
+            )}
+          </div>
           <button onClick={onClose} className="service-page-back">✕</button>
         </div>
+
+        {/* Package inclusions & delivery */}
+        {(inclusionList.length > 0 || plan?.deliveryTime || featureList.length > 0) && (
+          <div style={{ background: 'rgba(255,45,85,0.05)', border: '1px solid rgba(255,45,85,0.2)', borderRadius: 14, padding: '16px 20px', marginBottom: 24 }}>
+            {plan?.deliveryTime && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: inclusionList.length > 0 || featureList.length > 0 ? 12 : 0 }}>
+                <span style={{ fontSize: '0.7rem', color: '#ff2d55', fontFamily: 'monospace' }}>⏱ DELIVERY TIME</span>
+                <span style={{ fontWeight: 700, color: '#fff', fontSize: '0.9rem' }}>{plan.deliveryTime}</span>
+              </div>
+            )}
+            {inclusionList.length > 0 && (
+              <div style={{ marginBottom: featureList.length > 0 ? 12 : 0 }}>
+                <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', marginBottom: 8 }}>THIS PACKAGE INCLUDES</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {inclusionList.map((inc, i) => (
+                    <span key={i} style={{ padding: '4px 12px', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.85)', fontSize: '0.8rem' }}>{inc}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {featureList.length > 0 && (
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {featureList.map((f, i) => (
+                  <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.83rem', color: 'rgba(255,255,255,0.72)' }}>
+                    <span style={{ color: '#34c759', flexShrink: 0 }}>✓</span> {f}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {/* Form fields */}
         <div className="msf-grid">
           <div className="field"><label>Name *</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Your full name" /></div>
           <div className="field"><label>Email *</label><input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" /></div>
         </div>
         <div className="msf-grid">
-          <div className="field"><label>Phone</label><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+91 98765 43210" /></div>
-          <div className="field"><label>Company</label><input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="Company name" /></div>
+          <div className="field"><label>Phone *</label><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+91 98765 43210" /></div>
+          <div className="field"><label>Company</label><input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="Company / Brand name" /></div>
         </div>
-        <div className="msf-grid">
-          <div className="field"><label>Service Required</label>
-            <select value={form.service} onChange={(e) => setForm({ ...form, service: e.target.value })}>
-              <option value="">Select a service...</option>
-              {SERVICE_OPTIONS.map((s) => <option key={s}>{s}</option>)}
-            </select>
+
+        {/* Drive link */}
+        <div className="field" style={{ marginBottom: 16 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>📁</span> Google Drive / Raw Files Link
+            <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', fontWeight: 400 }}>(optional)</span>
+          </label>
+          <input
+            value={form.driveLink}
+            onChange={(e) => setForm({ ...form, driveLink: e.target.value })}
+            placeholder="https://drive.google.com/drive/folders/..."
+            style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
+          />
+          <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>Share raw footage, assets, or reference files here. Set folder access to "Anyone with link can view".</div>
+        </div>
+
+        {/* Project description */}
+        <div className="field" style={{ marginBottom: 20 }}>
+          <label>Project Description</label>
+          <textarea
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            placeholder="Describe your vision, target audience, references, and any specific requirements..."
+            style={{ minHeight: 100 }}
+          />
+        </div>
+
+        {/* FAQ Section */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', letterSpacing: '0.12em', marginBottom: 12 }}>FREQUENTLY ASKED QUESTIONS</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {faqs.map((faq, i) => (
+              <div key={i} style={{ borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                <button
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'none', border: 'none', color: '#fff', cursor: 'pointer', textAlign: 'left', fontSize: '0.88rem', fontWeight: 600 }}
+                >
+                  {faq.q}
+                  <span style={{ color: '#ff2d55', fontSize: '1rem', flexShrink: 0, marginLeft: 8, transition: 'transform 0.2s', transform: openFaq === i ? 'rotate(45deg)' : 'none' }}>+</span>
+                </button>
+                {openFaq === i && (
+                  <div style={{ padding: '0 16px 14px', fontSize: '0.84rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.65 }}>{faq.a}</div>
+                )}
+              </div>
+            ))}
           </div>
-          <div className="field"><label>Budget</label><input value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="e.g. ₹50,000" /></div>
         </div>
-        <div className="field"><label>Project Description</label><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Describe your project goals, target audience, and any references..." /></div>
-        <button className="btn-primary" onClick={submit} disabled={loading} style={{ width: "100%" }}>
-          {loading ? "Submitting…" : "Submit Inquiry ✓"}
-        </button>
-        <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <a className="btn-ghost" href={settings?.bookingUrl || "https://calendly.com/"} target="_blank" rel="noreferrer">Book a Discovery Call</a>
-          <a className="btn-primary" href={`https://wa.me/${(settings?.whatsappNumber || "+919416085060").replace(/\D/g, "")}`} target="_blank" rel="noreferrer">Chat on WhatsApp</a>
+
+        {/* CTA */}
+        {isCustom ? (
+          <>
+            <button className="btn-primary" onClick={handleCustomInquiry} disabled={loading} style={{ width: '100%', marginBottom: 12, padding: '15px' }}>
+              {loading ? 'Submitting…' : '📋 Submit Custom Quote Request'}
+            </button>
+            <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginBottom: 16 }}>Our team will review and send a detailed quote within 24 hours.</div>
+          </>
+        ) : (
+          <>
+            <button
+              id="start-project-pay-btn"
+              className="btn-primary"
+              onClick={handleRazorpay}
+              disabled={loading}
+              style={{ width: '100%', padding: '16px', fontSize: '1rem', letterSpacing: '0.05em', marginBottom: 12, background: 'linear-gradient(135deg,#ff2d55,#bd1c3c)', boxShadow: '0 0 30px rgba(255,45,85,0.4)' }}
+            >
+              {loading ? '⏳ Processing…' : `🚀 Start Project — Pay ₹${Number(rawPrice).toLocaleString('en-IN')} via Razorpay`}
+            </button>
+            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', textAlign: 'center', marginBottom: 16 }}>🔒 Secured by Razorpay · SSL encrypted · UPI, Cards, Net Banking accepted</div>
+          </>
+        )}
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <a className="btn-ghost" href={settings?.bookingUrl || 'https://calendly.com/'} target="_blank" rel="noreferrer" style={{ flex: 1, textAlign: 'center' }}>📅 Book Discovery Call</a>
+          <a className="btn-primary" href={`https://wa.me/${(settings?.whatsappNumber || '+919416085060').replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ flex: 1, textAlign: 'center', background: '#25d366', boxShadow: 'none' }}>💬 Chat on WhatsApp</a>
         </div>
       </div>
     </div>
@@ -1598,6 +1885,7 @@ function LegacyTeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
 export default function App() {
   const [page, setPage] = useState("home");
   const [selectedService, setSelectedService] = useState(null);
+  const [selectedPlan, setSelectedPlan] = useState(null); // { plan, service }
   const [showInquiry, setShowInquiry] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -1903,7 +2191,7 @@ export default function App() {
           </div>
         ) : page === "service" ? (
           <div className="page" style={{ paddingTop: 100 }}>
-            <ServiceDetail title={selectedService} portfolio={portfolio} loading={dataLoading} onBack={() => requestPage("services")} onInquiry={(svc) => { setSelectedService(svc); setShowInquiry(true); }} />
+            <ServiceDetail title={selectedService} portfolio={portfolio} loading={dataLoading} pricingData={pricing} onBack={() => requestPage("services")} onSelectPlan={(plan, svc) => { setSelectedPlan({ plan, service: svc || selectedService }); setShowInquiry(true); }} />
             <FuturisticFooter onNavigate={requestPage} />
           </div>
         ) : page === "portfolio" ? (
@@ -1928,7 +2216,7 @@ export default function App() {
           </div>
         ) : page === "pricing" ? (
           <div className="page" style={{ paddingTop: 100 }}>
-            <FuturisticPricing onSelectPlan={() => setShowInquiry(true)} pricingData={pricing} />
+            <FuturisticPricing onSelectPlan={(plan, svc) => { setSelectedPlan({ plan, service: svc || '' }); setShowInquiry(true); }} pricingData={pricing} />
             <FuturisticFooter onNavigate={requestPage} />
           </div>
         ) : (
@@ -1957,7 +2245,7 @@ export default function App() {
             <HolographicTestimonials testimonials={testimonials} />
 
             {/* 7. Transparent Pricing */}
-            <FuturisticPricing onSelectPlan={() => setShowInquiry(true)} pricingData={pricing} />
+            <FuturisticPricing onSelectPlan={(plan, svc) => { setSelectedPlan({ plan, service: svc || '' }); setShowInquiry(true); }} pricingData={pricing} />
 
             {/* 8. Command Center Contact Form */}
             <CommandCenterContact showToast={showToast} />
@@ -1970,7 +2258,7 @@ export default function App() {
 
       {/* Modals */}
       {showSearch && <GlobalSearch onClose={() => setShowSearch(false)} onNavigate={requestPage} />}
-      {showInquiry && <InquiryModal initialService={selectedService || ""} onClose={() => setShowInquiry(false)} settings={settings} showToast={showToast} session={session} />}
+      {showInquiry && <PackageProjectModal plan={selectedPlan?.plan || null} service={selectedPlan?.service || selectedService || ""} onClose={() => { setShowInquiry(false); setSelectedPlan(null); }} settings={settings} showToast={showToast} session={session} />}
       {showAuth && <LoginModal onLogin={onLogin} onGoogleLogin={onGoogleLogin} onClose={() => setShowAuth(false)} />}
     </>
   );

@@ -602,8 +602,46 @@ app.delete('/api/projects/:id', requireAuth, async (req, res) => {
   res.json({ ok: true, deletedId: req.params.id })
 })
 
-app.get('/api/payment/key', requireAuth, (req, res) => {
+app.get('/api/payment/key', (req, res) => {
   res.json({ key: process.env.RAZORPAY_KEY_ID || null })
+})
+
+// New: create a standalone package order (no project required yet)
+app.post('/api/payment/create-package-order', async (req, res) => {
+  const { amount, currency = 'INR', receipt } = req.body
+  if (!amount || amount < 100) {
+    return res.status(400).json({ message: 'Amount must be at least ₹1 (100 paise).' })
+  }
+  if (!razorpay) {
+    // Dev/test mode: return mock order
+    return res.json({ order_id: `order_mock_${Date.now()}`, amount, currency })
+  }
+  try {
+    const order = await razorpay.orders.create({
+      amount: Math.round(amount),
+      currency,
+      receipt: receipt || `pkg_${Date.now()}`,
+    })
+    res.json({ order_id: order.id, amount: order.amount, currency: order.currency })
+  } catch (err) {
+    res.status(500).json({ message: err?.error?.description || 'Failed to create payment order.' })
+  }
+})
+
+// New: verify a standalone package payment (no project required)
+app.post('/api/payment/verify-package', async (req, res) => {
+  const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body
+  if (!razorpay_payment_id || !razorpay_order_id) {
+    return res.status(400).json({ message: 'Missing payment fields.' })
+  }
+  if (razorpay && razorpay_signature) {
+    const body = razorpay_order_id + '|' + razorpay_payment_id
+    const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).update(body).digest('hex')
+    if (expectedSignature !== razorpay_signature) {
+      return res.status(400).json({ message: 'Invalid payment signature.' })
+    }
+  }
+  res.json({ ok: true, payment_id: razorpay_payment_id })
 })
 
 app.post('/api/payment/create-order', requireAuth, async (req, res) => {

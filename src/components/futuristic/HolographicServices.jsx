@@ -1,16 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { PUBLIC_SERVICES } from '../../data/siteData.js';
 import { playClickSound, playHoverSound } from '../../utils/audio.js';
-import { AnimatedSectionTitle, AnimatedParagraph, AnimatedButtonText } from './CinematicTypography.jsx';
+import { AnimatedSectionTitle } from './CinematicTypography.jsx';
 import { Video, Globe, Smartphone, BarChart, Palette, PenTool, Gamepad2, Wand2 } from 'lucide-react';
 
 gsap.registerPlugin(ScrollTrigger);
 
 export function HolographicServices({ onPickService }) {
-  const [selectedService, setSelectedService] = useState(null);
-
   const getIcon = (title) => {
     switch (title) {
       case "Video Editing": return <Video size={36} color="#ff2d55" />;
@@ -32,11 +30,6 @@ export function HolographicServices({ onPickService }) {
     tech: ['WebGL', 'GPU Accelerated', 'AI Powered', 'Real-Time'][idx % 4],
     lucideIcon: getIcon(s.title)
   }));
-
-  const handleCardClick = (service) => {
-    playClickSound();
-    setSelectedService(service);
-  };
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -68,7 +61,7 @@ export function HolographicServices({ onPickService }) {
           <AnimatedSectionTitle
             label="HOLOGRAPHIC CAPABILITIES MATRIX"
             title="ENGINEERING & CREATIVE MODULES"
-            sub="Select any capability module below to inspect real-time specs, scope, and instant deployment pricing."
+            sub="Select any capability module below to view pricing plans and get started instantly."
             animationStyle="services"
           />
         </div>
@@ -85,7 +78,7 @@ export function HolographicServices({ onPickService }) {
           {services.map((svc) => (
             <div
               key={svc.title}
-              onClick={() => handleCardClick(svc)}
+              onClick={() => { playClickSound(); if (onPickService) onPickService(svc.title); }}
               onMouseEnter={playHoverSound}
               style={{
                 position: 'relative',
@@ -138,120 +131,17 @@ export function HolographicServices({ onPickService }) {
                 <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'rgba(255, 255, 255, 0.45)' }}>
                   {svc.tech}
                 </span>
-                <span style={{ color: '#ff2d55', fontWeight: 700, fontSize: '1.2rem', transition: 'transform 0.3s ease' }}>
-                  →
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace' }}>VIEW PLANS</span>
+                  <span style={{ color: '#ff2d55', fontWeight: 700, fontSize: '1.2rem', transition: 'transform 0.3s ease' }}>
+                    →
+                  </span>
+                </div>
               </div>
             </div>
           ))}
         </div>
       </div>
-
-      {/* Holographic Detail Drawer Modal */}
-      {selectedService && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 99999,
-            backgroundColor: 'rgba(2, 2, 4, 0.88)',
-            backdropFilter: 'blur(32px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 24
-          }}
-        >
-          <div
-            style={{
-              position: 'relative',
-              width: '100%',
-              maxWidth: 720,
-              backgroundColor: 'rgba(14, 14, 20, 0.95)',
-              border: '1px solid rgba(255, 45, 85, 0.5)',
-              borderRadius: 32,
-              padding: 40,
-              boxShadow: '0 30px 100px rgba(0,0,0,0.95), 0 0 60px rgba(255, 45, 85, 0.3)',
-              maxHeight: '90vh',
-              overflowY: 'auto'
-            }}
-          >
-            <button
-              onClick={() => {
-                playClickSound();
-                setSelectedService(null);
-              }}
-              style={{
-                position: 'absolute',
-                top: 24,
-                right: 24,
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                color: '#ffffff',
-                fontSize: '1.2rem',
-                cursor: 'pointer'
-              }}
-            >
-              ✕
-            </button>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-              <span>{selectedService.lucideIcon}</span>
-              <div>
-                <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#ff2d55', letterSpacing: '0.2em' }}>
-                  {selectedService.tag} // HOLOGRAPHIC SPEC
-                </span>
-                <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.8rem', color: '#ffffff', margin: 0 }}>
-                  {selectedService.title}
-                </h3>
-              </div>
-            </div>
-
-            <AnimatedParagraph style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '1rem', lineHeight: 1.7, marginBottom: 32 }}>
-              {selectedService.desc}
-            </AnimatedParagraph>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 32 }}>
-              <div style={{ padding: 20, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <div style={{ fontSize: '0.75rem', color: '#ff2d55', fontFamily: 'monospace' }}>DELIVERY TIMELINE</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#ffffff', marginTop: 4 }}>3 – 10 DAYS</div>
-              </div>
-              <div style={{ padding: 20, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <div style={{ fontSize: '0.75rem', color: '#ff2d55', fontFamily: 'monospace' }}>BENCHMARK ACCELERATION</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#ffffff', marginTop: 4 }}>60 FPS ULTRA</div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: 16 }}>
-              <button
-                onClick={() => {
-                  playClickSound();
-                  const title = selectedService.title;
-                  setSelectedService(null);
-                  if (onPickService) onPickService(title);
-                }}
-                style={{
-                  flex: 1,
-                  padding: '16px 28px',
-                  borderRadius: 999,
-                  background: 'linear-gradient(135deg, #ff2d55, #bd1c3c)',
-                  color: '#ffffff',
-                  fontWeight: 700,
-                  fontSize: '0.95rem',
-                  border: 'none',
-                  boxShadow: '0 0 30px rgba(255, 45, 85, 0.4)',
-                  cursor: 'pointer'
-                }}
-              >
-                <AnimatedButtonText label="DEPLOY MODULE NOW" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <style>{`
         .holo-card:hover {

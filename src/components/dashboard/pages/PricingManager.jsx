@@ -60,6 +60,8 @@ const EMPTY_FORM = {
   price: '',
   period: '/month',
   features: '',
+  deliveryTime: '',
+  inclusions: '',
   highlight: false,
   service: 'Video Editing',
 };
@@ -97,6 +99,8 @@ export function PricingManager({ showToast }) {
       price: String(item.price || ''),
       period: item.period || '/month',
       features: Array.isArray(item.features) ? item.features.join(', ') : (item.features || ''),
+      deliveryTime: item.deliveryTime || '',
+      inclusions: Array.isArray(item.inclusions) ? item.inclusions.join(', ') : (item.inclusions || ''),
       highlight: Boolean(item.highlight),
       service: item.service || 'Video Editing',
     });
@@ -114,6 +118,10 @@ export function PricingManager({ showToast }) {
         features: typeof form.features === 'string'
           ? form.features.split(',').map(f => f.trim()).filter(Boolean)
           : form.features,
+        inclusions: typeof form.inclusions === 'string'
+          ? form.inclusions.split(',').map(i => i.trim()).filter(Boolean)
+          : form.inclusions,
+        deliveryTime: form.deliveryTime || '',
       };
       if (editingItem) {
         await api.updatePricing(editingItem.id || editingItem._id, payload);
@@ -313,6 +321,11 @@ export function PricingManager({ showToast }) {
               style={{ width: '100%', padding: '10px', borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', marginTop: 4 }} />
           </div>
           <div>
+            <label style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', fontFamily: 'monospace' }}>DELIVERY TIME</label>
+            <input type="text" value={form.deliveryTime} onChange={e => setForm({ ...form, deliveryTime: e.target.value })} placeholder="e.g. 3–5 days, 1 week"
+              style={{ width: '100%', padding: '10px', borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', marginTop: 4 }} />
+          </div>
+          <div>
             <label style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', fontFamily: 'monospace' }}>BILLING PERIOD</label>
             <select value={form.period} onChange={e => setForm({ ...form, period: e.target.value })}
               style={{ width: '100%', padding: '10px', borderRadius: 8, backgroundColor: '#0c0c10', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', marginTop: 4 }}>
@@ -321,6 +334,12 @@ export function PricingManager({ showToast }) {
               <option value="/year">/year</option>
               <option value="one-time">one-time</option>
             </select>
+          </div>
+          <div style={{ gridColumn: 'span 2' }}>
+            <label style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', fontFamily: 'monospace' }}>INCLUSIONS — Visible tags on plan card (Comma Separated)</label>
+            <input type="text" value={form.inclusions} onChange={e => setForm({ ...form, inclusions: e.target.value })} placeholder="Color Grading, J-Cuts, L-Cuts, Motion Title, Sound Design"
+              style={{ width: '100%', padding: '10px', borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', marginTop: 4 }} />
+            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>These display as pill badges on pricing cards and in the project start form.</div>
           </div>
           <div style={{ gridColumn: 'span 2' }}>
             <label style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', fontFamily: 'monospace' }}>FEATURES (Comma Separated)</label>

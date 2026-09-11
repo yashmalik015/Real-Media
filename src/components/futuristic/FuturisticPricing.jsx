@@ -134,7 +134,7 @@ export function FuturisticPricing({ onSelectPlan, pricingData }) {
               <button
                 onClick={() => {
                   playClickSound();
-                  if (onSelectPlan) onSelectPlan(plan.name);
+                  if (onSelectPlan) onSelectPlan(plan, plan.service || '');
                 }}
                 style={{
                   width: '100%',
