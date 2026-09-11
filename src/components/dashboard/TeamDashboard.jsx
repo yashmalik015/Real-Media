@@ -82,7 +82,7 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
 
   const loadAllData = useCallback(async () => {
     try {
-      const [analyticsRes, portfolioRes, testimonialsRes, coursesRes, inquiriesRes, settingsRes, actRes, skillsRes] = await Promise.all([
+      const [analyticsRes, portfolioRes, testimonialsRes, coursesRes, inquiriesRes, settingsRes, actRes, skillsRes, projectsRes] = await Promise.all([
         api.getAnalytics().catch(() => ({ analytics: {} })),
         api.getPublicPortfolio().catch(() => ({ portfolio: [] })),
         api.getAllTestimonials().catch(() => ({ testimonials: [] })),
