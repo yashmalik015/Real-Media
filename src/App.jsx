@@ -138,54 +138,55 @@ function ServiceGrid({ onPick }) {
 
 // ── Service detail ────────────────────────────────────────────────────────────
 function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricingData = [], skillsData = [] }) {
-  const service = PUBLIC_SERVICES.find((s) => s.title === title) || skillsData.find((s) => s.title === title);
-  const work = useMemo(() => portfolio.filter((item) => item.service === title), [portfolio, title]);
+  const safeTitle = title || "Video Editing";
+  const service = PUBLIC_SERVICES.find((s) => s.title === safeTitle) || skillsData.find((s) => s.title === safeTitle);
+  const work = useMemo(() => portfolio.filter((item) => item.service === safeTitle), [portfolio, safeTitle]);
 
   // Combine DB pricing plans, skill.tiers, and PRICING_DATA fallbacks
   const plans = useMemo(() => {
-    const dbPlans = pricingData.filter((p) => p.service === title || p.category === title);
+    const dbPlans = pricingData.filter((p) => p.service === safeTitle || p.category === safeTitle);
     if (dbPlans.length > 0) return dbPlans;
 
-    const skillObj = skillsData.find((s) => s.title === title);
+    const skillObj = skillsData.find((s) => s.title === safeTitle);
     if (skillObj && Array.isArray(skillObj.tiers) && skillObj.tiers.length > 0) {
       return skillObj.tiers.map((t, idx) => ({
-        _id: t.id || t._id || `tier_${idx}_${title}`,
+        _id: t.id || t._id || `tier_${idx}_${safeTitle}`,
         name: t.name || t.title || `Plan ${idx + 1}`,
         price: typeof t.price === 'number' ? `₹${t.price.toLocaleString('en-IN')}` : (t.price || 'Custom Quote'),
         deliveryTime: t.deliveryTime || t.turnaround || '3-5 days',
         inclusions: t.inclusions || [],
         features: t.features || [],
         highlight: Boolean(t.highlight || t.popular),
-        service: title
+        service: safeTitle
       }));
     }
 
-    const staticCategory = PRICING_DATA[title];
+    const staticCategory = PRICING_DATA[safeTitle];
     if (staticCategory && staticCategory.length > 0) {
       return staticCategory.map((p, idx) => ({
-        _id: `static_${idx}_${title}`,
+        _id: `static_${idx}_${safeTitle}`,
         name: p.name,
         price: p.price,
         deliveryTime: p.turnaround || '3-5 days',
         inclusions: p.inclusions || (p.features ? p.features.slice(0, 3) : []),
         features: p.features || [],
         highlight: p.badge === 'Most Popular' || p.badge === 'Recommended Tier',
-        service: title
+        service: safeTitle
       }));
     }
 
     return [
-      { _id: `fallback_1_${title}`, name: "Starter", price: "₹4,999", features: ["Essential editing & cuts", "Full HD export"], deliveryTime: "3-5 days", inclusions: ["Normal cuts", "Color grading", "Sound FX", "4K Export"] },
-      { _id: `fallback_2_${title}`, name: "Professional", price: "₹14,999", features: ["Advanced motion graphics", "Sound FX & mixing", "4K delivery"], deliveryTime: "48-72 hrs", inclusions: ["Custom cuts", "Color grading", "Sound design", "Motion graphics"], highlight: true },
-      { _id: `fallback_3_${title}`, name: "Premium", price: "₹29,999", features: ["Full cinematic production", "VFX & Compositing", "Unlimited revisions"], deliveryTime: "24-48 hrs", inclusions: ["Full production", "VFX compositing", "Sound FX", "Priority support"] },
+      { _id: `fallback_1_${safeTitle}`, name: "Starter", price: "₹4,999", features: ["Essential editing & cuts", "Full HD export"], deliveryTime: "3-5 days", inclusions: ["Normal cuts", "Color grading", "Sound FX", "4K Export"] },
+      { _id: `fallback_2_${safeTitle}`, name: "Professional", price: "₹14,999", features: ["Advanced motion graphics", "Sound FX & mixing", "4K delivery"], deliveryTime: "48-72 hrs", inclusions: ["Custom cuts", "Color grading", "Sound design", "Motion graphics"], highlight: true },
+      { _id: `fallback_3_${safeTitle}`, name: "Premium", price: "₹29,999", features: ["Full cinematic production", "VFX & Compositing", "Unlimited revisions"], deliveryTime: "24-48 hrs", inclusions: ["Full production", "VFX compositing", "Sound FX", "Priority support"] },
     ];
-  }, [pricingData, skillsData, title]);
+  }, [pricingData, skillsData, safeTitle]);
 
   return (
     <section className="section" style={{ paddingTop: 120 }}>
       <div className="section-inner">
         <button className="service-page-back" onClick={onBack}>← Back to Services</button>
-        <SectionHeader label={service?.title?.toUpperCase() || "SERVICE"} title={service?.title || title} sub={service?.desc || ""} />
+        <SectionHeader label={service?.title?.toUpperCase() || safeTitle.toUpperCase()} title={service?.title || safeTitle} sub={service?.desc || ""} />
         <div className="why-grid" style={{ marginTop: 40 }}>
           {(service?.details || [
             "Premium execution tailored to business goals.",
@@ -198,7 +199,7 @@ function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricin
 
         {/* Pricing Plans — DB driven */}
         <div style={{ marginTop: 72 }}>
-          <SectionHeader label="PRICING" title={`${title} Plans`} sub="Transparent starting points. Every scope is confirmed before production begins." />
+          <SectionHeader label="PRICING" title={`${safeTitle} Plans`} sub="Transparent starting points. Every scope is confirmed before production begins." />
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
@@ -226,7 +227,7 @@ function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricin
                   {plan.highlight && (
                     <div style={{ position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)', padding: '4px 18px', borderRadius: 999, background: 'linear-gradient(90deg,#ff2d55,#bd1c3c)', color: '#fff', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', whiteSpace: 'nowrap' }}>✦ MOST POPULAR</div>
                   )}
-                  <div style={{ fontSize: '0.7rem', color: '#ff2d55', fontFamily: 'monospace', letterSpacing: '0.12em', marginBottom: 6 }}>{title.toUpperCase()}</div>
+                  <div style={{ fontSize: '0.7rem', color: '#ff2d55', fontFamily: 'monospace', letterSpacing: '0.12em', marginBottom: 6 }}>{safeTitle.toUpperCase()}</div>
                   <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.9rem', color: '#fff', margin: '0 0 12px', letterSpacing: '0.03em' }}>{plan.name}</h3>
                   <div style={{ marginBottom: 20 }}>
                     <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.8rem', color: plan.highlight ? '#ff2d55' : '#fff' }}>
@@ -269,7 +270,7 @@ function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricin
                   <button
                     className="pricing-cta"
                     style={{ marginTop: 'auto', width: '100%', padding: '13px', borderRadius: 12, background: plan.highlight ? 'linear-gradient(135deg,#ff2d55,#bd1c3c)' : 'rgba(255,45,85,0.12)', color: plan.highlight ? '#fff' : '#ff2d55', border: plan.highlight ? 'none' : '1px solid rgba(255,45,85,0.3)', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', letterSpacing: '0.05em' }}
-                    onClick={() => onSelectPlan(plan, title)}
+                    onClick={() => onSelectPlan(plan, safeTitle)}
                   >
                     {isCustom ? 'Get Custom Quote' : 'Get Started'}
                   </button>
@@ -281,8 +282,8 @@ function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricin
 
         {/* Portfolio work */}
         <div style={{ marginTop: 72 }}>
-          <SectionHeader label="OUR WORK" title={`Selected ${title} Work`} sub="Projects are published directly by our team." />
-          {loading ? <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20, marginTop: 36 }}><Skeleton h={280} /><Skeleton h={280} /><Skeleton h={280} /></div> : work.length ? <div className="portfolio-grid" style={{ marginTop: 36 }}>{work.map((item) => <PortfolioCard key={item.id} item={item} onStartProject={() => onSelectPlan(null, title)} />)}</div> : <div style={{ display: "grid", marginTop: 36 }}><EmptyState icon="🎬" title={`No ${title} projects published yet.`} sub="Check back soon for new work from our team." /></div>}
+          <SectionHeader label="OUR WORK" title={`Selected ${safeTitle} Work`} sub="Projects are published directly by our team." />
+          {loading ? <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20, marginTop: 36 }}><Skeleton h={280} /><Skeleton h={280} /><Skeleton h={280} /></div> : work.length ? <div className="portfolio-grid" style={{ marginTop: 36 }}>{work.map((item) => <PortfolioCard key={item.id} item={item} onStartProject={() => onSelectPlan(null, safeTitle)} />)}</div> : <div style={{ display: "grid", marginTop: 36 }}><EmptyState icon="🎬" title={`No ${safeTitle} projects published yet.`} sub="Check back soon for new work from our team." /></div>}
         </div>
       </div>
     </section>
@@ -2022,10 +2023,22 @@ export default function App() {
 
   useEffect(() => {
     const syncRoute = () => {
-      const slug = window.location.pathname.match(/^\/services\/([^/]+)$/)?.[1];
-      const service = skills.find((item) => serviceSlug(item.title) === slug);
-      if (service) { setSelectedService(service.title); setPage("service"); }
+      const match = window.location.pathname.match(/^\/services\/([^/]+)$/);
+      if (!match) return;
+      const slug = match[1];
+      const foundInPublic = PUBLIC_SERVICES.find((item) => serviceSlug(item.title) === slug);
+      const foundInSkills = skills.find((item) => serviceSlug(item.title) === slug);
+      const matched = foundInPublic || foundInSkills;
+
+      if (matched) {
+        setSelectedService(matched.title);
+      } else {
+        const formattedTitle = slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+        setSelectedService(formattedTitle);
+      }
+      setPage("service");
     };
+
     syncRoute();
     window.addEventListener("popstate", syncRoute);
     return () => window.removeEventListener("popstate", syncRoute);
@@ -2221,7 +2234,20 @@ export default function App() {
           </div>
         ) : page === "service" ? (
           <div className="page" style={{ paddingTop: 100 }}>
-            <ServiceDetail title={selectedService} portfolio={portfolio} loading={dataLoading} pricingData={pricing} skillsData={skills} onBack={() => requestPage("services")} onSelectPlan={(plan, svc) => { setSelectedPlan({ plan, service: svc || selectedService }); setShowInquiry(true); }} />
+            <ErrorBoundary fallbackTitle="SERVICE DETAIL">
+              <ServiceDetail
+                title={selectedService || "Video Editing"}
+                portfolio={portfolio}
+                loading={dataLoading}
+                pricingData={pricing}
+                skillsData={skills}
+                onBack={() => requestPage("services")}
+                onSelectPlan={(plan, svc) => {
+                  setSelectedPlan({ plan, service: svc || selectedService || "Video Editing" });
+                  setShowInquiry(true);
+                }}
+              />
+            </ErrorBoundary>
             <FuturisticFooter onNavigate={requestPage} />
           </div>
         ) : page === "portfolio" ? (
