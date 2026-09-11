@@ -137,19 +137,49 @@ function ServiceGrid({ onPick }) {
 }
 
 // ── Service detail ────────────────────────────────────────────────────────────
-function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricingData }) {
-  const service = PUBLIC_SERVICES.find((s) => s.title === title);
+function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricingData = [], skillsData = [] }) {
+  const service = PUBLIC_SERVICES.find((s) => s.title === title) || skillsData.find((s) => s.title === title);
   const work = useMemo(() => portfolio.filter((item) => item.service === title), [portfolio, title]);
-  // Filter DB plans for this service; fall back to a generic placeholder if none exist yet
+
+  // Combine DB pricing plans, skill.tiers, and PRICING_DATA fallbacks
   const plans = useMemo(() => {
-    const dbPlans = pricingData.filter((p) => p.service === title);
+    const dbPlans = pricingData.filter((p) => p.service === title || p.category === title);
     if (dbPlans.length > 0) return dbPlans;
+
+    const skillObj = skillsData.find((s) => s.title === title);
+    if (skillObj && Array.isArray(skillObj.tiers) && skillObj.tiers.length > 0) {
+      return skillObj.tiers.map((t, idx) => ({
+        _id: t.id || t._id || `tier_${idx}_${title}`,
+        name: t.name || t.title || `Plan ${idx + 1}`,
+        price: typeof t.price === 'number' ? `₹${t.price.toLocaleString('en-IN')}` : (t.price || 'Custom Quote'),
+        deliveryTime: t.deliveryTime || t.turnaround || '3-5 days',
+        inclusions: t.inclusions || [],
+        features: t.features || [],
+        highlight: Boolean(t.highlight || t.popular),
+        service: title
+      }));
+    }
+
+    const staticCategory = PRICING_DATA[title];
+    if (staticCategory && staticCategory.length > 0) {
+      return staticCategory.map((p, idx) => ({
+        _id: `static_${idx}_${title}`,
+        name: p.name,
+        price: p.price,
+        deliveryTime: p.turnaround || '3-5 days',
+        inclusions: p.inclusions || (p.features ? p.features.slice(0, 3) : []),
+        features: p.features || [],
+        highlight: p.badge === 'Most Popular' || p.badge === 'Recommended Tier',
+        service: title
+      }));
+    }
+
     return [
-      { _id: `fallback_1_${title}`, name: "Starter", price: "Custom Quote", features: [], deliveryTime: "TBD", inclusions: [] },
-      { _id: `fallback_2_${title}`, name: "Professional", price: "Custom Quote", features: [], deliveryTime: "TBD", inclusions: [] },
-      { _id: `fallback_3_${title}`, name: "Premium", price: "Custom Quote", features: [], deliveryTime: "TBD", inclusions: [] },
+      { _id: `fallback_1_${title}`, name: "Starter", price: "₹4,999", features: ["Essential editing & cuts", "Full HD export"], deliveryTime: "3-5 days", inclusions: ["Normal cuts", "Color grading", "Sound FX", "4K Export"] },
+      { _id: `fallback_2_${title}`, name: "Professional", price: "₹14,999", features: ["Advanced motion graphics", "Sound FX & mixing", "4K delivery"], deliveryTime: "48-72 hrs", inclusions: ["Custom cuts", "Color grading", "Sound design", "Motion graphics"], highlight: true },
+      { _id: `fallback_3_${title}`, name: "Premium", price: "₹29,999", features: ["Full cinematic production", "VFX & Compositing", "Unlimited revisions"], deliveryTime: "24-48 hrs", inclusions: ["Full production", "VFX compositing", "Sound FX", "Priority support"] },
     ];
-  }, [pricingData, title]);
+  }, [pricingData, skillsData, title]);
 
   return (
     <section className="section" style={{ paddingTop: 120 }}>
@@ -2191,7 +2221,7 @@ export default function App() {
           </div>
         ) : page === "service" ? (
           <div className="page" style={{ paddingTop: 100 }}>
-            <ServiceDetail title={selectedService} portfolio={portfolio} loading={dataLoading} pricingData={pricing} onBack={() => requestPage("services")} onSelectPlan={(plan, svc) => { setSelectedPlan({ plan, service: svc || selectedService }); setShowInquiry(true); }} />
+            <ServiceDetail title={selectedService} portfolio={portfolio} loading={dataLoading} pricingData={pricing} skillsData={skills} onBack={() => requestPage("services")} onSelectPlan={(plan, svc) => { setSelectedPlan({ plan, service: svc || selectedService }); setShowInquiry(true); }} />
             <FuturisticFooter onNavigate={requestPage} />
           </div>
         ) : page === "portfolio" ? (

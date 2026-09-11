@@ -838,6 +838,46 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
     }
   })
 
+  // ── Skills CRUD Routes ──
+  app.get('/api/skills', async (_req, res) => {
+    try {
+      res.json({ skills: await repository.getSkills() })
+    } catch (err) {
+      res.status(500).json({ message: err.message })
+    }
+  })
+
+  app.post('/api/skills', requireAuth, async (req, res) => {
+    if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
+    try {
+      const item = await repository.createSkill(req.body)
+      res.status(201).json({ skill: item, message: 'Skill created' })
+    } catch (err) {
+      res.status(500).json({ message: err.message })
+    }
+  })
+
+  app.put('/api/skills/:id', requireAuth, async (req, res) => {
+    if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
+    try {
+      const item = await repository.updateSkill(req.params.id, req.body)
+      if (!item) return res.status(404).json({ message: 'Skill not found.' })
+      res.json({ skill: item, message: 'Skill updated' })
+    } catch (err) {
+      res.status(500).json({ message: err.message })
+    }
+  })
+
+  app.delete('/api/skills/:id', requireAuth, async (req, res) => {
+    if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
+    try {
+      await repository.deleteSkill(req.params.id)
+      res.json({ ok: true, message: 'Skill deleted' })
+    } catch (err) {
+      res.status(500).json({ message: err.message })
+    }
+  })
+
   // ── Analytics ──
   app.get('/api/analytics', requireAuth, async (req, res) => {
     if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })

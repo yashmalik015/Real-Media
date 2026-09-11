@@ -58,8 +58,9 @@ export async function createDatabase() {
   const learningProgress = db.collection('learning_progress')
   const lessonLikes = db.collection('lesson_likes')
 
-  // New Pricing Collection
+  // New Pricing & Skills Collections
   const pricing = db.collection('pricing')
+  const skills = db.collection('skills')
 
   // New Media & Activities Collections
   const media = db.collection('media')
@@ -119,8 +120,9 @@ export async function createDatabase() {
     learningProgress.createIndex({ user_id: 1, course_id: 1 }, { unique: true }),
     lessonLikes.createIndex({ user_id: 1, lesson_id: 1 }, { unique: true }),
 
-    // Pricing Index
+    // Pricing & Skills Index
     pricing.createIndex({ category: 1 }),
+    skills.createIndex({ category: 1 }),
     // Client Chat Index
     clientChatMessages.createIndex({ user_id: 1, created_at: 1 }),
   ])
@@ -151,6 +153,7 @@ export async function createDatabase() {
     learningProgress,
     lessonLikes,
     pricing,
+    skills,
   })
 
   return {
@@ -267,6 +270,7 @@ function makeRepository(client, collections) {
     learningProgress,
     lessonLikes,
     pricing,
+    skills,
     media,
     activities,
     clientChatMessages,
@@ -1049,16 +1053,21 @@ function makeRepository(client, collections) {
     },
     createPricing: async (data) => {
       const item = {
-        id: id('price'),
-        _id: id('price'),
-        category: data.category || '',
+        id: data.id || id('price'),
+        _id: data.id || id('price'),
+        service: data.service || data.category || '',
+        category: data.category || data.service || '',
         name: data.name || '',
         plan: data.plan || '',
         price: data.price || '',
         period: data.period || null,
         badge: data.badge || null,
         desc: data.desc || '',
+        deliveryTime: data.deliveryTime || '3-5 days',
+        inclusions: data.inclusions || [],
         features: data.features || [],
+        highlight: Boolean(data.highlight || data.popular || data.badge === 'Most Popular'),
+        popular: Boolean(data.popular || data.highlight),
         cta: data.cta || '',
         best: data.best || null,
         starting: Boolean(data.starting),
@@ -1069,9 +1078,11 @@ function makeRepository(client, collections) {
       return pricingRow(item)
     },
     updatePricing: async (pricingId, data) => {
-      const existing = await pricing.findOne({ id: pricingId })
+      const existing = await pricing.findOne({ $or: [{ id: pricingId }, { _id: pricingId }] })
       if (!existing) return null
+      const targetId = existing.id || existing._id
       const payload = {
+        service: data.service ?? existing.service,
         category: data.category ?? existing.category,
         name: data.name ?? existing.name,
         plan: data.plan ?? existing.plan,
@@ -1079,17 +1090,72 @@ function makeRepository(client, collections) {
         period: data.period !== undefined ? data.period : existing.period,
         badge: data.badge !== undefined ? data.badge : existing.badge,
         desc: data.desc ?? existing.desc,
+        deliveryTime: data.deliveryTime ?? existing.deliveryTime,
+        inclusions: data.inclusions ?? existing.inclusions,
         features: data.features ?? existing.features,
+        highlight: data.highlight !== undefined ? Boolean(data.highlight) : existing.highlight,
+        popular: data.popular !== undefined ? Boolean(data.popular) : existing.popular,
         cta: data.cta ?? existing.cta,
         best: data.best !== undefined ? data.best : existing.best,
         starting: data.starting !== undefined ? Boolean(data.starting) : existing.starting,
         updated_at: now(),
       }
-      await pricing.updateOne({ id: pricingId }, { $set: payload })
-      return pricingRow(await pricing.findOne({ id: pricingId }))
+      await pricing.updateOne({ id: targetId }, { $set: payload })
+      return pricingRow(await pricing.findOne({ id: targetId }))
     },
     deletePricing: async (pricingId) => {
-      await pricing.deleteOne({ id: pricingId })
+      await pricing.deleteOne({ $or: [{ id: pricingId }, { _id: pricingId }] })
+      return true
+    },
+
+    // ── Skills CRUD ──
+    getSkills: async (query = {}) => {
+      return (await skills.find(query).toArray()).map(skillRow)
+    },
+    createSkill: async (data) => {
+      const item = {
+        id: data.id || id('skill'),
+        _id: data.id || id('skill'),
+        title: data.title || '',
+        category: data.category || '',
+        icon: data.icon || '🎬',
+        rating: Number(data.rating) || 5.0,
+        reviews: Number(data.reviews) || 0,
+        desc: data.desc || '',
+        startingPrice: Number(data.startingPrice) || 0,
+        turnaround: data.turnaround || '',
+        features: data.features || [],
+        popular: Boolean(data.popular),
+        tiers: data.tiers || [],
+        created_at: now(),
+        updated_at: now(),
+      }
+      await skills.insertOne(item)
+      return skillRow(item)
+    },
+    updateSkill: async (skillId, data) => {
+      const existing = await skills.findOne({ $or: [{ id: skillId }, { _id: skillId }, { title: skillId }] })
+      if (!existing) return null
+      const targetId = existing.id || existing._id
+      const payload = {
+        title: data.title ?? existing.title,
+        category: data.category ?? existing.category,
+        icon: data.icon ?? existing.icon,
+        rating: data.rating !== undefined ? Number(data.rating) : existing.rating,
+        reviews: data.reviews !== undefined ? Number(data.reviews) : existing.reviews,
+        desc: data.desc ?? existing.desc,
+        startingPrice: data.startingPrice !== undefined ? Number(data.startingPrice) : existing.startingPrice,
+        turnaround: data.turnaround ?? existing.turnaround,
+        features: data.features ?? existing.features,
+        popular: data.popular !== undefined ? Boolean(data.popular) : existing.popular,
+        tiers: data.tiers ?? existing.tiers,
+        updated_at: now(),
+      }
+      await skills.updateOne({ id: targetId }, { $set: payload })
+      return skillRow(await skills.findOne({ id: targetId }))
+    },
+    deleteSkill: async (skillId) => {
+      await skills.deleteOne({ $or: [{ id: skillId }, { _id: skillId }, { title: skillId }] })
       return true
     },
 
@@ -1543,17 +1609,42 @@ function pricingRow(doc) {
   if (!doc) return null
   return {
     id: doc.id || doc._id,
-    category: doc.category || '',
+    service: doc.service || doc.category || '',
+    category: doc.category || doc.service || '',
     name: doc.name || '',
     plan: doc.plan || '',
     price: doc.price || '',
     period: doc.period || null,
     badge: doc.badge || null,
     desc: doc.desc || '',
+    deliveryTime: doc.deliveryTime || '',
+    inclusions: doc.inclusions || [],
     features: doc.features || [],
+    highlight: Boolean(doc.highlight || doc.popular || doc.badge === 'Most Popular'),
+    popular: Boolean(doc.popular || doc.highlight),
     cta: doc.cta || '',
     best: doc.best || null,
     starting: Boolean(doc.starting),
+    createdAt: doc.created_at || null,
+    updatedAt: doc.updated_at || null,
+  }
+}
+
+function skillRow(doc) {
+  if (!doc) return null
+  return {
+    id: doc.id || doc._id,
+    title: doc.title || '',
+    category: doc.category || '',
+    icon: doc.icon || '🎬',
+    rating: doc.rating || 5.0,
+    reviews: doc.reviews || 0,
+    desc: doc.desc || '',
+    startingPrice: doc.startingPrice || 0,
+    turnaround: doc.turnaround || '',
+    features: doc.features || [],
+    popular: Boolean(doc.popular),
+    tiers: doc.tiers || [],
     createdAt: doc.created_at || null,
     updatedAt: doc.updated_at || null,
   }
