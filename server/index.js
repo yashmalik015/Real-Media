@@ -27,10 +27,13 @@ const MAX_UPLOAD_GB = Number(process.env.MAX_UPLOAD_GB || 3)
 const CORS_ORIGIN = process.env.CORS_ORIGIN
 const FRONTEND_ONLY = (process.env.FRONTEND_ONLY === 'true' || process.env.FRONTEND_ONLY === '1')
 
-const razorpay = process.env.RAZORPAY_KEY_ID ? new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-}) : null
+const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_TaoMw0lsJ25hzS'
+const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || '0YkvQ3HlgUu7b2hlb6gttHrY'
+
+const razorpay = new Razorpay({
+  key_id: RAZORPAY_KEY_ID,
+  key_secret: RAZORPAY_KEY_SECRET,
+})
 
 let repository = null
 let dbAvailable = false
@@ -602,8 +605,8 @@ app.delete('/api/projects/:id', requireAuth, async (req, res) => {
   res.json({ ok: true, deletedId: req.params.id })
 })
 
-app.get('/api/payment/key', (req, res) => {
-  res.json({ key: process.env.RAZORPAY_KEY_ID || null })
+app.get('/api/payment/key', (_req, res) => {
+  res.json({ key: RAZORPAY_KEY_ID })
 })
 
 // Handler: Create Razorpay Order (Standard Web Checkout)
@@ -615,32 +618,18 @@ const createOrderHandler = async (req, res) => {
     return res.status(400).json({ message: 'Amount must be at least 100 paise (₹1).' })
   }
 
-  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-    return res.status(401).json({ message: 'Razorpay API credentials missing from environment.' })
-  }
-
   try {
-    if (razorpay) {
-      const order = await razorpay.orders.create({
-        amount: Math.round(numAmount),
-        currency: currency || 'INR',
-        receipt: receipt || `receipt_${Date.now()}`,
-      })
-      return res.json({
-        order_id: order.id,
-        id: order.id,
-        amount: order.amount,
-        currency: order.currency,
-      })
-    } else {
-      const mockOrderId = `order_mock_${Date.now()}`
-      return res.json({
-        order_id: mockOrderId,
-        id: mockOrderId,
-        amount: Math.round(numAmount),
-        currency: currency || 'INR',
-      })
-    }
+    const order = await razorpay.orders.create({
+      amount: Math.round(numAmount),
+      currency: currency || 'INR',
+      receipt: receipt || `receipt_${Date.now()}`,
+    })
+    return res.json({
+      order_id: order.id,
+      id: order.id,
+      amount: order.amount,
+      currency: order.currency,
+    })
   } catch (err) {
     console.error('[Razorpay Create Order Error]:', err)
     return res.status(500).json({ message: err?.error?.description || err?.message || 'Failed to create payment order.' })
@@ -655,14 +644,10 @@ const verifyPaymentHandler = async (req, res) => {
     return res.status(400).json({ message: 'Missing required payment verification fields (razorpay_payment_id, razorpay_order_id, razorpay_signature).' })
   }
 
-  if (!process.env.RAZORPAY_KEY_SECRET) {
-    return res.status(401).json({ message: 'Razorpay secret key missing from environment.' })
-  }
-
   try {
     const body = razorpay_order_id + '|' + razorpay_payment_id
     const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .createHmac('sha256', RAZORPAY_KEY_SECRET)
       .update(body.toString())
       .digest('hex')
 
@@ -675,6 +660,13 @@ const verifyPaymentHandler = async (req, res) => {
       ok: true,
       message: 'Payment verified successfully.',
       payment_id: razorpay_payment_id,
+      order_id: razorpay_order_id,
+    })
+  } catch (err) {
+    console.error('[Razorpay Verify Error]:', err)
+    return res.status(500).json({ success: false, message: 'Failed to verify payment signature.' })
+  }
+}
       order_id: razorpay_order_id,
     })
   } catch (err) {
@@ -719,7 +711,7 @@ app.post('/api/payment/verify', requireAuth, async (req, res) => {
 
   if (razorpay) {
     const body = razorpay_order_id + '|' + razorpay_payment_id
-    const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).update(body.toString()).digest('hex')
+    const expectedSignature = crypto.createHmac('sha256', RAZORPAY_KEY_SECRET).update(body.toString()).digest('hex')
     if (expectedSignature !== razorpay_signature) {
       return res.status(400).json({ message: 'Invalid payment signature.' })
     }
