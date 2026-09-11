@@ -1,12 +1,11 @@
 import crypto from 'node:crypto'
 import { MongoClient } from 'mongodb'
-import { MongoMemoryServer } from 'mongodb-memory-server'
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://yashmalik015_db_user:TIHJvglnODWAHuah@cluster0.dqhp8cg.mongodb.net/assetsweber?retryWrites=true&w=majority&appName=Cluster0'
 const MONGODB_DB = process.env.MONGODB_DB || 'assetsweber'
 
 export async function createDatabase() {
-  let activeUri = MONGODB_URI
+  const activeUri = MONGODB_URI
   const isProd = process.env.NODE_ENV === 'production'
 
   try {
@@ -14,14 +13,10 @@ export async function createDatabase() {
     await testClient.connect()
     await testClient.close()
   } catch (err) {
-    console.warn(`Primary MongoDB connection failed (${err.message}). Attempting memory server fallback...`)
-    try {
-      const mongod = await MongoMemoryServer.create()
-      activeUri = mongod.getUri()
-    } catch (memErr) {
-      console.error('[MongoDB Error] Memory server fallback failed:', memErr.message)
-      if (isProd) throw err
-    }
+    console.error(`[MongoDB Error] Primary MongoDB connection failed:`, err.message)
+    // In production, we might want to throw to let PM2/Passenger restart,
+    // but throwing here is caught by index.js which gracefully starts in 503 mode.
+    throw err
   }
 
   const client = new MongoClient(activeUri)

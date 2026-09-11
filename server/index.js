@@ -695,13 +695,7 @@ const verifyPaymentHandler = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Failed to verify payment signature.' })
   }
 }
-      order_id: razorpay_order_id,
-    })
-  } catch (err) {
-    console.error('[Razorpay Verify Error]:', err)
-    return res.status(500).json({ success: false, message: 'Failed to verify payment signature.' })
-  }
-}
+
 
 app.post('/api/create-order', createOrderHandler)
 app.post('/api/payment/create-package-order', createOrderHandler)
