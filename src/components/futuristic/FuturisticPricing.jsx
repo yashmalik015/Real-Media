@@ -151,6 +151,24 @@ export function FuturisticPricing({ onSelectPlan, pricingData }) {
                 </div>
               )}
 
+              {plan.service && (
+                <div style={{ marginBottom: 16 }}>
+                  <span style={{ 
+                    padding: '4px 10px', 
+                    borderRadius: 6, 
+                    backgroundColor: 'rgba(255,255,255,0.05)', 
+                    border: '1px solid rgba(255,255,255,0.1)', 
+                    color: 'rgba(255,255,255,0.7)', 
+                    fontSize: '0.65rem', 
+                    fontWeight: 600, 
+                    letterSpacing: '0.1em', 
+                    textTransform: 'uppercase' 
+                  }}>
+                    {plan.service}
+                  </span>
+                </div>
+              )}
+              
               <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', color: '#ffffff', margin: '0 0 8px 0', letterSpacing: '0.05em' }}>
                 {plan.name}
               </h3>
