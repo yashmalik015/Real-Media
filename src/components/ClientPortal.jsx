@@ -202,6 +202,8 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
   const chatBottomRef = useRef(null);
   const chatFileRef = useRef(null);
   const recordingTimerRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
   const [clientTestimonials, setClientTestimonials] = useState([]);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -382,17 +384,55 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
     e.target.value = '';
   };
 
-  const handleToggleVoice = () => {
+  const handleToggleVoice = async () => {
     if (isRecording) {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+      }
       clearInterval(recordingTimerRef.current);
       setIsRecording(false);
-      const dur = recordingTime;
       setRecordingTime(0);
-      if (dur > 1) handleSendMessage(`🎙️ Voice message (${dur}s)`);
     } else {
-      setIsRecording(true);
-      setRecordingTime(0);
-      recordingTimerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) audioChunksRef.current.push(e.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const dur = recordingTime;
+          
+          if (dur > 1) {
+            const fd = new FormData();
+            fd.append('file', audioBlob, 'voicemessage.webm');
+            fd.append('text', `🎙️ Voice message (${dur}s)`);
+            fd.append('isVoice', 'true');
+            fd.append('voiceDuration', dur.toString());
+            try {
+              const res = await api.uploadClientChatFile(fd);
+              if (res.message) {
+                setChatMessages(prev => [...prev, res.message]);
+                showToast('Voice message sent.');
+              }
+            } catch { showToast('Upload failed.'); }
+          }
+          
+          // Stop tracks to release mic
+          stream.getTracks().forEach(track => track.stop());
+        };
+
+        mediaRecorder.start();
+        setIsRecording(true);
+        setRecordingTime(0);
+        recordingTimerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
+      } catch (err) {
+        showToast('Microphone access denied or unavailable.');
+      }
     }
   };
 
@@ -822,6 +862,8 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
                         <div style={{ marginBottom: 6 }}>
                           {msg.fileType === 'image' ? (
                             <img src={mediaUrl(msg.fileUrl)} alt="attachment" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 6 }} />
+                          ) : msg.fileType === 'audio' || msg.isVoice ? (
+                            <audio controls src={mediaUrl(msg.fileUrl)} style={{ height: 36, maxWidth: 220 }} />
                           ) : (
                             <a href={mediaUrl(msg.fileUrl)} target="_blank" rel="noreferrer" style={{ color: '#53bdeb', fontSize: '0.84rem' }}>
                               <Download size={13} /> {msg.fileName || 'Download'}

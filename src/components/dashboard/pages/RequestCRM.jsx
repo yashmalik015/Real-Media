@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
-import { Search, ExternalLink, Mail, MessageSquare, Check, X, FileText, IndianRupee, Clock, CheckCircle, Send } from 'lucide-react';
+import { Search, ExternalLink, Mail, MessageSquare, Check, X, FileText, IndianRupee, Clock, CheckCircle, Send, Paperclip, Download } from 'lucide-react';
 import { GlassModal } from '../ui/GlassModal.jsx';
 import { playClickSound, playHoverSound } from '../../../utils/audio.js';
-import { api } from '../../../api.js';
+import { api, mediaUrl } from '../../../api.js';
 
 export function RequestCRM({ projects = [], onLoad, showToast }) {
   const [activeTab, setActiveTab] = useState('All');
@@ -16,6 +16,7 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
   const [chatLoading, setChatLoading] = useState(false);
   const [sendingMsg, setSendingMsg] = useState(false);
   const chatBottomRef = useRef(null);
+  const chatFileRef = useRef(null);
 
   useEffect(() => {
     if (selectedProject) {
@@ -58,6 +59,22 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
     } finally {
       setSendingMsg(false);
     }
+  };
+
+  const handleUploadAttachment = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedProject) return;
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('text', `📎 Sent: ${file.name}`);
+      fd.append('targetUserId', selectedProject.clientId);
+      await api.uploadClientChatFile(fd);
+      showToast('File sent to client.');
+    } catch {
+      showToast('Upload failed.');
+    }
+    e.target.value = '';
   };
 
   // Default status for projects might be null if they didn't have one initially.
@@ -358,12 +375,26 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
                     return (
                       <div key={msg.id || i} style={{ alignSelf: isTeam ? 'flex-end' : 'flex-start', maxWidth: '80%' }}>
                         <div style={{
-                          backgroundColor: isTeam ? 'rgba(255,45,85,0.15)' : 'rgba(255,255,255,0.08)',
+                          backgroundColor: isTeam ? 'rgba(255,45,85,0.1)' : 'rgba(255,255,255,0.05)',
                           border: `1px solid ${isTeam ? 'rgba(255,45,85,0.3)' : 'rgba(255,255,255,0.1)'}`,
                           padding: '10px 14px', borderRadius: 12, color: '#fff', fontSize: '0.9rem', lineHeight: 1.4
                         }}>
                           {!isTeam && <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>{msg.senderName}</div>}
                           {isTeam && <div style={{ fontSize: '0.75rem', color: '#ff2d55', marginBottom: 4 }}>{msg.senderName}</div>}
+                          
+                          {msg.fileUrl && (
+                            <div style={{ marginBottom: 6 }}>
+                              {msg.fileType === 'image' ? (
+                                <img src={mediaUrl(msg.fileUrl)} alt="attachment" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 6 }} />
+                              ) : msg.fileType === 'audio' || msg.isVoice ? (
+                                <audio controls src={mediaUrl(msg.fileUrl)} style={{ height: 36, maxWidth: 220 }} />
+                              ) : (
+                                <a href={mediaUrl(msg.fileUrl)} target="_blank" rel="noreferrer" style={{ color: '#ff2d55', fontSize: '0.84rem' }}>
+                                  <Download size={13} /> {msg.fileName || 'Download'}
+                                </a>
+                              )}
+                            </div>
+                          )}
                           <div>{msg.text}</div>
                         </div>
                       </div>
@@ -373,7 +404,11 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
                 <div ref={chatBottomRef} />
               </div>
 
-              <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <button onClick={() => chatFileRef.current?.click()} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>
+                  <Paperclip size={18} />
+                </button>
+                <input ref={chatFileRef} type="file" style={{ display: 'none' }} onChange={handleUploadAttachment} />
                 <input
                   type="text"
                   value={chatInput}
