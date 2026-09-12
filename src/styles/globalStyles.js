@@ -12,8 +12,8 @@ export const styles = `
   --muted2: rgba(255,255,255,0.72);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{background:#000;color:#fff;font-family:'DM Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{background:#000;color:#fff;font-family:'DM Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden;width:100%}
 button,input,textarea,select{font:inherit;color:inherit}
 button{cursor:pointer;background:transparent;border:0}
 a{color:inherit;text-decoration:none}
