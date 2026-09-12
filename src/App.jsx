@@ -1291,7 +1291,7 @@ function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, s
                       const driveId = lesson.videoUrl.match(/\/d\/([^/]+)/)?.[1];
                       return <iframe src={`https://drive.google.com/file/d/${driveId}/preview`} style={{ width: "100%", height: "100%", border: "none" }} allow="autoplay; fullscreen" allowFullScreen />;
                     }
-                    return <video src={mediaUrl(lesson.videoUrl)} controls style={{ width: "100%", height: "100%", objectFit: "cover" }} />;
+                    return <video key={lesson.videoUrl} src={mediaUrl(lesson.videoUrl)} controls playsInline style={{ width: "100%", height: "100%", objectFit: "cover", backgroundColor: "#000" }} />;
                   })()
                 ) : (
                   <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", color: "var(--muted)", fontSize: ".9rem" }}>

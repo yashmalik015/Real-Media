@@ -303,13 +303,12 @@ export const api = {
 
 export function mediaUrl(url) {
   if (!url) return ''
-  if (url.startsWith('http')) return url
+  if (url.startsWith('http')) return encodeURI(url)
   let cleanUrl = url
   if (cleanUrl.startsWith('/src/assets/')) {
     cleanUrl = cleanUrl.replace(/^\/src\/assets\//, '/assets/')
   }
-  if (cleanUrl.startsWith('/uploads')) return `${API_BASE}${cleanUrl}`
-  return `${API_BASE}${cleanUrl}`
+  return `${API_BASE}${encodeURI(cleanUrl)}`
 }
 
 /**
