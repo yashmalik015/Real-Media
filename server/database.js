@@ -354,6 +354,10 @@ function makeRepository(client, collections) {
       await users.updateOne({ id: userId }, { $set: { role: newRole, active_mode: newRole, updated_at: now() } })
       return userRow(await users.findOne({ id: userId }))
     },
+    updateUserAvatar: async (userId, avatarUrl) => {
+      await users.updateOne({ id: userId }, { $set: { avatar: avatarUrl } })
+      return userRow(await users.findOne({ id: userId }))
+    },
     ensureTeamUser: async (defaults) => {
       const teamId = defaults.teamId ?? defaults.team_id
       const email = defaults.email?.trim().toLowerCase()
@@ -1269,6 +1273,7 @@ function userRow(doc) {
     teamId: doc.team_id || doc.teamId || null,
     teamCategory: doc.team_category || doc.teamCategory || null,
     googleId: doc.google_id || doc.googleId || null,
+    avatar: doc.avatar || null,
     createdAt: doc.created_at || doc.createdAt || null,
   }
 }

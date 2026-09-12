@@ -8,6 +8,18 @@ gsap.registerPlugin(ScrollTrigger);
 
 export function FuturisticPricing({ onSelectPlan, pricingData }) {
   const plans = pricingData || [];
+  const [currency, setCurrency] = useState('INR'); // Default to INR
+  const EXCHANGE_RATE = 83; // 1 USD = 83 INR
+
+  const formatPrice = (priceStr) => {
+    const raw = String(priceStr).replace(/[^0-9.]/g, '');
+    const num = Number(raw);
+    if (isNaN(num) || !raw) return priceStr;
+    if (currency === 'INR') {
+      return `₹${(num * EXCHANGE_RATE).toLocaleString('en-IN')}`;
+    }
+    return `$${num.toLocaleString('en-US')}`;
+  };
 
   useEffect(() => {
     if (plans.length === 0) return;
@@ -47,13 +59,46 @@ export function FuturisticPricing({ onSelectPlan, pricingData }) {
   return (
     <section id="pricing" style={{ padding: '100px 32px', position: 'relative' }}>
       <div style={{ maxWidth: 1440, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 64 }}>
+        <div style={{ textAlign: 'center', marginBottom: 48 }}>
           <AnimatedSectionTitle
             label="TRANSPARENT DEPLOYMENT TIERS"
             title="PRODUCTION PRICING MATRIX"
             sub="No hidden fees. Transparent, outcome-focused pricing designed for fast turnaround and maximum ROI."
             animationStyle="pricing"
           />
+          
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 32 }}>
+            <div style={{
+              display: 'flex', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 30, padding: 4, position: 'relative'
+            }}>
+              <div style={{
+                position: 'absolute', top: 4, bottom: 4, left: currency === 'INR' ? 4 : '50%',
+                width: 'calc(50% - 4px)', backgroundColor: '#ff2d55', borderRadius: 26,
+                transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)', zIndex: 0
+              }} />
+              <button
+                onClick={() => setCurrency('INR')}
+                style={{
+                  position: 'relative', zIndex: 1, padding: '8px 24px', background: 'none', border: 'none',
+                  color: currency === 'INR' ? '#fff' : 'rgba(255,255,255,0.5)', fontFamily: 'monospace',
+                  fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', transition: 'color 0.3s ease'
+                }}
+              >
+                INR (₹)
+              </button>
+              <button
+                onClick={() => setCurrency('USD')}
+                style={{
+                  position: 'relative', zIndex: 1, padding: '8px 24px', background: 'none', border: 'none',
+                  color: currency === 'USD' ? '#fff' : 'rgba(255,255,255,0.5)', fontFamily: 'monospace',
+                  fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', transition: 'color 0.3s ease'
+                }}
+              >
+                USD ($)
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Pricing Cards Grid */}
@@ -115,7 +160,7 @@ export function FuturisticPricing({ onSelectPlan, pricingData }) {
 
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 32 }}>
                 <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '3.6rem', color: plan.popular ? '#ff2d55' : '#ffffff', lineHeight: 1 }}>
-                  {plan.price}
+                  {formatPrice(plan.price)}
                 </span>
                 <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
                   / {plan.period}

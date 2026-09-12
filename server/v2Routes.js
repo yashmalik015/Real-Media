@@ -750,6 +750,22 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
     res.status(201).json({ portfolioItem })
   })
 
+  // ── User Avatar ──
+  app.post('/api/user/avatar', requireAuth, upload.single('avatar'), async (req, res) => {
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded.' })
+    const { url } = await uploadFile(req.file, 'avatars')
+    const updatedUser = await repository.updateUserAvatar(req.user.id || req.user.sub, url)
+    res.json({ message: 'Avatar updated.', user: updatedUser })
+  })
+
+  // ── Client Testimonials ──
+  app.get('/api/testimonials/me', requireAuth, async (req, res) => {
+    const userId = req.user.id || req.user.sub
+    const all = await repository.allTestimonials()
+    const mine = all.filter(t => t.userId === userId)
+    res.json({ testimonials: mine })
+  })
+
   // ── Testimonials (team CRUD) ──
   app.get('/api/testimonials/all', requireAuth, async (req, res) => {
     if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })

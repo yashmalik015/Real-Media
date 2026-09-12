@@ -70,6 +70,18 @@ export function PricingManager({ showToast }) {
   const [pricing, setPricing] = useState([]);
   const [loading, setLoading] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [currency, setCurrency] = useState('INR'); // Default to INR
+  const EXCHANGE_RATE = 83; // 1 USD = 83 INR
+
+  const formatPrice = (priceStr) => {
+    const raw = String(priceStr).replace(/[^0-9.]/g, '');
+    const num = Number(raw);
+    if (isNaN(num) || !raw) return priceStr;
+    if (currency === 'INR') {
+      return `₹${(num * EXCHANGE_RATE).toLocaleString('en-IN')}`;
+    }
+    return `$${num.toLocaleString('en-US')}`;
+  };
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -185,7 +197,37 @@ export function PricingManager({ showToast }) {
             PRICING PLAN MANAGER
           </h2>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{
+            display: 'flex', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 30, padding: 4, position: 'relative'
+          }}>
+            <div style={{
+              position: 'absolute', top: 4, bottom: 4, left: currency === 'INR' ? 4 : '50%',
+              width: 'calc(50% - 4px)', backgroundColor: '#ff2d55', borderRadius: 26,
+              transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)', zIndex: 0
+            }} />
+            <button
+              onClick={() => setCurrency('INR')}
+              style={{
+                position: 'relative', zIndex: 1, padding: '6px 16px', background: 'none', border: 'none',
+                color: currency === 'INR' ? '#fff' : 'rgba(255,255,255,0.5)', fontFamily: 'monospace',
+                fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'color 0.3s ease'
+              }}
+            >
+              INR
+            </button>
+            <button
+              onClick={() => setCurrency('USD')}
+              style={{
+                position: 'relative', zIndex: 1, padding: '6px 16px', background: 'none', border: 'none',
+                color: currency === 'USD' ? '#fff' : 'rgba(255,255,255,0.5)', fontFamily: 'monospace',
+                fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'color 0.3s ease'
+              }}
+            >
+              USD
+            </button>
+          </div>
           {pricing.length === 0 && (
             <button onClick={seedDefaults} disabled={seeding} onMouseEnter={playHoverSound}
               style={{ padding: '12px 20px', borderRadius: 14, background: 'rgba(255,255,255,0.07)', color: '#fff', fontWeight: 600, fontSize: '0.9rem', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -226,7 +268,7 @@ export function PricingManager({ showToast }) {
           </div>
           <div style={{ padding: 16, borderRadius: 14, backgroundColor: 'rgba(12,12,16,0.75)', border: '1px solid rgba(255,45,85,0.2)', textAlign: 'center' }}>
             <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', fontFamily: 'monospace' }}>AVG PRICE</div>
-            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', color: '#ff2d55' }}>${Math.round(pricing.reduce((a, p) => a + Number(p.price || 0), 0) / pricing.length)}</div>
+            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', color: '#ff2d55' }}>{formatPrice(Math.round(pricing.reduce((a, p) => a + Number(p.price || 0), 0) / pricing.length))}</div>
           </div>
         </div>
       )}
@@ -273,7 +315,7 @@ export function PricingManager({ showToast }) {
                       <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', marginBottom: 4 }}>{service.toUpperCase()}</div>
                       <h4 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', color: '#fff', margin: '0 0 8px' }}>{plan.name}</h4>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.8rem', color: plan.highlight ? '#ff2d55' : '#fff' }}>${plan.price}</span>
+                        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.8rem', color: plan.highlight ? '#ff2d55' : '#fff' }}>{formatPrice(plan.price)}</span>
                         <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>{plan.period || '/month'}</span>
                       </div>
                     </div>

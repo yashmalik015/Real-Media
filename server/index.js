@@ -837,6 +837,7 @@ app.post('/api/testimonials', requireAuth, async (req, res) => {
     tag: tag.trim() || project.service,
     result: result.trim(),
     initials,
+    photo: req.user.avatar || '',
     approved: true,
     createdAt: now(),
   })
