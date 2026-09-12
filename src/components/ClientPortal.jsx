@@ -579,7 +579,7 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {filteredOrders.map(order => {
-                const done = order.status === 'Completed' || order.projectState === 'finished';
+                const done = order.status === 'Completed' || order.status === 'Delivered' || order.projectState === 'finished';
                 const paid = order.paymentStatus === 'fully_paid' || (order.amountPaid >= order.totalAmount && order.totalAmount > 0);
                 const steps = [
                   { label: 'Placed', done: true },
@@ -643,6 +643,20 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
                         <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.84rem', lineHeight: 1.5, margin: '0 0 12px' }}>
                           {order.description}
                         </p>
+                      )}
+
+                      {/* Delivery Link */}
+                      {order.deliveryLink && (
+                        <div style={{ marginBottom: 16 }}>
+                          <a href={order.deliveryLink} target="_blank" rel="noreferrer" style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 20px',
+                            borderRadius: 12, background: 'linear-gradient(135deg, #ff2d55, #c81e42)',
+                            color: '#fff', fontSize: '0.9rem', fontWeight: 600, textDecoration: 'none',
+                            boxShadow: '0 4px 12px rgba(255,45,85,0.2)'
+                          }}>
+                            📦 Access Final Delivery
+                          </a>
+                        </div>
                       )}
 
                       {/* Downloadable files */}
