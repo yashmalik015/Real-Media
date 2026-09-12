@@ -304,14 +304,15 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
     if (!reviewText.trim()) { showToast('Please write a short review.'); return; }
     setSubmittingReview(true);
     try {
-      const fd = new FormData();
-      fd.append('projectTitle', reviewingOrder.title || '');
-      fd.append('name', user?.name || 'Client');
-      fd.append('biz', '');
-      fd.append('quote', reviewText.trim());
-      fd.append('result', String(reviewRating));
-      fd.append('tag', reviewingOrder.service || 'General');
-      await api.submitTestimonial(fd);
+      const payload = {
+        projectTitle: reviewingOrder.title || '',
+        name: user?.name || 'Client',
+        biz: '',
+        quote: reviewText.trim(),
+        result: String(reviewRating),
+        tag: reviewingOrder.service || 'General'
+      };
+      await api.submitTestimonial(payload);
       showToast('Thank you for your review! ⭐');
       setReviewingOrder(null);
       setReviewText('');
