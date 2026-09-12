@@ -101,11 +101,21 @@ export function HolographicTestimonials({ testimonials = [] }) {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                  <img
-                    src={rev.photo || rev.image || rev.avatar ? mediaUrl(rev.photo || rev.image || rev.avatar) : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
-                    alt={rev.name}
-                    style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '1px solid #ff2d55' }}
-                  />
+                  {rev.photo || rev.image || rev.avatar ? (
+                    <img
+                      src={mediaUrl(rev.photo || rev.image || rev.avatar)}
+                      alt={rev.name}
+                      style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '1px solid #ff2d55' }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: 44, height: 44, borderRadius: '50%', border: '1px solid #ff2d55',
+                      backgroundColor: 'rgba(255,45,85,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#ff2d55', fontWeight: 'bold', fontSize: '1.2rem', flexShrink: 0
+                    }}>
+                      {(rev.name || 'C').charAt(0).toUpperCase()}
+                    </div>
+                  )}
                   <div>
                     <div style={{ fontWeight: 700, color: '#ffffff', fontSize: '0.95rem' }}>{rev.name}</div>
                     <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)' }}>{rev.company}</div>

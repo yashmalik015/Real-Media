@@ -70,13 +70,27 @@ export function TestimonialManager({ testimonials = [], onLoad, showToast }) {
     {
       key: 'photo',
       label: 'IMAGE',
-      render: (val, row) => (
-        <img
-          src={mediaUrl(val || row.image || row.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80')}
-          alt=""
-          style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '1px solid #ff2d55' }}
-        />
-      )
+      render: (val, row) => {
+        const photoUrl = val || row.image || row.avatar;
+        if (photoUrl) {
+          return (
+            <img
+              src={mediaUrl(photoUrl)}
+              alt=""
+              style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '1px solid #ff2d55' }}
+            />
+          );
+        }
+        return (
+          <div style={{
+            width: 40, height: 40, borderRadius: '50%', border: '1px solid #ff2d55',
+            backgroundColor: 'rgba(255,45,85,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#ff2d55', fontWeight: 'bold', fontSize: '1rem', flexShrink: 0
+          }}>
+            {(row.name || 'C').charAt(0).toUpperCase()}
+          </div>
+        );
+      }
     },
     { key: 'name', label: 'CLIENT', render: (val, row) => <div style={{ fontWeight: 600, color: '#fff' }}>{val}<div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>{row.designation || 'Client'}</div></div> },
     { key: 'company', label: 'COMPANY', render: (val, row) => row.company || row.biz || 'N/A' },
