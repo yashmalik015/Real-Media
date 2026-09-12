@@ -16,7 +16,8 @@ import {
   Clock,
   Star,
   X,
-  Upload
+  Upload,
+  IndianRupee
 } from 'lucide-react';
 import { api, mediaUrl } from '../api.js';
 import { LOGO_URL, COMPANY_NAME } from '../data/siteData.js';
