@@ -1979,7 +1979,7 @@ export default function App() {
     handleGoogleRedirectResult().then(async (res) => {
       if (!res?.idToken) return;
       try {
-        const data = await api.loginGoogleLearner({ idToken: res.idToken });
+        const data = await api.loginGoogleLearner({ idToken: res.idToken, picture: res.user?.photoURL });
         setToken(data.accessToken || data.token);
         setSession(data.user);
         setShowAuth(false);
@@ -2077,7 +2077,7 @@ export default function App() {
   const onGoogleLogin = async () => {
     const res = await signInWithGoogle();
     if (!res?.idToken) return;
-    const data = await api.loginGoogleLearner({ idToken: res.idToken });
+    const data = await api.loginGoogleLearner({ idToken: res.idToken, picture: res.user?.photoURL });
     if (!data || (!data.accessToken && !data.token)) {
       throw new Error(data?.message || "Google auth failed.");
     }

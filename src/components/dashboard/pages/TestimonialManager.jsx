@@ -72,7 +72,7 @@ export function TestimonialManager({ testimonials = [], onLoad, showToast }) {
       label: 'IMAGE',
       render: (val, row) => (
         <img
-          src={mediaUrl(val || row.image || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80')}
+          src={mediaUrl(val || row.image || row.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80')}
           alt=""
           style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '1px solid #ff2d55' }}
         />

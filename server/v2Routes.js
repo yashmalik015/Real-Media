@@ -60,7 +60,7 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
     console.log('REQUEST RECEIVED')
 
     try {
-      const { idToken, googleId, name: rawName = '', email: rawEmail = '' } = req.body || {}
+      const { idToken, googleId, name: rawName = '', email: rawEmail = '', picture: rawPicture = '' } = req.body || {}
 
       if (idToken) {
         console.log(`idToken received. Token length: ${idToken.length}`)
@@ -74,7 +74,7 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
       let uid = ''
       let email = rawEmail.trim().toLowerCase()
       let name = rawName.trim()
-      let picture = ''
+      let picture = rawPicture || ''
 
       if (idToken) {
         console.log('VERIFYING TOKEN')

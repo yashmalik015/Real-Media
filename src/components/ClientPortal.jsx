@@ -15,7 +15,8 @@ import {
   Download,
   Clock,
   Star,
-  X
+  X,
+  Upload
 } from 'lucide-react';
 import { api, mediaUrl } from '../api.js';
 import { LOGO_URL, COMPANY_NAME } from '../data/siteData.js';
@@ -339,7 +340,10 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
         result: String(reviewRating),
         tag: reviewingOrder.service || 'General'
       };
-      await api.submitTestimonial(payload);
+      const { testimonial } = await api.submitTestimonial(payload);
+      if (testimonial) {
+        setClientTestimonials(prev => [...prev, testimonial]);
+      }
       showToast('Thank you for your review! ⭐');
       setReviewingOrder(null);
       setReviewText('');
@@ -439,22 +443,36 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
           <div 
             onClick={() => avatarInputRef.current?.click()}
             style={{
-              width: 50, height: 50, borderRadius: '50%', backgroundColor: 'rgba(255,45,85,0.2)',
-              border: '1px solid #ff2d55', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              overflow: 'hidden', cursor: uploadingAvatar ? 'wait' : 'pointer', flexShrink: 0,
-              position: 'relative'
+              position: 'relative',
+              width: 50, height: 50, flexShrink: 0,
+              cursor: uploadingAvatar ? 'wait' : 'pointer'
             }}
             title="Click to upload profile picture"
           >
-            {user?.avatar ? (
-              <img src={mediaUrl(user.avatar)} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <span style={{ color: '#ff2d55', fontWeight: 'bold', fontSize: '1.2rem' }}>
-                {(user?.name || 'C').charAt(0).toUpperCase()}
-              </span>
-            )}
+            <div style={{
+              width: '100%', height: '100%', borderRadius: '50%', backgroundColor: 'rgba(255,45,85,0.2)',
+              border: '1px solid #ff2d55', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              overflow: 'hidden'
+            }}>
+              {user?.avatar ? (
+                <img src={mediaUrl(user.avatar)} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ color: '#ff2d55', fontWeight: 'bold', fontSize: '1.2rem' }}>
+                  {(user?.name || 'C').charAt(0).toUpperCase()}
+                </span>
+              )}
+            </div>
+            {/* Camera badge */}
+            <div style={{
+              position: 'absolute', bottom: -2, right: -2, width: 20, height: 20,
+              backgroundColor: '#ff2d55', borderRadius: '50%', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', border: '2px solid #000'
+            }}>
+              <Upload size={10} color="#fff" />
+            </div>
+
             {uploadingAvatar && (
-              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>
                 <div style={{ width: 16, height: 16, border: '2px solid #ff2d55', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
               </div>
             )}
@@ -662,36 +680,36 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
                       </div>
 
                       {(() => {
-                        const existingReview = clientTestimonials.find(t => t.projectId === order.id || t.projectTitle === order.title);
-                        if (existingReview) {
-                          return (
-                            <div style={{ marginTop: 16, padding: '12px 16px', backgroundColor: 'rgba(255,210,121,0.05)', border: '1px solid rgba(255,210,121,0.15)', borderRadius: 12 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                                <div style={{ color: '#ffd279', fontSize: '0.9rem', letterSpacing: 2 }}>
-                                  {'★'.repeat(Number(existingReview.rating || existingReview.result?.replace(/\D/g, '') || 5))}
+                        const projectReviews = clientTestimonials.filter(t => t.projectId === order.id || t.projectTitle === order.title);
+                        return (
+                          <>
+                            {projectReviews.map((existingReview, idx) => (
+                              <div key={idx} style={{ marginTop: 16, padding: '12px 16px', backgroundColor: 'rgba(255,210,121,0.05)', border: '1px solid rgba(255,210,121,0.15)', borderRadius: 12 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                  <div style={{ color: '#ffd279', fontSize: '0.9rem', letterSpacing: 2 }}>
+                                    {'★'.repeat(Number(existingReview.rating || existingReview.result?.replace(/\D/g, '') || 5))}
+                                  </div>
+                                  <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>Your Review</span>
                                 </div>
-                                <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>Your Review</span>
+                                <p style={{ margin: 0, fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)', fontStyle: 'italic', lineHeight: 1.5 }}>
+                                  "{existingReview.quote || existingReview.review}"
+                                </p>
                               </div>
-                              <p style={{ margin: 0, fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)', fontStyle: 'italic', lineHeight: 1.5 }}>
-                                "{existingReview.quote || existingReview.review}"
-                              </p>
-                            </div>
-                          );
-                        } else if (order.status !== 'Pending Payment') {
-                          return (
-                            <div style={{ marginTop: 12 }}>
-                              <button onClick={() => { setReviewingOrder(order); setReviewRating(5); setReviewText(''); }} style={{
-                                padding: '8px 16px', borderRadius: 10,
-                                backgroundColor: 'rgba(255,210,121,0.12)', border: '1px solid rgba(255,210,121,0.3)',
-                                color: '#ffd279', fontWeight: 600, fontSize: '0.82rem',
-                                display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer'
-                              }}>
-                                <Star size={14} /> Write a Review
-                              </button>
-                            </div>
-                          );
-                        }
-                        return null;
+                            ))}
+                            {order.status !== 'Pending Payment' && (
+                              <div style={{ marginTop: 12 }}>
+                                <button onClick={() => { setReviewingOrder(order); setReviewRating(5); setReviewText(''); }} style={{
+                                  padding: '8px 16px', borderRadius: 10,
+                                  backgroundColor: 'rgba(255,210,121,0.12)', border: '1px solid rgba(255,210,121,0.3)',
+                                  color: '#ffd279', fontWeight: 600, fontSize: '0.82rem',
+                                  display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer'
+                                }}>
+                                  <Star size={14} /> Write a Review
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        );
                       })()}
                     </div>
                   </div>

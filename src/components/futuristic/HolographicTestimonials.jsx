@@ -3,6 +3,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { playClickSound, playHoverSound } from '../../utils/audio.js';
 import { AnimatedSectionTitle, AnimatedParagraph } from './CinematicTypography.jsx';
+import { mediaUrl } from '../../api.js';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -101,7 +102,7 @@ export function HolographicTestimonials({ testimonials = [] }) {
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                   <img
-                    src={rev.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
+                    src={rev.photo || rev.image || rev.avatar ? mediaUrl(rev.photo || rev.image || rev.avatar) : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
                     alt={rev.name}
                     style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '1px solid #ff2d55' }}
                   />
