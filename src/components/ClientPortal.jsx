@@ -305,11 +305,12 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
     setSubmittingReview(true);
     try {
       const fd = new FormData();
+      fd.append('projectTitle', reviewingOrder.title || '');
       fd.append('name', user?.name || 'Client');
-      fd.append('company', '');
-      fd.append('review', reviewText.trim());
-      fd.append('rating', String(reviewRating));
-      fd.append('service', reviewingOrder.service || 'General');
+      fd.append('biz', '');
+      fd.append('quote', reviewText.trim());
+      fd.append('result', String(reviewRating));
+      fd.append('tag', reviewingOrder.service || 'General');
       await api.submitTestimonial(fd);
       showToast('Thank you for your review! ⭐');
       setReviewingOrder(null);
@@ -596,7 +597,7 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
                           <MessageSquare size={14} /> Chat
                         </button>
 
-                        {done && (
+                        {order.status !== 'Pending Payment' && (
                           <button onClick={() => { setReviewingOrder(order); setReviewRating(5); setReviewText(''); }} style={{
                             padding: '8px 16px', borderRadius: 10,
                             backgroundColor: 'rgba(255,210,121,0.12)', border: '1px solid rgba(255,210,121,0.3)',
