@@ -837,7 +837,7 @@ app.post('/api/testimonials', requireAuth, async (req, res) => {
     tag: tag.trim() || project.service,
     result: result.trim(),
     initials,
-    approved: 1,
+    approved: true,
     createdAt: now(),
   })
   res.status(201).json({ testimonial })
