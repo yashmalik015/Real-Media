@@ -207,6 +207,7 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
 
   const [clientTestimonials, setClientTestimonials] = useState([]);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
   const avatarInputRef = useRef(null);
 
   const handleAvatarUpload = async (e) => {
@@ -433,6 +434,59 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
       } catch (err) {
         showToast('Microphone access denied or unavailable.');
       }
+    }
+  };
+
+  const loadRazorpay = () => new Promise((resolve) => {
+    if (window.Razorpay) return resolve(true);
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+
+  const handlePayment = async (order) => {
+    setProcessingPayment(true);
+    try {
+      const isLoaded = await loadRazorpay();
+      if (!isLoaded) throw new Error('Razorpay SDK failed to load');
+
+      const { id: order_id, amount, currency } = await api.createPaymentOrder({ projectId: order.id, amount: order.totalAmount });
+      
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: amount.toString(),
+        currency: currency || 'INR',
+        name: 'Assets Weber Studio',
+        description: order.title,
+        order_id,
+        handler: async (response) => {
+          try {
+            await api.verifyPayment({
+              projectId: order.id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+              amount: order.totalAmount
+            });
+            showToast('Payment successful!');
+            await loadOrders();
+          } catch {
+            showToast('Payment verification failed.');
+          }
+        },
+        prefill: { name: user?.name, email: user?.email },
+        theme: { color: '#ff2d55' }
+      };
+      
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.on('payment.failed', () => showToast('Payment failed.'));
+      paymentObject.open();
+    } catch (e) {
+      showToast(e.message || 'Payment initiation failed.');
+    } finally {
+      setProcessingPayment(false);
     }
   };
 
@@ -731,6 +785,17 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
                         }}>
                           Order Again
                         </button>
+                        
+                        {!paid && (
+                          <button onClick={() => handlePayment(order)} disabled={processingPayment} style={{
+                            padding: '8px 16px', borderRadius: 10,
+                            backgroundColor: processingPayment ? 'rgba(255,45,85,0.5)' : '#ff2d55',
+                            border: 'none', color: '#fff', fontWeight: 600, fontSize: '0.82rem', cursor: processingPayment ? 'not-allowed' : 'pointer',
+                            display: 'flex', alignItems: 'center', gap: 6
+                          }}>
+                            <IndianRupee size={14} /> Pay Now
+                          </button>
+                        )}
                       </div>
 
                       {(() => {

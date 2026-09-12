@@ -103,6 +103,7 @@ export const api = {
   getMyTestimonials: () => request('/api/testimonials/me'),
   updateUserAvatar: (formData) => request('/api/user/avatar', { method: 'POST', body: formData }),
   getPaymentKey: () => request('/api/payment/key'),
+  getLearnerCourses: () => request('/api/learner/courses'),
   createPaymentOrder: (payload) => request('/api/payment/create-order', { method: 'POST', body: payload }),
   verifyPayment: (payload) => request('/api/payment/verify', { method: 'POST', body: payload }),
   createPackageOrder: (payload) => request('/api/payment/create-package-order', { method: 'POST', body: payload }),
