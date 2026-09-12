@@ -145,6 +145,9 @@ export async function createDatabase() {
     lessonLikes,
     pricing,
     skills,
+    media,
+    activities,
+    clientChatMessages,
   })
 
   return {
