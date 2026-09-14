@@ -146,6 +146,10 @@ export const PRICING_DATA = {
     {name:"Domination",plan:"Per Month",price:"$600",period:"/mo",badge:null,desc:"Complete takeover of your digital presence.",features:["30 reels/month","Cinematic content production","Full social media management","Ad creatives included","Analytics reporting"],cta:"Start Project",best:"For enterprise & top creators"},
   ],
   "VFX":[
+    {name:"Basic VFX",plan:"Per Shot",price:"$36",period:"/shot",badge:null,desc:"Essential visual effects for clean compositing and polish.",features:["Object removal","Screen replacements","Simple compositing","Color matching","Basic rotoscoping"],cta:"Order VFX",best:"For social content & quick fixes"},
+    {name:"Advanced VFX",plan:"Per Shot",price:"$120",period:"/shot",badge:"Most Popular",desc:"Cinematic VFX with motion tracking and layered compositing.",features:["Motion tracking","CGI integration","Particle effects","Advanced compositing","Environment extensions"],cta:"Book VFX",best:"For ads, music videos & trailers"},
+    {name:"Cinematic VFX",plan:"Per Project",price:"$600",period:"+",badge:null,desc:"Full VFX pipeline for film-grade productions.",features:["3D asset integration","Full scene compositing","Matchmoving","Premium CGI","Color pipeline & delivery"],cta:"Start Project",best:"For films, OTT & premium campaigns",starting:true},
+  ],
   "Websites":[
     {name:"Business Website",plan:"One-Time",price:"$24,999",period:"+",badge:null,desc:"Professional business website to build your online presence.",features:["Responsive design","Up to 5 pages","SEO basics","Contact form","Modern UI"],cta:"Build Now",best:"For local businesses & service providers",starting:true},
     {name:"Premium Website",plan:"One-Time",price:"$59,999",period:"+",badge:"Most Popular",desc:"Custom UI/UX with advanced animations and CMS.",features:["Custom UI/UX design","Advanced animations","CMS dashboard","Premium responsive design","SEO optimization"],cta:"Get Premium",best:"For professional businesses & agencies",starting:true},
