@@ -353,7 +353,7 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
       let orderRes;
       if (!isCustom) {
         // Step 2: Create Razorpay order via backend
-        orderRes = await api.createPackageOrder({ amount: priceInPaise, currency: 'USD', receipt: `pkg_${Date.now()}` });
+        orderRes = await api.createPackageOrder({ amount: priceInPaise, currency: 'INR', receipt: `pkg_${Date.now()}` });
       }
 
       // Step 3: Launch Razorpay standard checkout modal
@@ -361,7 +361,7 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
         const options = {
           key: rzpKey,
           amount: priceInPaise,
-          currency: 'USD',
+          currency: 'INR',
           name: 'Assets Weber',
           description: `${service} — ${plan?.name || 'Package'}`,
           order_id: orderId,
