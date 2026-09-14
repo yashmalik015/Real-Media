@@ -142,6 +142,9 @@ function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricin
   const service = PUBLIC_SERVICES.find((s) => s.title === safeTitle) || skillsData.find((s) => s.title === safeTitle);
   const work = useMemo(() => portfolio.filter((item) => item.service === safeTitle), [portfolio, safeTitle]);
 
+  const [currency, setCurrency] = useState('INR'); // Default to INR
+  const EXCHANGE_RATE = 83; // 1 USD = 83 INR
+
   // Combine DB pricing plans, skill.tiers, and PRICING_DATA fallbacks
   const plans = useMemo(() => {
     const dbPlans = pricingData.filter((p) => p.service === safeTitle || p.category === safeTitle);
@@ -200,6 +203,40 @@ function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricin
         {/* Pricing Plans — DB driven */}
         <div style={{ marginTop: 72 }}>
           <SectionHeader label="PRICING" title={`${safeTitle} Plans`} sub="Transparent starting points. Every scope is confirmed before production begins." />
+          
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 32, marginBottom: 32 }}>
+            <div style={{
+              display: 'flex', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 30, padding: 4, position: 'relative'
+            }}>
+              <div style={{
+                position: 'absolute', top: 4, bottom: 4, left: currency === 'INR' ? 4 : '50%',
+                width: 'calc(50% - 4px)', backgroundColor: '#ff2d55', borderRadius: 26,
+                transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)', zIndex: 0
+              }} />
+              <button
+                onClick={() => setCurrency('INR')}
+                style={{
+                  position: 'relative', zIndex: 1, padding: '8px 24px', background: 'none', border: 'none',
+                  color: currency === 'INR' ? '#fff' : 'rgba(255,255,255,0.5)', fontFamily: 'monospace',
+                  fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', transition: 'color 0.3s ease'
+                }}
+              >
+                INR (₹)
+              </button>
+              <button
+                onClick={() => setCurrency('USD')}
+                style={{
+                  position: 'relative', zIndex: 1, padding: '8px 24px', background: 'none', border: 'none',
+                  color: currency === 'USD' ? '#fff' : 'rgba(255,255,255,0.5)', fontFamily: 'monospace',
+                  fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', transition: 'color 0.3s ease'
+                }}
+              >
+                USD ($)
+              </button>
+            </div>
+          </div>
+
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
@@ -231,7 +268,7 @@ function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricin
                   <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.9rem', color: '#fff', margin: '0 0 12px', letterSpacing: '0.03em' }}>{plan.name}</h3>
                   <div style={{ marginBottom: 20 }}>
                     <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.8rem', color: plan.highlight ? '#ff2d55' : '#fff' }}>
-                      {isCustom ? 'CUSTOM' : `$${Number(rawPrice).toLocaleString('en-US')}`}
+                      {isCustom ? 'CUSTOM' : currency === 'INR' ? `₹${(Number(rawPrice) * EXCHANGE_RATE).toLocaleString('en-IN')}` : `$${Number(rawPrice).toLocaleString('en-US')}`}
                     </span>
                     {!isCustom && plan.period && <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', marginLeft: 4 }}>{plan.period}</span>}
                   </div>
