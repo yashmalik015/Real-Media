@@ -659,17 +659,17 @@ app.get('/api/payment/key', (_req, res) => {
 
 // Handler: Create Razorpay Order (Standard Web Checkout)
 const createOrderHandler = async (req, res) => {
-  const { amount, currency = 'USD', receipt } = req.body
+  const { amount, currency = 'INR', receipt } = req.body
   const numAmount = Number(amount)
   
   if (isNaN(numAmount) || numAmount < 100) {
-    return res.status(400).json({ message: 'Amount must be at least 100 cents ($1).' })
+    return res.status(400).json({ message: 'Amount must be at least 100 paise / cents.' })
   }
 
   try {
     const order = await razorpay.orders.create({
       amount: Math.round(numAmount),
-      currency: currency || 'USD',
+      currency: currency || 'INR',
       receipt: receipt || `receipt_${Date.now()}`,
     })
     return res.json({
@@ -723,20 +723,22 @@ app.post('/api/verify-payment', verifyPaymentHandler)
 app.post('/api/payment/verify-package', verifyPaymentHandler)
 
 app.post('/api/payment/create-order', requireAuth, async (req, res) => {
-  const { projectId, amount } = req.body
+  const { projectId, amount, currency } = req.body
   const project = await repository.visibleProject(req.user, projectId)
   if (!project) return res.status(404).json({ message: 'Project not found.' })
+
+  const orderCurrency = currency || 'INR'
 
   if (!razorpay) {
     const mockOrderId = `order_mock_${Date.now()}`
     await repository.setRazorpayOrderId(projectId, mockOrderId)
-    return res.json({ id: mockOrderId, amount: amount * 100, currency: 'USD' })
+    return res.json({ id: mockOrderId, amount: amount * 100, currency: orderCurrency })
   }
 
   try {
     const order = await razorpay.orders.create({
       amount: Math.round(amount * 100),
-      currency: 'USD',
+      currency: orderCurrency,
       receipt: `receipt_${projectId}`,
     })
     await repository.setRazorpayOrderId(projectId, order.id)
