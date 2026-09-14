@@ -128,18 +128,24 @@ export const INDUSTRIES = [
   {emoji:"🏦",title:"Finance & Legal",desc:"Explainer content, trust-building"},
 ];
 export const TESTIMONIALS_STATIC = [];
-export const PRICING_CATEGORIES = ["Video Editing","VFX","Websites","Apps","Games","Marketing"];
+export const PRICING_CATEGORIES = ["Video Editing","Web Development","Digital Marketing","VFX"];
 export const PRICING_DATA = {
   "Video Editing":[
-    {name:"Basic Edit",plan:"Per Video",price:"$1,499",period:"/video",badge:null,desc:"Clean and professional editing for standard content.",features:["Clean editing","Captions","Music sync","Simple transitions"],cta:"Order Now",best:"For standard social media content"},
-    {name:"Professional Edit",plan:"Per Video",price:"$4,999",period:"/video",badge:"Most Popular",desc:"High-retention editing with motion graphics.",features:["Motion graphics","Speed ramps","Sound design","Retention-focused editing","Advanced subtitles"],cta:"Book Edit",best:"For YouTube, reels & branded content"},
-    {name:"Cinematic Ad",plan:"Per Video",price:"$14,999",period:"+",badge:null,desc:"Commercial-grade editing for brand campaigns.",features:["Commercial-style editing","Premium transitions","Storytelling structure","Color grading","Brand-focused editing"],cta:"Start Project",best:"For ads, launches & premium campaigns",starting:true},
+    {name:"Basic Edit",plan:"Per Video",price:"$18",period:"/video",badge:null,desc:"Clean and professional editing for standard content.",features:["Clean editing","Captions","Music sync","Simple transitions"],cta:"Order Now",best:"For standard social media content"},
+    {name:"Professional Edit",plan:"Per Video",price:"$60",period:"/video",badge:"Most Popular",desc:"High-retention editing with motion graphics.",features:["Motion graphics","Speed ramps","Sound design","Retention-focused editing","Advanced subtitles"],cta:"Book Edit",best:"For YouTube, reels & branded content"},
+    {name:"Cinematic Ad",plan:"Per Video",price:"$180",period:"+",badge:null,desc:"Commercial-grade editing for brand campaigns.",features:["Commercial-style editing","Premium transitions","Storytelling structure","Color grading","Brand-focused editing"],cta:"Start Project",best:"For ads, launches & premium campaigns",starting:true},
+  ],
+  "Web Development":[
+    {name:"Business Website",plan:"Per Project",price:"$300",period:"+",badge:null,desc:"Professional website for service businesses.",features:["Responsive design","Up to 5 pages","SEO basics","Contact form","Modern UI"],cta:"Order Now",best:"For small to medium businesses",starting:true},
+    {name:"Premium Website",plan:"Per Project",price:"$720",period:"+",badge:"Most Popular",desc:"High-performance website with custom UX.",features:["Custom UI/UX design","Advanced animations","CMS dashboard","Premium responsive design","SEO optimization"],cta:"Book Project",best:"For brands & agencies",starting:true},
+    {name:"Ecommerce Store",plan:"Per Project",price:"$1200",period:"+",badge:null,desc:"Full-scale online store with payment gateways.",features:["Payment gateway integration","Admin dashboard","Product management system","Inventory management","Authentication system"],cta:"Start Project",best:"For retail & D2C brands",starting:true},
+  ],
+  "Digital Marketing":[
+    {name:"Starter Growth",plan:"Per Month",price:"$156",period:"/mo",badge:null,desc:"Essential social media presence and growth.",features:["8 reels/month","Basic editing & captions","Content planning calendar","Social media post designs","3-day delivery"],cta:"Order Now",best:"For personal brands"},
+    {name:"Business Growth",plan:"Per Month",price:"$300",period:"/mo",badge:"Most Popular",desc:"Aggressive growth strategy and premium content.",features:["16 reels/month","Advanced editing & motion graphics","Speed ramps & sound design","Thumbnail & post design","Monthly strategy call"],cta:"Book Plan",best:"For scaling businesses"},
+    {name:"Domination",plan:"Per Month",price:"$600",period:"/mo",badge:null,desc:"Complete takeover of your digital presence.",features:["30 reels/month","Cinematic content production","Full social media management","Ad creatives included","Analytics reporting"],cta:"Start Project",best:"For enterprise & top creators"},
   ],
   "VFX":[
-    {name:"Basic VFX",plan:"Per Shot",price:"$2,999",period:"/shot",badge:null,desc:"Essential visual effects for clean compositing and polish.",features:["Object removal","Screen replacements","Simple compositing","Color matching","Basic rotoscoping"],cta:"Order VFX",best:"For social content & quick fixes"},
-    {name:"Advanced VFX",plan:"Per Shot",price:"$9,999",period:"/shot",badge:"Most Popular",desc:"Cinematic VFX with motion tracking and layered compositing.",features:["Motion tracking","CGI integration","Particle effects","Advanced compositing","Environment extensions"],cta:"Book VFX",best:"For ads, music videos & trailers"},
-    {name:"Cinematic VFX",plan:"Per Project",price:"$49,999",period:"+",badge:null,desc:"Full VFX pipeline for film-grade productions.",features:["3D asset integration","Full scene compositing","Matchmoving","Premium CGI","Color pipeline & delivery"],cta:"Start Project",best:"For films, OTT & premium campaigns",starting:true},
-  ],
   "Websites":[
     {name:"Business Website",plan:"One-Time",price:"$24,999",period:"+",badge:null,desc:"Professional business website to build your online presence.",features:["Responsive design","Up to 5 pages","SEO basics","Contact form","Modern UI"],cta:"Build Now",best:"For local businesses & service providers",starting:true},
     {name:"Premium Website",plan:"One-Time",price:"$59,999",period:"+",badge:"Most Popular",desc:"Custom UI/UX with advanced animations and CMS.",features:["Custom UI/UX design","Advanced animations","CMS dashboard","Premium responsive design","SEO optimization"],cta:"Get Premium",best:"For professional businesses & agencies",starting:true},

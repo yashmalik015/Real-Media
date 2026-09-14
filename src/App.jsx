@@ -338,7 +338,7 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
   const inclusionList = plan ? (Array.isArray(plan.inclusions) ? plan.inclusions : String(plan.inclusions || '').split(',').map(i => i.trim()).filter(Boolean)) : [];
   const rawPrice = plan ? Number(String(plan.price).replace(/[^\d]/g, '')) : 0;
   const isCustom = !rawPrice || String(plan?.price || '').toLowerCase().includes('custom');
-  const priceInPaise = rawPrice * 100;
+  const priceInPaise = rawPrice * 83 * 100; // Convert USD to INR paise (1 USD = 83 INR)
 
   const handleRazorpay = async () => {
     if (!form.name || !form.email) { showToast("Please enter your name and email."); return; }

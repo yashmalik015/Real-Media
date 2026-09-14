@@ -15,19 +15,19 @@ const SERVICE_CATEGORIES = [
 
 const DEFAULT_PLANS_BY_SERVICE = {
   'Video Editing': [
-    { name: 'Starter', price: '149', period: '/month', features: ['5 Short Videos (up to 60s)', 'Basic Color Grading', '48h Delivery', '1 Revision Round', 'Subtitles Included'], highlight: false },
-    { name: 'Professional', price: '349', period: '/month', features: ['15 Videos (up to 5 min)', 'Advanced Color Grading', '24h Delivery', '3 Revision Rounds', 'Motion Graphics', 'Sound Design'], highlight: true },
-    { name: 'Enterprise', price: '799', period: '/month', features: ['Unlimited Videos', 'Full Post-Production', 'Priority 12h Delivery', 'Unlimited Revisions', 'VFX Integration', 'Dedicated Editor', 'Monthly Strategy Call'], highlight: false },
+    { name: 'Basic Edit', price: '18', period: '/video', features: ['Clean editing', 'Captions', 'Music sync', 'Simple transitions'], highlight: false },
+    { name: 'Professional Edit', price: '60', period: '/video', features: ['Motion graphics', 'Speed ramps', 'Sound design', 'Retention-focused editing', 'Advanced subtitles'], highlight: true },
+    { name: 'Cinematic Ad', price: '180', period: '/video', features: ['Commercial-style editing', 'Premium transitions', 'Storytelling structure', 'Color grading', 'Brand-focused editing'], highlight: false },
   ],
   'Web Development': [
-    { name: 'Landing Page', price: '499', period: '/project', features: ['1-Page Website', 'Mobile Responsive', 'SEO Optimized', '3 Revision Rounds', '5-Day Delivery', 'CMS Integration'], highlight: false },
-    { name: 'Business Site', price: '1299', period: '/project', features: ['Up to 10 Pages', 'Custom UI Design', 'Contact & Lead Forms', 'Analytics Setup', '5 Revision Rounds', 'Deployment Included'], highlight: true },
-    { name: 'Full-Stack App', price: '3999', period: '/project', features: ['Custom Web App', 'Database Architecture', 'User Auth System', 'API Development', 'Admin Dashboard', 'Unlimited Revisions', '3 Months Support'], highlight: false },
+    { name: 'Business Website', price: '300', period: '/project', features: ['Responsive design', 'Up to 5 pages', 'SEO basics', 'Contact form', 'Modern UI'], highlight: false },
+    { name: 'Premium Website', price: '720', period: '/project', features: ['Custom UI/UX design', 'Advanced animations', 'CMS dashboard', 'Premium responsive design', 'SEO optimization'], highlight: true },
+    { name: 'Ecommerce Store', price: '1200', period: '/project', features: ['Payment gateway integration', 'Admin dashboard', 'Product management system', 'Inventory management', 'Authentication system'], highlight: false },
   ],
   'Digital Marketing': [
-    { name: 'Starter', price: '249', period: '/month', features: ['2 Social Platforms', 'Basic Ad Campaigns', '5 Ad Creatives/month', 'Monthly Report', 'Email Support'], highlight: false },
-    { name: 'Growth', price: '599', period: '/month', features: ['4 Social Platforms', 'Advanced Targeting', '15 Ad Creatives/month', 'Weekly Reports', 'A/B Testing', 'Dedicated Manager'], highlight: true },
-    { name: 'Scale', price: '1299', period: '/month', features: ['All Platforms', 'Full Funnel Strategy', 'Unlimited Creatives', 'Daily Reports', 'Influencer Outreach', 'Content Calendar', 'Priority Support'], highlight: false },
+    { name: 'Starter Growth', price: '156', period: '/month', features: ['8 reels/month', 'Basic editing & captions', 'Content planning calendar', 'Social media post designs', '3-day delivery'], highlight: false },
+    { name: 'Business Growth', price: '300', period: '/month', features: ['16 reels/month', 'Advanced editing & motion graphics', 'Speed ramps & sound design', 'Thumbnail & post design', 'Monthly strategy call'], highlight: true },
+    { name: 'Domination', price: '600', period: '/month', features: ['30 reels/month', 'Cinematic content production', 'Full social media management', 'Ad creatives included', 'Analytics reporting'], highlight: false },
   ],
   'Graphic Design': [
     { name: 'Basic', price: '199', period: '/month', features: ['5 Designs/month', 'Social Media Graphics', 'PNG & PDF Delivery', '2 Revision Rounds', '48h Turnaround'], highlight: false },
@@ -35,9 +35,9 @@ const DEFAULT_PLANS_BY_SERVICE = {
     { name: 'Agency', price: '999', period: '/month', features: ['Unlimited Designs', 'Full Brand Strategy', 'Packaging & Merch', 'Marketing Materials', 'Unlimited Revisions', 'Dedicated Designer', 'Slack Access'], highlight: false },
   ],
   'VFX & Animation': [
-    { name: 'Motion', price: '299', period: '/month', features: ['3 Motion Graphics', 'Logo Animation', '2 Revision Rounds', '1080p Output', '72h Delivery'], highlight: false },
-    { name: 'Cinematic', price: '699', period: '/month', features: ['10 VFX Shots', 'Advanced Compositing', '3D Title Sequences', '4K Output', '3 Revision Rounds', '48h Delivery'], highlight: true },
-    { name: 'Blockbuster', price: '1599', period: '/month', features: ['Unlimited VFX Shots', 'Full CG/CGI Pipeline', 'Character Animation', '8K Output', 'Unlimited Revisions', 'Dedicated VFX Artist', 'Weekly Reviews'], highlight: false },
+    { name: 'Basic VFX', price: '36', period: '/shot', features: ['Object removal', 'Screen replacements', 'Simple compositing', 'Color matching', 'Basic rotoscoping'], highlight: false },
+    { name: 'Advanced VFX', price: '120', period: '/shot', features: ['Motion tracking', 'CGI integration', 'Particle effects', 'Advanced compositing', 'Environment extensions'], highlight: true },
+    { name: 'Cinematic VFX', price: '600', period: '/project', features: ['3D asset integration', 'Full scene compositing', 'Matchmoving', 'Premium CGI', 'Color pipeline & delivery'], highlight: false },
   ],
   'Social Media Management': [
     { name: 'Essentials', price: '179', period: '/month', features: ['2 Platforms', '12 Posts/month', 'Caption Copywriting', 'Hashtag Strategy', 'Monthly Report'], highlight: false },
@@ -78,7 +78,7 @@ export function PricingManager({ showToast }) {
     const num = Number(raw);
     if (isNaN(num) || !raw) return priceStr;
     if (currency === 'INR') {
-      return `$${(num * EXCHANGE_RATE).toLocaleString('en-US')}`;
+      return `₹${(num * EXCHANGE_RATE).toLocaleString('en-IN')}`;
     }
     return `$${num.toLocaleString('en-US')}`;
   };

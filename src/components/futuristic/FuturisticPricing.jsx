@@ -16,7 +16,7 @@ export function FuturisticPricing({ onSelectPlan, pricingData }) {
     const num = Number(raw);
     if (isNaN(num) || !raw) return priceStr;
     if (currency === 'INR') {
-      return `$${(num * EXCHANGE_RATE).toLocaleString('en-US')}`;
+      return `₹${(num * EXCHANGE_RATE).toLocaleString('en-IN')}`;
     }
     return `$${num.toLocaleString('en-US')}`;
   };
