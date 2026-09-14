@@ -18,6 +18,7 @@ import { uploadFile, uploadsDirectory } from './fileStorage.js'
 import { registerV2Routes } from './v2Routes.js';
 import { verifyJwt, requireRoles, firebaseLoginHandler } from './middleware/auth.js';
 import { signAccessToken, signRefreshToken, hashRefreshToken, verifyToken } from './utils/jwt.js';
+import { sendPurchaseNotifications } from './utils/notifications.js';
 
 // Safely load .env file if it exists locally, without crashing if absent (e.g. production host environments)
 try {
@@ -536,6 +537,10 @@ app.post('/api/projects', requireAuth, upload.array('files', 20), async (req, re
   if (amountNum === 0) {
     await repository.notify(req.user.id, project.id, 'Project submitted', `${project.title} was sent to the Buildbig team.`)
     await notifyTeam(project, req.user.name)
+  } else if (parsedAnswers && parsedAnswers.paymentId) {
+    await repository.notify(req.user.id, project.id, 'Purchase Successful', `${project.title} purchase completed.`)
+    await notifyTeam(project, req.user.name)
+    await sendPurchaseNotifications({ ...project, answersJson: JSON.stringify(parsedAnswers) });
   }
 
   res.status(201).json({ project })
@@ -654,17 +659,17 @@ app.get('/api/payment/key', (_req, res) => {
 
 // Handler: Create Razorpay Order (Standard Web Checkout)
 const createOrderHandler = async (req, res) => {
-  const { amount, currency = 'INR', receipt } = req.body
+  const { amount, currency = 'USD', receipt } = req.body
   const numAmount = Number(amount)
   
   if (isNaN(numAmount) || numAmount < 100) {
-    return res.status(400).json({ message: 'Amount must be at least 100 paise (₹1).' })
+    return res.status(400).json({ message: 'Amount must be at least 100 cents ($1).' })
   }
 
   try {
     const order = await razorpay.orders.create({
       amount: Math.round(numAmount),
-      currency: currency || 'INR',
+      currency: currency || 'USD',
       receipt: receipt || `receipt_${Date.now()}`,
     })
     return res.json({
@@ -725,13 +730,13 @@ app.post('/api/payment/create-order', requireAuth, async (req, res) => {
   if (!razorpay) {
     const mockOrderId = `order_mock_${Date.now()}`
     await repository.setRazorpayOrderId(projectId, mockOrderId)
-    return res.json({ id: mockOrderId, amount: amount * 100, currency: 'INR' })
+    return res.json({ id: mockOrderId, amount: amount * 100, currency: 'USD' })
   }
 
   try {
     const order = await razorpay.orders.create({
       amount: Math.round(amount * 100),
-      currency: 'INR',
+      currency: 'USD',
       receipt: `receipt_${projectId}`,
     })
     await repository.setRazorpayOrderId(projectId, order.id)

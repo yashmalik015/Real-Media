@@ -152,7 +152,7 @@ function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricin
       return skillObj.tiers.map((t, idx) => ({
         _id: t.id || t._id || `tier_${idx}_${safeTitle}`,
         name: t.name || t.title || `Plan ${idx + 1}`,
-        price: typeof t.price === 'number' ? `₹${t.price.toLocaleString('en-IN')}` : (t.price || 'Custom Quote'),
+        price: typeof t.price === 'number' ? `$${t.price.toLocaleString('en-US')}` : (t.price || 'Custom Quote'),
         deliveryTime: t.deliveryTime || t.turnaround || '3-5 days',
         inclusions: t.inclusions || [],
         features: t.features || [],
@@ -176,9 +176,9 @@ function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricin
     }
 
     return [
-      { _id: `fallback_1_${safeTitle}`, name: "Starter", price: "₹4,999", features: ["Essential editing & cuts", "Full HD export"], deliveryTime: "3-5 days", inclusions: ["Normal cuts", "Color grading", "Sound FX", "4K Export"] },
-      { _id: `fallback_2_${safeTitle}`, name: "Professional", price: "₹14,999", features: ["Advanced motion graphics", "Sound FX & mixing", "4K delivery"], deliveryTime: "48-72 hrs", inclusions: ["Custom cuts", "Color grading", "Sound design", "Motion graphics"], highlight: true },
-      { _id: `fallback_3_${safeTitle}`, name: "Premium", price: "₹29,999", features: ["Full cinematic production", "VFX & Compositing", "Unlimited revisions"], deliveryTime: "24-48 hrs", inclusions: ["Full production", "VFX compositing", "Sound FX", "Priority support"] },
+      { _id: `fallback_1_${safeTitle}`, name: "Starter", price: "$4,999", features: ["Essential editing & cuts", "Full HD export"], deliveryTime: "3-5 days", inclusions: ["Normal cuts", "Color grading", "Sound FX", "4K Export"] },
+      { _id: `fallback_2_${safeTitle}`, name: "Professional", price: "$14,999", features: ["Advanced motion graphics", "Sound FX & mixing", "4K delivery"], deliveryTime: "48-72 hrs", inclusions: ["Custom cuts", "Color grading", "Sound design", "Motion graphics"], highlight: true },
+      { _id: `fallback_3_${safeTitle}`, name: "Premium", price: "$29,999", features: ["Full cinematic production", "VFX & Compositing", "Unlimited revisions"], deliveryTime: "24-48 hrs", inclusions: ["Full production", "VFX compositing", "Sound FX", "Priority support"] },
     ];
   }, [pricingData, skillsData, safeTitle]);
 
@@ -231,7 +231,7 @@ function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricin
                   <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.9rem', color: '#fff', margin: '0 0 12px', letterSpacing: '0.03em' }}>{plan.name}</h3>
                   <div style={{ marginBottom: 20 }}>
                     <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.8rem', color: plan.highlight ? '#ff2d55' : '#fff' }}>
-                      {isCustom ? 'CUSTOM' : `₹${Number(rawPrice).toLocaleString('en-IN')}`}
+                      {isCustom ? 'CUSTOM' : `$${Number(rawPrice).toLocaleString('en-US')}`}
                     </span>
                     {!isCustom && plan.period && <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', marginLeft: 4 }}>{plan.period}</span>}
                   </div>
@@ -295,7 +295,7 @@ const SERVICE_FAQS = {
   "Video Editing": [
     { q: "What formats do you deliver?", a: "We deliver in MP4 (H.264/H.265), MOV, and any format you need for your platform. Resolution from 1080p to 4K." },
     { q: "How do I share raw footage?", a: "Upload a Google Drive / Dropbox link below. Ensure the folder is set to 'Anyone with link can view'." },
-    { q: "How many revisions are included?", a: "Revision rounds are specified per package. Additional rounds are available at ₹500/round." },
+    { q: "How many revisions are included?", a: "Revision rounds are specified per package. Additional rounds are available at $500/round." },
     { q: "Do you add subtitles or captions?", a: "Yes — SRT files and burned-in captions are included in Professional and above packages." },
   ],
   "Web Development": [
@@ -353,7 +353,7 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
       let orderRes;
       if (!isCustom) {
         // Step 2: Create Razorpay order via backend
-        orderRes = await api.createPackageOrder({ amount: priceInPaise, currency: 'INR', receipt: `pkg_${Date.now()}` });
+        orderRes = await api.createPackageOrder({ amount: priceInPaise, currency: 'USD', receipt: `pkg_${Date.now()}` });
       }
 
       // Step 3: Launch Razorpay standard checkout modal
@@ -361,7 +361,7 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
         const options = {
           key: rzpKey,
           amount: priceInPaise,
-          currency: 'INR',
+          currency: 'USD',
           name: 'Assets Weber',
           description: `${service} — ${plan?.name || 'Package'}`,
           order_id: orderId,
@@ -479,7 +479,7 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
             <h2 className="bn" style={{ fontSize: '1.8rem', margin: 0 }}>{plan?.name || 'Custom Project'}</h2>
             {!isCustom && (
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 6 }}>
-                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', color: '#ff2d55' }}>₹{Number(rawPrice).toLocaleString('en-IN')}</span>
+                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', color: '#ff2d55' }}>${Number(rawPrice).toLocaleString('en-US')}</span>
                 {plan?.period && <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>{plan.period}</span>}
               </div>
             )}
@@ -592,7 +592,7 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
               disabled={loading}
               style={{ width: '100%', padding: '16px', fontSize: '1rem', letterSpacing: '0.05em', marginBottom: 12, background: 'linear-gradient(135deg,#ff2d55,#bd1c3c)', boxShadow: '0 0 30px rgba(255,45,85,0.4)' }}
             >
-              {loading ? '⏳ Processing…' : `🚀 Start Project — Pay ₹${Number(rawPrice).toLocaleString('en-IN')} via Razorpay`}
+              {loading ? '⏳ Processing…' : `🚀 Start Project — Pay $${Number(rawPrice).toLocaleString('en-US')} via Razorpay`}
             </button>
             <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', textAlign: 'center', marginBottom: 16 }}>🔒 Secured by Razorpay · SSL encrypted · UPI, Cards, Net Banking accepted</div>
           </>
@@ -1871,7 +1871,7 @@ function LegacyTeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
               <h3 className="bn" style={{ fontSize: "1.4rem", marginBottom: 18 }}>{editingPricing ? "Edit Pricing Tier" : "Add Pricing Tier"}</h3>
               <div className="msf-grid">
                 <div className="field"><label>Plan Name *</label><input value={pricingForm.name} onChange={(e) => setPricingForm({ ...pricingForm, name: e.target.value })} placeholder="e.g. STARTUP ENGINE" /></div>
-                <div className="field"><label>Price *</label><input value={pricingForm.price} onChange={(e) => setPricingForm({ ...pricingForm, price: e.target.value })} placeholder="e.g. ₹24,999" /></div>
+                <div className="field"><label>Price *</label><input value={pricingForm.price} onChange={(e) => setPricingForm({ ...pricingForm, price: e.target.value })} placeholder="e.g. $24,999" /></div>
               </div>
               <div className="msf-grid">
                 <div className="field"><label>Period</label><input value={pricingForm.period} onChange={(e) => setPricingForm({ ...pricingForm, period: e.target.value })} placeholder="e.g. per project" /></div>

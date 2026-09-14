@@ -501,7 +501,7 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
                       {lessonCount} {lessonCount === 1 ? 'Video' : 'Videos'}
                     </span>
                     <span style={{ padding: '4px 10px', borderRadius: 8, backgroundColor: 'rgba(52,199,89,0.1)', border: '1px solid rgba(52,199,89,0.2)', color: '#34c759', fontSize: '0.75rem', fontWeight: 600 }}>
-                      {crs.price ? `₹${crs.price}` : 'FREE'}
+                      {crs.price ? `$${crs.price}` : 'FREE'}
                     </span>
                   </div>
                   {crs.instructor && (

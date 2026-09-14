@@ -660,7 +660,7 @@ export function PricingSection({onStartProject}){
               <div className="pricing-desc">{p.desc}</div>
               <div className="pricing-price">
                 <div className="pricing-amount">
-                  <span>₹</span>{p.price.replace("₹","")}
+                  <span>$</span>{p.price.replace("$","")}
                   <span className="pricing-period">{p.period}</span>
                 </div>
                 {p.starting&&<div className="pricing-starting">Starting from</div>}
@@ -1066,11 +1066,11 @@ export function PaymentGate({ project, onPaymentComplete, onToast }) {
       <div style={{fontSize:"3rem",marginBottom:20}}>💳</div>
       <h2 style={{fontSize:"1.8rem",marginBottom:10,fontWeight:700}}>Payment Required</h2>
       <p style={{color:"var(--muted)",marginBottom:30,maxWidth:400,lineHeight:1.6}}>
-        To access your project workspace for <strong>{project.title}</strong>, a payment of ₹{amountToPay.toLocaleString()} is required. 
+        To access your project workspace for <strong>{project.title}</strong>, a payment of ${amountToPay.toLocaleString()} is required. 
         {project.paymentStatus === 'pending' && amountToPay < project.totalAmount && " (50% upfront for this plan)."}
       </p>
       <button className="btn-primary" style={{padding:"14px 30px",fontSize:"1.1rem"}} onClick={handlePay} disabled={loading}>
-        {loading ? "Processing..." : `Pay ₹${amountToPay.toLocaleString()} Securely`}
+        {loading ? "Processing..." : `Pay $${amountToPay.toLocaleString()} Securely`}
       </button>
     </div>
   );

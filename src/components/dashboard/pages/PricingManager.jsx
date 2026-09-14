@@ -78,7 +78,7 @@ export function PricingManager({ showToast }) {
     const num = Number(raw);
     if (isNaN(num) || !raw) return priceStr;
     if (currency === 'INR') {
-      return `₹${(num * EXCHANGE_RATE).toLocaleString('en-IN')}`;
+      return `$${(num * EXCHANGE_RATE).toLocaleString('en-US')}`;
     }
     return `$${num.toLocaleString('en-US')}`;
   };

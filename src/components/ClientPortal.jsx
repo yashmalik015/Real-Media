@@ -320,7 +320,7 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
 
       try {
         await api.sendClientChatMessage({
-          text: `📦 New order placed: "${res.project.title}" (₹${selectedTier.price.toLocaleString()})`
+          text: `📦 New order placed: "${res.project.title}" ($${selectedTier.price.toLocaleString()})`
         });
         await loadChat();
       } catch { /* silent */ }
@@ -695,7 +695,7 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
                     }}>
                       <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', color: 'rgba(255,255,255,0.6)' }}>
                         <span>Ordered {new Date(order.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                        <span style={{ color: '#34c759', fontWeight: 700 }}>₹{(order.totalAmount || 0).toLocaleString()}</span>
+                        <span style={{ color: '#34c759', fontWeight: 700 }}>${(order.totalAmount || 0).toLocaleString()}</span>
                         <span>{order.service}</span>
                       </div>
                       <span style={{ fontFamily: 'monospace', color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem' }}>
@@ -1023,7 +1023,7 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
                       color: '#fff', textAlign: 'left', cursor: 'pointer'
                     }}>
                       <div style={{ fontWeight: 600, fontSize: '0.82rem' }}>{tier.name}</div>
-                      <div style={{ color: '#ff2d55', fontWeight: 700, fontSize: '1rem', marginTop: 3 }}>₹{tier.price.toLocaleString()}</div>
+                      <div style={{ color: '#ff2d55', fontWeight: 700, fontSize: '1rem', marginTop: 3 }}>${tier.price.toLocaleString()}</div>
                     </button>
                   );
                 })}
@@ -1055,7 +1055,7 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 18 }}>
               <div>
                 <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>Total</div>
-                <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', color: '#34c759' }}>₹{selectedTier.price.toLocaleString()}</div>
+                <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', color: '#34c759' }}>${selectedTier.price.toLocaleString()}</div>
               </div>
               <button onClick={handlePlaceOrder} disabled={submittingOrder} style={{
                 padding: '14px 28px', borderRadius: 999, background: 'linear-gradient(135deg, #ff2d55, #c81e42)',

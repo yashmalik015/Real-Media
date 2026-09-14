@@ -383,7 +383,7 @@ export function SkillManager({ showToast }) {
             service: form.title,
             category: form.category,
             name: tier.name,
-            price: typeof tier.price === 'number' ? `₹${tier.price.toLocaleString('en-IN')}` : String(tier.price),
+            price: typeof tier.price === 'number' ? `$${tier.price.toLocaleString('en-US')}` : String(tier.price),
             deliveryTime: tier.deliveryTime,
             inclusions: tier.inclusions,
             features: tier.features,
@@ -482,7 +482,7 @@ export function SkillManager({ showToast }) {
           {filteredSkills.map((skill) => {
             const tierCount = Array.isArray(skill.tiers) ? skill.tiers.length : 0;
             const startPrice = skill.startingPrice || (skill.tiers?.[0]?.price) || 0;
-            const formattedPrice = typeof startPrice === 'number' && startPrice > 0 ? `₹${startPrice.toLocaleString('en-IN')}` : (startPrice || 'CUSTOM');
+            const formattedPrice = typeof startPrice === 'number' && startPrice > 0 ? `$${startPrice.toLocaleString('en-US')}` : (startPrice || 'CUSTOM');
 
             return (
               <div
@@ -635,7 +635,7 @@ export function SkillManager({ showToast }) {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)', marginBottom: 6 }}>Starting Price (₹)</label>
+                  <label style={{ display: 'block', fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)', marginBottom: 6 }}>Starting Price ($)</label>
                   <input
                     type="number"
                     value={form.startingPrice}
@@ -739,7 +739,7 @@ export function SkillManager({ showToast }) {
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>Price (₹) *</label>
+                        <label style={{ display: 'block', fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>Price ($) *</label>
                         <input
                           value={tier.price}
                           onChange={(e) => handleUpdateTier(idx, 'price', e.target.value)}

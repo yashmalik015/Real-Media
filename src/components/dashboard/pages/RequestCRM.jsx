@@ -222,7 +222,7 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>Amount</span>
-                    <span style={{ color: '#34c759', fontWeight: 700, fontSize: '0.9rem' }}>₹{proj.totalAmount || 0}</span>
+                    <span style={{ color: '#34c759', fontWeight: 700, fontSize: '0.9rem' }}>${proj.totalAmount || 0}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>Date</span>
@@ -254,7 +254,7 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
                 <span style={{ padding: '6px 14px', borderRadius: 8, backgroundColor: 'rgba(255,45,85,0.15)', color: '#ff2d55', fontWeight: 700, fontFamily: 'monospace' }}>
                   {selectedProject.service}
                 </span>
-                <span style={{ color: '#34c759', fontWeight: 700, fontSize: '1.2rem' }}>₹{selectedProject.totalAmount || 0}</span>
+                <span style={{ color: '#34c759', fontWeight: 700, fontSize: '1.2rem' }}>${selectedProject.totalAmount || 0}</span>
               </div>
             </div>
 
