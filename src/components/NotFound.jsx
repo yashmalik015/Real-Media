@@ -1,11 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 
 export default function NotFound() {
   const containerRef = useRef(null);
   const textRef = useRef(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     gsap.fromTo(containerRef.current, 
@@ -80,7 +78,7 @@ export default function NotFound() {
           The sector you are looking for has been purged from the archives or never existed. Return to base to recalibrate.
         </p>
         <button 
-          onClick={() => navigate('/')}
+          onClick={() => window.location.href = '/'}
           style={{
             padding: '16px 40px',
             backgroundColor: 'transparent',
