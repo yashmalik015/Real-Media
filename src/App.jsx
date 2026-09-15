@@ -82,7 +82,6 @@ function SectionHeader({ label, title, sub }) {
       <h2 className="section-title">{title}</h2>
       {sub && <p className="section-sub">{sub}</p>}
     </>
-    </GlobalErrorBoundary>
   );
 }
 
@@ -2372,6 +2371,7 @@ export default function App() {
       {showInquiry && <PackageProjectModal plan={selectedPlan?.plan || null} service={selectedPlan?.service || selectedService || ""} onClose={() => { setShowInquiry(false); setSelectedPlan(null); }} settings={settings} showToast={showToast} session={session} />}
       {showAuth && <LoginModal onLogin={onLogin} onGoogleLogin={onGoogleLogin} onClose={() => setShowAuth(false)} />}
     </>
+    </GlobalErrorBoundary>
   );
 }
 
