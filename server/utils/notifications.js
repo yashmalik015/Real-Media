@@ -80,3 +80,58 @@ Your Website Notifier`
     console.error('Error sending purchase notifications:', error);
   }
 };
+
+export const sendInquiryNotification = async (inquiryData) => {
+  try {
+    const { name, email, phone, company, service, description } = inquiryData;
+    
+    // --- 1. Send Email Notification ---
+    const mailOptions = {
+      from: process.env.SMTP_EMAIL || 'yashmalik015@gmail.com',
+      to: 'yashmalik015@gmail.com, assetsweber@assetsweber.com',
+      subject: `New Contact Form Inquiry: ${name}`,
+      text: `Hello,
+
+A new inquiry has been submitted via the Command Center Contact form.
+
+Client Details:
+- Name: ${name || 'N/A'}
+- Email: ${email || 'N/A'}
+- Phone: ${phone || 'N/A'}
+- Company: ${company || 'N/A'}
+
+Project Details:
+- Service Needed: ${service || 'N/A'}
+- Description: ${description || 'N/A'}
+
+View more details in the admin Request CRM.
+
+Best,
+Your Website Notifier`
+    };
+
+    if (process.env.SMTP_PASSWORD) {
+      await transporter.sendMail(mailOptions);
+      console.log('Inquiry email sent successfully.');
+    } else {
+      console.log('Skipping email notification: SMTP_PASSWORD is not set.');
+    }
+
+    // --- 2. Send WhatsApp Notification ---
+    if (twilioClient && process.env.TWILIO_WHATSAPP_NUMBER) {
+      const waMessage = `*New Contact Inquiry!*\n\n*Name:* ${name}\n*Email:* ${email}\n*Phone:* ${phone}\n*Service:* ${service}\n\n*Description:*\n${description}`;
+
+      await twilioClient.messages.create({
+        body: waMessage,
+        from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`, 
+        to: 'whatsapp:+919416085060' 
+      });
+      console.log('Inquiry WhatsApp message sent successfully.');
+    } else {
+      console.log('Skipping WhatsApp notification: Twilio credentials or WhatsApp number not configured.');
+    }
+
+  } catch (error) {
+    console.error('Error sending inquiry notifications:', error);
+  }
+};

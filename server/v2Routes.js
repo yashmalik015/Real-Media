@@ -2,6 +2,7 @@ import { id, now } from './database.js'
 import { courseToDb } from './database.js'
 import { verifyIdToken } from './firebaseAdmin.js'
 import { deleteFromCloudinary } from './cloudinary.js'
+import { sendInquiryNotification } from './utils/notifications.js'
 
 function parseJsonSafely(val, fallback = []) {
   if (!val) return fallback
@@ -285,6 +286,7 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
     if (deps.io) {
       deps.io.emit('newInquiry', inquiry)
     }
+    await sendInquiryNotification(req.body);
     res.status(201).json({ inquiry })
   })
 

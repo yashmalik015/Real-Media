@@ -51,19 +51,19 @@ const rawPort = process.env.PORT || process.env.API_PORT || 4000
 const PORT = (typeof rawPort === 'string' && isNaN(Number(rawPort)))
   ? rawPort
   : (Number(rawPort) || 4000)
-const TEAM_ACCESS_ID = process.env.TEAM_ACCESS_ID || '1234567890'
-const TEAM_ACCESS_PASSWORD = process.env.TEAM_ACCESS_PASSWORD || 'admin123'
+const TEAM_ACCESS_ID = process.env.TEAM_ACCESS_ID
+const TEAM_ACCESS_PASSWORD = process.env.TEAM_ACCESS_PASSWORD
 const MAX_UPLOAD_GB = Number(process.env.MAX_UPLOAD_GB || 3)
 const CORS_ORIGIN = process.env.CORS_ORIGIN
 const FRONTEND_ONLY = (process.env.FRONTEND_ONLY === 'true' || process.env.FRONTEND_ONLY === '1')
 
-const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_TaoMw0lsJ25hzS'
-const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || '0YkvQ3HlgUu7b2hlb6gttHrY'
+const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID
+const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET
 
-const razorpay = new Razorpay({
+const razorpay = (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET) ? new Razorpay({
   key_id: RAZORPAY_KEY_ID,
   key_secret: RAZORPAY_KEY_SECRET,
-})
+}) : null;
 
 let repository = null
 let dbAvailable = false
@@ -106,6 +106,15 @@ app.use(rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 }))
+
+const authRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // limit each IP to 20 auth requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many login attempts from this IP, please try again after 15 minutes.' }
+})
+app.use('/api/auth', authRateLimiter)
 app.use('/uploads', express.static(uploadsDirectory()))
 
 app.use('/assets', express.static(path.join(rootDir, 'public', 'assets')))
@@ -131,6 +140,14 @@ if (fs.existsSync(distDir)) {
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_UPLOAD_GB * 1024 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase()
+    const forbidden = ['.exe', '.sh', '.bat', '.cmd', '.msi', '.php', '.js', '.py', '.rb']
+    if (forbidden.includes(ext)) {
+      return cb(new Error('File type not allowed for security reasons.'))
+    }
+    cb(null, true)
+  }
 })
 
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
@@ -311,9 +328,18 @@ app.post('/api/auth/client', async (req, res) => {
 
 app.post('/api/auth/team', async (req, res) => {
   try {
-    const { teamId = '', name = 'Buildbig Team' } = req.body
-    if (!/^\d{10}$/.test(teamId) || teamId !== TEAM_ACCESS_ID) {
-      return res.status(401).json({ message: 'Enter a valid 10 digit team ID.' })
+    const { teamId = '', password = '', name = 'Buildbig Team' } = req.body
+    
+    if (!TEAM_ACCESS_ID || !TEAM_ACCESS_PASSWORD) {
+      return res.status(500).json({ message: 'Team authentication is not properly configured on the server.' })
+    }
+
+    if (teamId !== TEAM_ACCESS_ID) {
+      return res.status(401).json({ message: 'Invalid Team ID.' })
+    }
+    
+    if (password !== TEAM_ACCESS_PASSWORD) {
+      return res.status(401).json({ message: 'Invalid Team Password.' })
     }
 
     const legacyEmail = `${name.trim()}@team.internal`.toLowerCase()
@@ -664,6 +690,10 @@ const createOrderHandler = async (req, res) => {
   
   if (isNaN(numAmount) || numAmount < 100) {
     return res.status(400).json({ message: 'Amount must be at least 100 paise / cents.' })
+  }
+
+  if (!razorpay) {
+    return res.status(503).json({ message: 'Razorpay is not configured on this server.' })
   }
 
   try {

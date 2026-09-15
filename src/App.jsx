@@ -20,6 +20,8 @@ import { CommandCenterContact } from "./components/futuristic/CommandCenterConta
 import { FuturisticFooter } from "./components/futuristic/FuturisticFooter.jsx";
 import { TeamDashboard } from "./components/dashboard/TeamDashboard.jsx";
 import { ClientPortal } from "./components/ClientPortal.jsx";
+import GlobalErrorBoundary from "./components/ErrorBoundary.jsx";
+import NotFound from "./components/NotFound.jsx";
 
 // ── Error Boundary ──────────────────────────────────────────────────────────
 class ErrorBoundary extends React.Component {
@@ -80,6 +82,7 @@ function SectionHeader({ label, title, sub }) {
       <h2 className="section-title">{title}</h2>
       {sub && <p className="section-sub">{sub}</p>}
     </>
+    </GlobalErrorBoundary>
   );
 }
 
@@ -2069,7 +2072,12 @@ export default function App() {
   useEffect(() => {
     const syncRoute = () => {
       const match = window.location.pathname.match(/^\/services\/([^/]+)$/);
-      if (!match) return;
+      if (!match) {
+        if (window.location.pathname !== '/' && window.location.pathname !== '') {
+          setPage("404");
+        }
+        return;
+      }
       const slug = match[1];
       const foundInPublic = PUBLIC_SERVICES.find((item) => serviceSlug(item.title) === slug);
       const foundInSkills = skills.find((item) => serviceSlug(item.title) === slug);
@@ -2077,11 +2085,10 @@ export default function App() {
 
       if (matched) {
         setSelectedService(matched.title);
+        setPage("service");
       } else {
-        const formattedTitle = slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-        setSelectedService(formattedTitle);
+        setPage("404");
       }
-      setPage("service");
     };
 
     syncRoute();
@@ -2188,6 +2195,7 @@ export default function App() {
   const filteredPortfolio = portfolioFilter === "All" ? portfolio : portfolio.filter((item) => item.service === portfolioFilter);
 
   return (
+    <GlobalErrorBoundary>
     <>
       <style>{styles}</style>
       <style>{`
@@ -2320,6 +2328,8 @@ export default function App() {
             <FuturisticPricing onSelectPlan={(plan, svc) => { setSelectedPlan({ plan, service: svc || '' }); setShowInquiry(true); }} pricingData={pricing} />
             <FuturisticFooter onNavigate={requestPage} />
           </div>
+        ) : page === "404" ? (
+          <NotFound />
         ) : (
           /* 2045 HOME OPERATING SYSTEM EXPERIENCE */
           <div className="page page--home" style={{ paddingTop: 0 }}>
