@@ -135,3 +135,52 @@ Your Website Notifier`
     console.error('Error sending inquiry notifications:', error);
   }
 };
+
+export const sendVerificationEmail = async (email, otp) => {
+  try {
+    const mailOptions = {
+      from: process.env.SMTP_EMAIL || 'yashmalik015@gmail.com',
+      to: email,
+      subject: `Your Verification Code for Real-Media`,
+      text: `Hello,
+
+Your email verification code is: ${otp}
+
+Please enter this code on the website to verify your account. It will expire in 10 minutes.
+
+Best,
+Real-Media Team`
+    };
+    if (process.env.SMTP_PASSWORD) {
+      await transporter.sendMail(mailOptions);
+      console.log(`Verification email sent successfully to ${email}`);
+      return true;
+    } else {
+      console.log('Skipping verification email: SMTP_PASSWORD is not set.');
+      return false;
+    }
+  } catch (error) {
+    console.error('Error sending verification email:', error);
+    return false;
+  }
+};
+
+export const sendVerificationSMS = async (phone, otp) => {
+  try {
+    if (twilioClient && process.env.TWILIO_PHONE_NUMBER) { // assuming a twilio phone number is used for sms
+      await twilioClient.messages.create({
+        body: `Your Real-Media verification code is: ${otp}. It will expire in 10 minutes.`,
+        from: process.env.TWILIO_PHONE_NUMBER, 
+        to: phone.startsWith('+') ? phone : `+${phone}`
+      });
+      console.log(`Verification SMS sent successfully to ${phone}`);
+      return true;
+    } else {
+      console.log('Skipping verification SMS: Twilio client or TWILIO_PHONE_NUMBER is not set.');
+      return false;
+    }
+  } catch (error) {
+    console.error('Error sending verification SMS:', error);
+    return false;
+  }
+};

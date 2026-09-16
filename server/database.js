@@ -338,6 +338,9 @@ function makeRepository(client, collections) {
         ...user,
         _id: user.id,
         email,
+        phone: user.phone ?? null,
+        isEmailVerified: user.isEmailVerified ?? false,
+        isPhoneVerified: user.isPhoneVerified ?? false,
         team_id: user.teamId ?? user.team_id ?? null,
         team_category: user.teamCategory ?? user.team_category ?? null,
         password_hash: user.passwordHash ?? user.password_hash ?? null,
@@ -346,6 +349,36 @@ function makeRepository(client, collections) {
       }
       await users.insertOne(payload)
       return userRow(payload)
+    },
+    updateUserOTP: async (userId, type, otp, expiry) => {
+      const set = {}
+      if (type === 'email') {
+        set.emailOtp = otp
+        set.emailOtpExpiry = expiry
+      } else if (type === 'phone') {
+        set.phoneOtp = otp
+        set.phoneOtpExpiry = expiry
+      }
+      await users.updateOne({ id: userId }, { $set: set })
+      return userRow(await users.findOne({ id: userId }))
+    },
+    verifyUserOTP: async (userId, type, otp) => {
+      const doc = await users.findOne({ id: userId })
+      if (!doc) return false
+      
+      const nowTime = Date.now()
+      if (type === 'email') {
+        if (doc.emailOtp === otp && doc.emailOtpExpiry > nowTime) {
+          await users.updateOne({ id: userId }, { $set: { isEmailVerified: true, emailOtp: null, emailOtpExpiry: null } })
+          return true
+        }
+      } else if (type === 'phone') {
+        if (doc.phoneOtp === otp && doc.phoneOtpExpiry > nowTime) {
+          await users.updateOne({ id: userId }, { $set: { isPhoneVerified: true, phoneOtp: null, phoneOtpExpiry: null } })
+          return true
+        }
+      }
+      return false
     },
     updateUserGoogle: async (userId, googleId, avatar) => {
       const set = { google_id: googleId }
@@ -1272,6 +1305,9 @@ function userRow(doc) {
     role: doc.role,
     name: doc.name,
     email: doc.email || null,
+    phone: doc.phone || null,
+    isEmailVerified: doc.isEmailVerified || false,
+    isPhoneVerified: doc.isPhoneVerified || false,
     passwordHash: doc.password_hash || doc.passwordHash || null,
     teamId: doc.team_id || doc.teamId || null,
     teamCategory: doc.team_category || doc.teamCategory || null,

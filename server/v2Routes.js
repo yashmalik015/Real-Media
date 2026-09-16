@@ -2,7 +2,7 @@ import { id, now } from './database.js'
 import { courseToDb } from './database.js'
 import { verifyIdToken } from './firebaseAdmin.js'
 import { deleteFromCloudinary } from './cloudinary.js'
-import { sendInquiryNotification } from './utils/notifications.js'
+import { sendInquiryNotification, sendVerificationEmail, sendVerificationSMS } from './utils/notifications.js'
 
 function parseJsonSafely(val, fallback = []) {
   if (!val) return fallback
@@ -23,7 +23,7 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
 
   // ── Learner auth ──
   app.post('/api/auth/learner', async (req, res) => {
-    const { mode = 'login', name = '', email = '', password = '' } = req.body
+    const { mode = 'login', name = '', email = '', phone = '', password = '' } = req.body
     const cleanEmail = email.trim().toLowerCase()
     if (!cleanEmail || !password || (mode === 'register' && !name.trim())) {
       return res.status(400).json({ success: false, message: 'Name, email, and password are required.' })
@@ -41,6 +41,9 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
         role: 'learner',
         name: name.trim(),
         email: cleanEmail,
+        phone: phone.trim(),
+        isEmailVerified: false,
+        isPhoneVerified: false,
         passwordHash: hashPassword(password),
         teamId: null,
         teamCategory: null,
@@ -55,6 +58,53 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
     const sessionRes = await createAuthResponse(user)
     res.json({ success: true, accessToken: sessionRes.accessToken, token: sessionRes.accessToken, user: sessionRes.user })
   })
+
+  // ── Verification endpoints ──
+  app.post('/api/auth/send-verification', requireAuth, async (req, res) => {
+    const { type } = req.body;
+    const user = req.user;
+    
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    await repository.updateUserOTP(user.id, type, otp, expiry);
+    
+    let sent = false;
+    if (type === 'email') {
+      if (!user.email) return res.status(400).json({ success: false, message: 'No email found.' });
+      sent = await sendVerificationEmail(user.email, otp);
+    } else if (type === 'phone') {
+      if (!user.phone) return res.status(400).json({ success: false, message: 'No phone number found.' });
+      sent = await sendVerificationSMS(user.phone, otp);
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid verification type.' });
+    }
+
+    if (sent) {
+      res.json({ success: true, message: `Verification code sent to your ${type}.` });
+    } else {
+      res.status(500).json({ success: false, message: `Failed to send verification code to ${type}.` });
+    }
+  });
+
+  app.post('/api/auth/verify-otp', requireAuth, async (req, res) => {
+    const { type, otp } = req.body;
+    const user = req.user;
+    
+    if (!type || !otp) {
+      return res.status(400).json({ success: false, message: 'Type and OTP are required.' });
+    }
+
+    const isValid = await repository.verifyUserOTP(user.id, type, otp);
+    if (isValid) {
+      const updatedUser = await repository.findUserById(user.id);
+      res.json({ success: true, user: updatedUser, message: `${type} verified successfully.` });
+    } else {
+      res.status(400).json({ success: false, message: 'Invalid or expired OTP.' });
+    }
+  });
+
 
   const handleGoogleAuth = async (req, res) => {
     console.log('GOOGLE LOGIN STARTED')

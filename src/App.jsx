@@ -649,7 +649,7 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
 function LoginModal({ onLogin, onGoogleLogin, onClose }) {
   const [tab, setTab] = useState("learner");
   const [mode, setMode] = useState("login"); // login | register
-  const [form, setForm] = useState({ name: "", email: "", password: "", teamId: "", teamPass: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", teamId: "", teamPass: "" });
   const [loading, setLoading] = useState(false);
   const [gLoading, setGLoading] = useState(false);
   const [err, setErr] = useState("");
@@ -660,7 +660,7 @@ function LoginModal({ onLogin, onGoogleLogin, onClose }) {
       if (tab === "team") {
         await onLogin({ role: "team", teamId: form.teamId, password: form.teamPass });
       } else {
-        await onLogin({ role: "learner", name: form.name, email: form.email, password: form.password, mode });
+        await onLogin({ role: "learner", name: form.name, email: form.email, phone: form.phone, password: form.password, mode });
       }
     } catch (e) {
       setErr(e.message || "Login failed.");
@@ -702,6 +702,7 @@ function LoginModal({ onLogin, onGoogleLogin, onClose }) {
             </div>
             {mode === "register" && <div className="field"><label>Name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Your full name" /></div>}
             <div className="field"><label>Email</label><input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" /></div>
+            {mode === "register" && <div className="field"><label>Phone Number</label><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+1234567890" /></div>}
             <div className="field"><label>Password</label><input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Password" /></div>
             <button className="btn-primary" style={{ width: "100%" }} onClick={submit} disabled={loading || gLoading}>{loading ? "…" : mode === "register" ? "Create Account" : "Login"}</button>
             <div className="divider">or</div>
@@ -718,6 +719,87 @@ function LoginModal({ onLogin, onGoogleLogin, onClose }) {
           </>
         )}
         {err && <div style={{ background: "rgba(229,57,53,.12)", border: "1px solid rgba(229,57,53,.35)", borderRadius: 12, padding: "10px 14px", fontSize: ".86rem", color: "#fca5a5", marginTop: 14 }}>{err}</div>}
+      </div>
+    </div>
+  );
+}
+
+// ── Verification Modal ────────────────────────────────────────────────────────
+function VerificationModal({ user, onVerified, onClose, showToast }) {
+  const [emailOtp, setEmailOtp] = useState("");
+  const [phoneOtp, setPhoneOtp] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+
+  const handleVerify = async (type, otp) => {
+    if (!otp) return showToast(`Please enter the ${type} OTP.`);
+    setLoading(true);
+    try {
+      const res = await api.verifyOtp({ type, otp });
+      if (res.user) {
+        showToast(res.message);
+        onVerified(res.user);
+      }
+    } catch (e) {
+      showToast(e.message || `Failed to verify ${type}.`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async (type) => {
+    setResending(true);
+    try {
+      const res = await api.sendVerification({ type });
+      showToast(res.message);
+    } catch (e) {
+      showToast(e.message || `Failed to resend ${type} code.`);
+    } finally {
+      setResending(false);
+    }
+  };
+
+  return (
+    <div className="login-page">
+      <div className="login-card login-card--wide">
+        <button className="login-close" onClick={onClose}>✕</button>
+        <div className="login-hero" style={{ paddingBottom: 10 }}>
+          <div className="bn login-title">Verify Account</div>
+          <p className="login-copy">Please verify your contact details to continue.</p>
+        </div>
+        
+        {!user?.isEmailVerified && (
+          <div style={{ marginBottom: 20, padding: 16, background: "rgba(255,255,255,0.02)", borderRadius: 8 }}>
+            <div className="field">
+              <label>Email Verification ({user?.email})</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input value={emailOtp} onChange={e => setEmailOtp(e.target.value)} placeholder="6-digit code" style={{ flex: 1 }} />
+                <button className="btn-primary" onClick={() => handleVerify("email", emailOtp)} disabled={loading}>Verify</button>
+              </div>
+            </div>
+            <button className="btn-ghost" style={{ fontSize: "0.8rem", padding: "4px 8px" }} onClick={() => handleResend("email")} disabled={resending}>Resend Email Code</button>
+          </div>
+        )}
+
+        {!user?.isPhoneVerified && user?.phone && (
+          <div style={{ marginBottom: 20, padding: 16, background: "rgba(255,255,255,0.02)", borderRadius: 8 }}>
+            <div className="field">
+              <label>Phone Verification ({user?.phone})</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input value={phoneOtp} onChange={e => setPhoneOtp(e.target.value)} placeholder="6-digit code" style={{ flex: 1 }} />
+                <button className="btn-primary" onClick={() => handleVerify("phone", phoneOtp)} disabled={loading}>Verify</button>
+              </div>
+            </div>
+            <button className="btn-ghost" style={{ fontSize: "0.8rem", padding: "4px 8px" }} onClick={() => handleResend("phone")} disabled={resending}>Resend SMS Code</button>
+          </div>
+        )}
+
+        {(user?.isEmailVerified && (user?.isPhoneVerified || !user?.phone)) && (
+          <div style={{ textAlign: "center", padding: 20 }}>
+            <h3 style={{ color: "#4ade80", marginBottom: 10 }}>All set!</h3>
+            <button className="btn-primary" onClick={() => onVerified(user)}>Continue to Dashboard</button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1966,6 +2048,8 @@ export default function App() {
   const [selectedPlan, setSelectedPlan] = useState(null); // { plan, service }
   const [showInquiry, setShowInquiry] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
+  const [showVerification, setShowVerification] = useState(false);
+  const [verificationUser, setVerificationUser] = useState(null);
   const [showSearch, setShowSearch] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [toast, setToast] = useState({ show: false, msg: "" });
@@ -2109,11 +2193,22 @@ export default function App() {
       setShowAuth(false);
       setPage("team");
     } else {
-      const data = await api.loginLearner({ name: payload.name, email: payload.email, password: payload.password, mode: payload.mode });
+      const data = await api.loginLearner({ name: payload.name, email: payload.email, phone: payload.phone, password: payload.password, mode: payload.mode });
       setToken(data.accessToken || data.token);
-      setSession(data.user);
-      setShowAuth(false);
-      showToast(`Welcome${payload.mode === "register" ? " to Assets Weber" : " back"}, ${data.user.name}!`);
+      
+      const user = data.user;
+      if (!user.isEmailVerified || (!user.isPhoneVerified && user.phone)) {
+        setVerificationUser(user);
+        setShowAuth(false);
+        setShowVerification(true);
+        // Automatically send OTPs
+        if (!user.isEmailVerified) api.sendVerification({ type: 'email' }).catch(console.error);
+        if (!user.isPhoneVerified && user.phone) api.sendVerification({ type: 'phone' }).catch(console.error);
+      } else {
+        setSession(user);
+        setShowAuth(false);
+        showToast(`Welcome${payload.mode === "register" ? " to Assets Weber" : " back"}, ${user.name}!`);
+      }
     }
   };
 
@@ -2209,7 +2304,7 @@ export default function App() {
       <FuturisticCursor />
       <FuturisticBackground />
 
-      <div className={`site-shell ${showAuth ? "site-shell--blurred" : ""}`}>
+      <div className={`site-shell ${showAuth || showVerification ? "site-shell--blurred" : ""}`}>
         <Toast msg={toast.msg} show={toast.show} />
 
         {/* Floating Glass 2045 HUD Navbar */}
@@ -2370,7 +2465,21 @@ export default function App() {
       {showSearch && <GlobalSearch onClose={() => setShowSearch(false)} onNavigate={requestPage} />}
       {showInquiry && <PackageProjectModal plan={selectedPlan?.plan || null} service={selectedPlan?.service || selectedService || ""} onClose={() => { setShowInquiry(false); setSelectedPlan(null); }} settings={settings} showToast={showToast} session={session} />}
       {showAuth && <LoginModal onLogin={onLogin} onGoogleLogin={onGoogleLogin} onClose={() => setShowAuth(false)} />}
-    </>
+      {showVerification && (
+        <VerificationModal 
+          user={verificationUser} 
+          onVerified={(u) => {
+            setVerificationUser(u);
+            if (u.isEmailVerified && (u.isPhoneVerified || !u.phone)) {
+              setSession(u);
+              setShowVerification(false);
+              showToast(`Welcome to Assets Weber, ${u.name}!`);
+            }
+          }}
+          onClose={() => setShowVerification(false)}
+          showToast={showToast}
+        />
+      )}    </>
     </GlobalErrorBoundary>
   );
 }

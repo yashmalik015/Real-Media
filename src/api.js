@@ -82,6 +82,8 @@ export const api = {
   loginLearner: (payload) => request('/api/auth/learner', { method: 'POST', body: payload }),
   loginGoogleLearner: (payload) => request('/api/auth/google', { method: 'POST', body: typeof payload === 'string' ? { idToken: payload } : payload }),
   loginTeamV2: (payload) => request('/api/auth/team/login', { method: 'POST', body: payload }),
+  sendVerification: (payload) => request('/api/auth/send-verification', { method: 'POST', body: payload }),
+  verifyOtp: (payload) => request('/api/auth/verify-otp', { method: 'POST', body: payload }),
   logout: () => request('/api/auth/logout', { method: 'POST' }),
   me: () => request('/api/me'),
   getPortfolio: () => request('/api/portfolio/public'),
