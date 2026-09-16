@@ -358,12 +358,14 @@ const SERVICE_FAQS = {
 };
 
 // ── Package Project Modal (replaces InquiryModal) ──────────────────────────────
-function PackageProjectModal({ plan, service, onClose, settings, showToast, session }) {
+function PackageProjectModal({ plan, service, onClose, settings, showToast, session, skills = [] }) {
+  const isTeam = session?.role === "team";
   const [form, setForm] = useState({
-    name: session?.name || "",
-    email: session?.email || "",
-    phone: session?.phone || "",
+    name: isTeam ? "" : (session?.name || ""),
+    email: isTeam ? "" : (session?.email || ""),
+    phone: isTeam ? "" : (session?.phone || ""),
     company: "",
+    skill: service || "",
     driveLink: "",
     description: "",
   });
@@ -432,8 +434,8 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
 
       // Step 5: Create project in portal
       const fd = new FormData();
-      fd.append('service', service || 'General');
-      fd.append('title', `${service} — ${plan?.name || 'Package'} — ${form.name}`);
+      fd.append('service', form.skill || service || 'General');
+      fd.append('title', `${form.skill || service} — ${plan?.name || 'Package'} — ${form.name}`);
       fd.append('description', `${form.description || 'Package project'}${form.driveLink ? `\n\nRaw files: ${form.driveLink}` : ''}`);
       fd.append('servicePlan', plan?.name || 'Custom');
       fd.append('totalAmount', rawPrice || 0);
@@ -463,7 +465,7 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
     try {
       await api.submitInquiry({
         name: form.name, email: form.email, phone: form.phone,
-        company: form.company, service, description: form.description,
+        company: form.company, service: form.skill || service, description: form.description,
         budget: 'Custom Quote', driveLink: form.driveLink,
       });
       setDone(true);
@@ -566,6 +568,21 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
           <div className="field"><label>Phone *</label><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+91 98765 43210" /></div>
           <div className="field"><label>Company</label><input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="Company / Brand name" /></div>
         </div>
+
+        {isCustom && (
+          <div className="field" style={{ marginBottom: 16 }}>
+            <label>Required Skill / Service</label>
+            <select value={form.skill} onChange={(e) => setForm({ ...form, skill: e.target.value })} style={{ width: '100%', padding: '12px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.95rem' }}>
+              <option value="" disabled>Select a skill or service...</option>
+              {['Web Development', 'Video Editing', 'Digital Marketing', 'Graphic Design', 'SEO', 'App Development', 'Other'].map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+              {skills.filter(s => !['Web Development', 'Video Editing', 'Digital Marketing', 'Graphic Design', 'SEO', 'App Development', 'Other'].includes(s.title)).map(s => (
+                <option key={s.title} value={s.title}>{s.title}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Drive link */}
         <div className="field" style={{ marginBottom: 16 }}>
@@ -2463,7 +2480,7 @@ export default function App() {
 
       {/* Modals */}
       {showSearch && <GlobalSearch onClose={() => setShowSearch(false)} onNavigate={requestPage} />}
-      {showInquiry && <PackageProjectModal plan={selectedPlan?.plan || null} service={selectedPlan?.service || selectedService || ""} onClose={() => { setShowInquiry(false); setSelectedPlan(null); }} settings={settings} showToast={showToast} session={session} />}
+      {showInquiry && <PackageProjectModal plan={selectedPlan?.plan || null} service={selectedPlan?.service || selectedService || ""} onClose={() => { setShowInquiry(false); setSelectedPlan(null); }} settings={settings} showToast={showToast} session={session} skills={skills} />}
       {showAuth && <LoginModal onLogin={onLogin} onGoogleLogin={onGoogleLogin} onClose={() => setShowAuth(false)} />}
       {showVerification && (
         <VerificationModal 
