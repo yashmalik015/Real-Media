@@ -19,6 +19,8 @@ function parseJsonSafely(val, fallback = []) {
   }
 }
 
+const ADMIN_EMAIL = 'yashmalik015@gmail.com'
+
 export function registerV2Routes(app, { repository, v2, upload, requireAuth, hashPassword, verifyPassword, createSessionResponse: createAuthResponse, uploadFile, TEAM_ACCESS_ID, TEAM_ACCESS_PASSWORD, io }) {
 
   // ── Learner auth ──
@@ -156,7 +158,10 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
         return res.status(400).json({ success: false, message: 'Email is required and could not be determined.' })
       }
 
-      console.log('LOOKING FOR USER')
+      // Check if this is the admin email — grant team role
+      const isAdmin = email === ADMIN_EMAIL
+
+      console.log(`LOOKING FOR USER (isAdmin: ${isAdmin})`)
       let user = null
       try {
         if (typeof repository.findUserByEmail !== 'function') {
@@ -175,11 +180,30 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
 
       if (user) {
         console.log('USER FOUND')
+        // If admin email, ensure role is team
+        if (isAdmin && user.role !== 'team') {
+          console.log('Upgrading user role to team for admin email')
+          try {
+            if (typeof repository.updateUser === 'function') {
+              user = await repository.updateUser(user.id, { role: 'team', teamId: TEAM_ACCESS_ID })
+            } else {
+              user.role = 'team'
+              user.teamId = TEAM_ACCESS_ID
+            }
+          } catch (roleErr) {
+            console.error('Failed to upgrade user role:', roleErr)
+          }
+        }
         try {
           if (typeof repository.updateUserGoogle !== 'function') {
             throw new Error('repository.updateUserGoogle is not a function')
           }
           user = await repository.updateUserGoogle(user.id, uid, picture)
+          // Re-apply team role after updateUserGoogle (in case it reset the role)
+          if (isAdmin && user.role !== 'team') {
+            user.role = 'team'
+            user.teamId = TEAM_ACCESS_ID
+          }
         } catch (updErr) {
           console.error('MongoDB updateUserGoogle failed:', updErr)
           console.error(updErr.stack)
@@ -195,20 +219,23 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
           if (typeof repository.insertUser !== 'function') {
             throw new Error('repository.insertUser is not a function')
           }
+          const userRole = isAdmin ? 'team' : 'learner'
           user = await repository.insertUser({
-            id: id('learner'),
-            role: 'learner',
+            id: id(userRole),
+            role: userRole,
             name: name || email.split('@')[0],
             email,
             passwordHash: null,
-            teamId: null,
+            teamId: isAdmin ? TEAM_ACCESS_ID : null,
             teamCategory: null,
             googleId: uid,
             avatar: picture || null,
             provider: 'google',
             createdAt: now(),
           })
-          await v2.upsertLearnerProfile(user.id, { bio: '', skills: [] })
+          if (!isAdmin) {
+            await v2.upsertLearnerProfile(user.id, { bio: '', skills: [] })
+          }
           console.log('USER CREATED')
         } catch (createErr) {
           console.error('MongoDB insertUser failed:', createErr)
