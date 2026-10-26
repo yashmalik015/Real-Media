@@ -116,9 +116,10 @@ const authRateLimiter = rateLimit({
   message: { message: 'Too many login attempts from this IP, please try again after 15 minutes.' }
 })
 app.use('/api/auth', authRateLimiter)
-// Progressive HTTP 206 Partial Content streaming for uploaded video playback
-app.get('/uploads/*', (req, res, next) => {
-  const relPath = req.params[0]
+// Progressive HTTP 206 Partial Content streaming for uploaded video playback (Express 5 compatible)
+app.use('/uploads', (req, res, next) => {
+  if (req.method !== 'GET') return next()
+  const relPath = req.path ? decodeURIComponent(req.path.replace(/^\//, '')) : ''
   if (!relPath) return next()
   const filePath = path.join(uploadsDirectory(), relPath)
   if (!fs.existsSync(filePath)) return next()
