@@ -43,6 +43,7 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
   const [lessonForm, setLessonForm] = useState(emptyLessonForm);
   const [lessonVideo, setLessonVideo] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [videoSourceType, setVideoSourceType] = useState('link');
   const [editingLesson, setEditingLesson] = useState(null);
   const [expandedModules, setExpandedModules] = useState({});
 
@@ -147,13 +148,27 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
       const lessonId = `les_${Date.now()}`;
       let videoUrl = lessonForm.videoUrl?.trim() || '';
       const driveLink = lessonForm.driveLink?.trim() || '';
+      const isExternalLink = Boolean(
+        driveLink && (
+          driveLink.startsWith('http://') ||
+          driveLink.startsWith('https://') ||
+          driveLink.includes('youtu') ||
+          driveLink.includes('drive.google')
+        )
+      );
 
-      // If YouTube or Google Drive link is provided and no videoUrl is set, use it as the playable videoUrl
-      if (!videoUrl && driveLink) {
-        videoUrl = driveLink;
-      }
+      // Priority 1: If YouTube or Google Drive link is provided, use it directly!
+      // This completely skips uploading any heavy file and prevents 413 errors.
+      if (isExternalLink || videoSourceType === 'link') {
+        videoUrl = driveLink || videoUrl;
+      } else if (lessonVideo) {
+        // Priority 2: Direct file upload
+        if (lessonVideo.size > 100 * 1024 * 1024) {
+          throw new Error(
+            `File is ${(lessonVideo.size / (1024 * 1024)).toFixed(1)} MB! Direct web upload is limited to 100MB. Please use the YouTube / Google Drive link option.`
+          );
+        }
 
-      if (lessonVideo) {
         let uploadedUrl = null;
         // 1. Attempt direct upload to Cloudinary (bypasses Hostinger reverse proxy 413 limit completely)
         try {
@@ -180,6 +195,12 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
         if (uploadedUrl) {
           videoUrl = uploadedUrl;
         }
+      }
+
+      if (!videoUrl) {
+        showToast('Please provide a YouTube / Drive link or upload an MP4 video.');
+        setLoading(false);
+        return;
       }
 
       const newLesson = {
@@ -221,12 +242,24 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
     try {
       let videoUrl = lessonForm.videoUrl?.trim() || '';
       const driveLink = lessonForm.driveLink?.trim() || '';
+      const isExternalLink = Boolean(
+        driveLink && (
+          driveLink.startsWith('http://') ||
+          driveLink.startsWith('https://') ||
+          driveLink.includes('youtu') ||
+          driveLink.includes('drive.google')
+        )
+      );
 
-      if (!videoUrl && driveLink) {
-        videoUrl = driveLink;
-      }
+      if (isExternalLink || videoSourceType === 'link') {
+        videoUrl = driveLink || videoUrl;
+      } else if (lessonVideo) {
+        if (lessonVideo.size > 100 * 1024 * 1024) {
+          throw new Error(
+            `File is ${(lessonVideo.size / (1024 * 1024)).toFixed(1)} MB! Direct web upload is limited to 100MB. Please use the YouTube / Google Drive link option.`
+          );
+        }
 
-      if (lessonVideo) {
         let uploadedUrl = null;
         // 1. Attempt direct upload to Cloudinary (bypasses Hostinger reverse proxy 413 limit completely)
         try {
@@ -307,15 +340,19 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
   const startEditLesson = (modId, lesson) => {
     setEditingLesson({ modId, lessonId: lesson.id });
     setActiveModuleId(modId);
+    const link = lesson.driveLink || lesson.videoUrl || '';
+    const isExt = link.includes('youtube') || link.includes('youtu.be') || link.includes('drive.google') || link.startsWith('http');
+    setVideoSourceType(isExt ? 'link' : (lesson.videoUrl && !lesson.videoUrl.startsWith('http') ? 'file' : 'link'));
     setLessonForm({
       title: lesson.title || '',
       description: lesson.description || '',
       videoUrl: lesson.videoUrl || '',
-      driveLink: lesson.driveLink || '',
+      driveLink: lesson.driveLink || (isExt ? lesson.videoUrl : ''),
       resources: lesson.resources || '',
       notes: lesson.notes || ''
     });
     setLessonVideo(null);
+    setUploadProgress(0);
     setExpandedModules((prev) => ({ ...prev, [modId]: true }));
   };
 
@@ -323,6 +360,7 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
     setLessonForm(emptyLessonForm);
     setLessonVideo(null);
     setUploadProgress(0);
+    setVideoSourceType('link');
     setEditingLesson(null);
     setActiveModuleId(null);
   };
@@ -410,32 +448,99 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
               style={{ width: '100%', padding: '10px', borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', marginTop: 4, resize: 'vertical' }}
             />
           </div>
-          <div style={{ gridColumn: 'span 2', fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', padding: '8px 12px', borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            💡 <strong>Recommendation:</strong> For 1080p/4K lessons, simply paste a <strong>YouTube or Google Drive link</strong> (zero file upload wait, zero server size limits). You can also upload an MP4 file directly below.
-          </div>
-          <div>
-            <label style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>YOUTUBE / DRIVE LINK (RECOMMENDED)</label>
-            <input
-              type="text"
-              placeholder="https://youtube.com/watch?v=..."
-              value={lessonForm.driveLink}
-              onChange={(e) => setLessonForm({ ...lessonForm, driveLink: e.target.value })}
-              style={{ width: '100%', padding: '10px', borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', marginTop: 4 }}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>OR UPLOAD VIDEO FILE (MP4, WEBM)</label>
-            <input type="file" accept="video/*" onChange={(e) => setLessonVideo(e.target.files?.[0] || null)} style={{ width: '100%', marginTop: 8, color: '#fff', fontSize: '0.8rem' }} />
-            {lessonVideo && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                <span style={{ fontSize: '0.72rem', color: '#34c759' }}>{lessonVideo.name} ({(lessonVideo.size / (1024 * 1024)).toFixed(1)} MB)</span>
-                <button
-                  type="button"
-                  onClick={() => setLessonVideo(null)}
-                  style={{ background: 'none', border: 'none', color: '#ff453a', fontSize: '0.72rem', cursor: 'pointer', padding: '0 4px', textDecoration: 'underline' }}
-                >
-                  Remove file
-                </button>
+          <div style={{ gridColumn: 'span 2' }}>
+            <label style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace', marginBottom: 6, display: 'block' }}>
+              VIDEO SOURCE SELECTION
+            </label>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <button
+                type="button"
+                onClick={() => { setVideoSourceType('link'); setLessonVideo(null); }}
+                style={{
+                  flex: 1,
+                  padding: '9px 12px',
+                  borderRadius: 8,
+                  border: videoSourceType === 'link' ? '1px solid #ff2d55' : '1px solid rgba(255,255,255,0.1)',
+                  backgroundColor: videoSourceType === 'link' ? 'rgba(255,45,85,0.18)' : 'rgba(255,255,255,0.03)',
+                  color: videoSourceType === 'link' ? '#ff2d55' : 'rgba(255,255,255,0.7)',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span>🔗 YouTube / Google Drive Link (Recommended)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setVideoSourceType('file')}
+                style={{
+                  flex: 1,
+                  padding: '9px 12px',
+                  borderRadius: 8,
+                  border: videoSourceType === 'file' ? '1px solid #ff2d55' : '1px solid rgba(255,255,255,0.1)',
+                  backgroundColor: videoSourceType === 'file' ? 'rgba(255,45,85,0.18)' : 'rgba(255,255,255,0.03)',
+                  color: videoSourceType === 'file' ? '#ff2d55' : 'rgba(255,255,255,0.7)',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span>📁 Upload MP4 File (Max 100MB)</span>
+              </button>
+            </div>
+
+            {videoSourceType === 'link' ? (
+              <div>
+                <input
+                  type="text"
+                  placeholder="https://youtu.be/... or https://youtube.com/watch?v=... or Google Drive preview link"
+                  value={lessonForm.driveLink}
+                  onChange={(e) => setLessonForm({ ...lessonForm, driveLink: e.target.value })}
+                  style={{ width: '100%', padding: '11px', borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.85rem' }}
+                />
+                <div style={{ fontSize: '0.72rem', color: '#34c759', marginTop: 6 }}>
+                  ✓ Instant 1080p/4K playback, 0MB server upload, works with any video length.
+                </div>
+              </div>
+            ) : (
+              <div style={{ padding: 12, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={(e) => setLessonVideo(e.target.files?.[0] || null)}
+                  style={{ width: '100%', color: '#fff', fontSize: '0.8rem' }}
+                />
+                {lessonVideo && (
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: '0.75rem', color: lessonVideo.size > 100 * 1024 * 1024 ? '#ff453a' : '#34c759', fontWeight: 600 }}>
+                        {lessonVideo.name} ({(lessonVideo.size / (1024 * 1024)).toFixed(1)} MB)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setLessonVideo(null)}
+                        style={{ background: 'none', border: 'none', color: '#ff453a', fontSize: '0.72rem', cursor: 'pointer', textDecoration: 'underline' }}
+                      >
+                        Remove file
+                      </button>
+                    </div>
+                    {lessonVideo.size > 100 * 1024 * 1024 && (
+                      <div style={{ fontSize: '0.75rem', color: '#ff453a', marginTop: 6, padding: '8px 12px', borderRadius: 6, backgroundColor: 'rgba(255,69,58,0.15)', border: '1px solid rgba(255,69,58,0.3)' }}>
+                        ⚠️ <strong>File is {(lessonVideo.size / (1024 * 1024)).toFixed(1)} MB!</strong> Direct web uploads are limited to 100MB (larger files trigger Error 413). Please switch to the <strong>YouTube / Google Drive Link</strong> tab above!
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

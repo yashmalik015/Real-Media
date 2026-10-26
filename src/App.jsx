@@ -1665,9 +1665,13 @@ function LegacyTeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
     if (!lessonForm.title.trim() || !selectedCourse) return;
     setLoad("lesson", true);
     try {
-      let videoUrl = lessonForm.videoUrl;
+      let videoUrl = lessonForm.videoUrl?.trim() || '';
+      const driveLink = lessonForm.driveLink?.trim() || '';
+      if (!videoUrl && driveLink) {
+        videoUrl = driveLink;
+      }
       const lessonId = uid("les");
-      if (videoFile) {
+      if (videoFile && !driveLink) {
         const fd = new FormData(); fd.append("video", videoFile);
         const { url } = await api.uploadLessonVideo(selectedCourse.id, lessonId, fd);
         videoUrl = url;
