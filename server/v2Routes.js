@@ -952,7 +952,7 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
 
     const finalMediaUrl = uploaded?.url || videoUp?.url || thumbnailUp?.url || ''
     const finalVideoUrl = videoUp?.url || (uploaded?.mediaType === 'video' ? uploaded?.url : '')
-    const finalThumbnail = thumbnailUp?.url || (uploaded?.mediaType === 'image' ? uploaded?.url : '')
+    const finalThumbnail = thumbnailUp?.url || (uploaded?.mediaType === 'image' ? uploaded?.url : '') || uploaded?.thumbnailUrl || videoUp?.thumbnailUrl || ''
     const finalMediaType = uploaded?.mediaType || (videoUp ? 'video' : (mediaFile?.mimetype?.startsWith('video/') ? 'video' : 'image'))
 
     const portfolioItem = await repository.addPortfolioFull({

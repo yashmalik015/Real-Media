@@ -11,7 +11,8 @@ import {
   Settings,
   AlertTriangle,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  Share2
 } from 'lucide-react';
 import { mediaUrl, optimizedMediaUrl } from '../../api.js';
 
@@ -60,6 +61,26 @@ export function FuturisticVideoPlayer({
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [quality, setQuality] = useState('1080p'); // Default to full 1080p crisp fidelity
   const [showQualityMenu, setShowQualityMenu] = useState(false);
+  const [copiedToast, setCopiedToast] = useState(false);
+
+  // Share video action
+  const handleShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: title || 'Assets Weber Video Stream',
+          url,
+        });
+        return;
+      } catch (_) {}
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedToast(true);
+      setTimeout(() => setCopiedToast(false), 2200);
+    } catch (_) {}
+  };
 
   // Normalize source URL
   const rawUrl = (src || '').trim();
@@ -937,6 +958,23 @@ export function FuturisticVideoPlayer({
               )}
             </div>
 
+            {/* Share Button */}
+            <button
+              onClick={handleShare}
+              title="Share Video (Copy Link)"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#ffffff',
+                cursor: 'pointer',
+                display: 'grid',
+                placeItems: 'center',
+                padding: 2
+              }}
+            >
+              <Share2 size={16} />
+            </button>
+
             {/* Fullscreen Button */}
             <button
               onClick={toggleFullscreen}
@@ -956,6 +994,34 @@ export function FuturisticVideoPlayer({
           </div>
         </div>
       </div>
+
+      {/* Cyberpunk Share HUD Toast */}
+      {copiedToast && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 20,
+            right: 20,
+            backgroundColor: 'rgba(12, 12, 18, 0.95)',
+            border: '1px solid #ff2d55',
+            boxShadow: '0 0 25px rgba(255, 45, 85, 0.5)',
+            color: '#ffffff',
+            padding: '10px 18px',
+            borderRadius: 10,
+            fontFamily: 'monospace',
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            zIndex: 60,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            backdropFilter: 'blur(16px)'
+          }}
+        >
+          <Share2 size={14} color="#ff2d55" />
+          <span>LINK COPIED TO CLIPBOARD</span>
+        </div>
+      )}
 
       {/* Cyberpunk CSS Keyframes */}
       <style>{`

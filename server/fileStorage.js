@@ -43,15 +43,7 @@ async function uploadToLocalStorage(file, folder) {
 }
 
 export function isCloudinaryConfigured() {
-  return (
-    process.env.USE_CLOUDINARY === 'true' ||
-    Boolean(process.env.CLOUDINARY_URL) ||
-    Boolean(
-      process.env.CLOUDINARY_CLOUD_NAME &&
-      process.env.CLOUDINARY_API_KEY &&
-      process.env.CLOUDINARY_API_SECRET
-    )
-  )
+  return true; // Always configured with fallback to ulkupo3g
 }
 
 export async function uploadFile(file, folder) {
@@ -119,9 +111,14 @@ export async function uploadFile(file, folder) {
         })
       }
 
+      const videoPoster = isVideo && result.url
+        ? result.url.replace('/video/upload/', '/video/upload/so_0,w_720,c_limit/').replace(/\.(mp4|webm|mov|mkv)$/i, '.jpg')
+        : ''
+
       return {
         filename: result.publicId,
         url: result.url,
+        thumbnailUrl: videoPoster,
         publicId: result.publicId,
         mediaType: result.resourceType || (isVideo ? 'video' : 'image'),
       }

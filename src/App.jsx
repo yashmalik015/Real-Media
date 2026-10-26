@@ -1534,6 +1534,7 @@ function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, s
   const [commentText, setCommentText] = useState("");
   const [loadingComments, setLoadingComments] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [disliked, setDisliked] = useState(false);
   const [progress, setProgress] = useState(null);
   const lessons = course.modules?.flatMap(m => m.lessons.map(l => ({ ...l, moduleTitle: m.title }))) || [];
   const currentIndex = lessons.findIndex(l => l.id === lesson.id);
@@ -1573,7 +1574,48 @@ function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, s
     try {
       const { liked: newLiked } = await api.likeLesson(lesson.id);
       setLiked(newLiked);
+      if (newLiked && disliked) setDisliked(false);
+      showToast(newLiked ? "Liked video!" : "Removed like.");
     } catch { /* silent */ }
+  };
+
+  const toggleDislike = () => {
+    if (!user) { showToast("Please login to react."); return; }
+    setDisliked(prev => {
+      const next = !prev;
+      if (next && liked) setLiked(false);
+      showToast(next ? "Disliked video." : "Removed dislike.");
+      return next;
+    });
+  };
+
+  const shareVideo = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: lesson.title,
+          text: `Watch "${lesson.title}" on Assets Weber Academy!`,
+          url,
+        });
+        return;
+      } catch (_) {}
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast("Video link copied to clipboard!");
+    } catch (_) {
+      showToast("Failed to copy link.");
+    }
+  };
+
+  const scrollToComments = () => {
+    const el = document.getElementById("lesson-comments-section");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+      const input = el.querySelector("input");
+      if (input) input.focus();
+    }
   };
 
   const shellStyle = {
@@ -1609,8 +1651,19 @@ function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, s
             <div style={{ marginTop: 20, marginBottom: 16 }}>
               <div style={{ color: "var(--muted)", fontSize: ".72rem", letterSpacing: ".16em", textTransform: "uppercase", marginBottom: 8 }}>{course.title} · {lesson.moduleTitle}</div>
               <h2 style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "2.4rem", letterSpacing: ".04em", marginBottom: 12 }}>{lesson.title}</h2>
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                <button className={`est-opt ${liked ? "sel" : ""}`} onClick={toggleLike}>👍 {liked ? "Liked" : "Like"}</button>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                <button className={`est-opt ${liked ? "sel" : ""}`} onClick={toggleLike} title="Like this video">
+                  👍 {liked ? "Liked" : "Like"}
+                </button>
+                <button className={`est-opt ${disliked ? "sel" : ""}`} onClick={toggleDislike} title="Dislike this video">
+                  👎 {disliked ? "Disliked" : "Dislike"}
+                </button>
+                <button className="est-opt" onClick={shareVideo} title="Share video link">
+                  ↗ Share
+                </button>
+                <button className="est-opt" onClick={scrollToComments} title="Jump to discussion">
+                  💬 Comment ({comments.length})
+                </button>
                 {lesson.driveLink && <a className="btn-ghost" href={lesson.driveLink} target="_blank" rel="noreferrer" style={{ fontSize: ".88rem", padding: "8px 16px" }}>📁 Google Drive</a>}
                 {prev && <button className="btn-ghost" style={{ fontSize: ".88rem" }} onClick={() => onSelectLesson(course, prev)}>← Previous</button>}
                 {next && <button className="btn-primary" style={{ fontSize: ".88rem" }} onClick={() => onSelectLesson(course, next)}>Next Lesson →</button>}
@@ -1638,7 +1691,7 @@ function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, s
             )}
 
             {/* Comments */}
-            <div style={{ marginTop: 24 }}>
+            <div id="lesson-comments-section" style={{ marginTop: 24 }}>
               <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.6rem", letterSpacing: ".06em", marginBottom: 16 }}>Comments · {comments.length}</div>
               {user && (
                 <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>

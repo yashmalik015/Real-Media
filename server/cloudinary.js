@@ -1,20 +1,20 @@
 import { v2 as cloudinary } from 'cloudinary'
 import streamifier from 'streamifier'
 
+const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || 'ulkupo3g'
+const API_KEY = process.env.CLOUDINARY_API_KEY || '399856496556775'
+const API_SECRET = process.env.CLOUDINARY_API_SECRET || '4TkhsULlh0B-BF_q8DcyzOOBECQ'
+
 function initCloudinary() {
   if (process.env.CLOUDINARY_URL) {
     cloudinary.config({
       cloudinary_url: process.env.CLOUDINARY_URL,
     })
-  } else if (
-    process.env.CLOUDINARY_CLOUD_NAME &&
-    process.env.CLOUDINARY_API_KEY &&
-    process.env.CLOUDINARY_API_SECRET
-  ) {
+  } else {
     cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
+      cloud_name: CLOUD_NAME,
+      api_key: API_KEY,
+      api_secret: API_SECRET,
       secure: true,
     })
   }
@@ -45,14 +45,8 @@ export function uploadToCloudinaryStream(buffer, { folder = 'assetsweber/uploads
           console.error('[Cloudinary Upload Error]:', error)
           return reject(error)
         }
-        let url = result.secure_url
-        if (result.resource_type === 'video' && url.includes('/upload/')) {
-          url = url.replace('/upload/', '/upload/f_auto,q_auto,w_1280,c_limit/')
-        } else if (url.includes('/upload/')) {
-          url = url.replace('/upload/', '/upload/f_auto,q_auto,w_1920,c_limit/')
-        }
         resolve({
-          url,
+          url: result.secure_url || result.url,
           publicId: result.public_id,
           resourceType: result.resource_type,
         })
@@ -88,13 +82,8 @@ export async function uploadToCloudinaryLarge(filePath, { folder = 'assetsweber/
     )
   })
 
-  let url = result.secure_url || result.url
-  if (result.resource_type === 'video' && url.includes('/upload/')) {
-    url = url.replace('/upload/', '/upload/f_auto,q_auto,w_1280,c_limit/')
-  }
-
   return {
-    url,
+    url: result.secure_url || result.url,
     publicId: result.public_id,
     resourceType: result.resource_type,
   }
