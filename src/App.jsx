@@ -2287,17 +2287,30 @@ export default function App() {
   // Restore session from token
   useEffect(() => {
     const restoreSession = async () => {
+      // Clear legacy localStorage token so closed-browser visits start logged out
+      try { localStorage.removeItem('realmedia_token'); } catch (e) {}
       const token = getToken();
-      if (!token) { setSessionLoading(false); return; }
+      if (!token) {
+        setSession(null);
+        setSessionLoading(false);
+        return;
+      }
       try {
         const data = await api.me();
         if (data?.user) {
-          setSession(data.user);
-          if (data.user.role === "team") setPage("team");
+          const user = { ...data.user };
+          if ((user.email || '').toLowerCase().trim() === 'yashmalik015@gmail.com') {
+            user.role = 'team';
+          }
+          setSession(user);
+          if (user.role === "team") setPage("team");
+        } else {
+          setToken(null);
+          setSession(null);
         }
-        else setToken(null);
       } catch {
         setToken(null);
+        setSession(null);
       } finally {
         setSessionLoading(false);
       }
@@ -2455,13 +2468,18 @@ export default function App() {
 
   const switchToClientMode = async () => {
     try {
+      if (session?.role === 'team' || (session?.email || '').toLowerCase().trim() === 'yashmalik015@gmail.com') {
+        setPage("client-portal");
+        showToast("Opened Client Portal (Admin View).");
+        return;
+      }
       const res = await api.switchMode('client');
       if (res?.user) setSession(res.user);
       if (res?.accessToken) setToken(res.accessToken);
       setPage("client-portal");
       showToast("Switched to Client Portal! Browse skills and track orders.");
     } catch (e) {
-      if (session) setSession({ ...session, role: 'client' });
+      if (session && session.role !== 'team') setSession({ ...session, role: 'client' });
       setPage("client-portal");
       showToast("Switched to Client Portal.");
     }
@@ -2469,13 +2487,18 @@ export default function App() {
 
   const switchToStudentMode = async () => {
     try {
+      if (session?.role === 'team' || (session?.email || '').toLowerCase().trim() === 'yashmalik015@gmail.com') {
+        setPage("profile");
+        showToast("Opened Student Profile (Admin View).");
+        return;
+      }
       const res = await api.switchMode('learner');
       if (res?.user) setSession(res.user);
       if (res?.accessToken) setToken(res.accessToken);
       setPage("profile");
       showToast("Switched to Student Profile.");
     } catch (e) {
-      if (session) setSession({ ...session, role: 'learner' });
+      if (session && session.role !== 'team') setSession({ ...session, role: 'learner' });
       setPage("profile");
       showToast("Switched to Student Profile.");
     }

@@ -344,10 +344,22 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
   })
 
 
-  app.post('/api/auth/logout', requireAuth, async (req, res) => {
-    const token = req.headers.authorization?.replace(/^Bearer\s+/i, '')
-    if (token) await repository.deleteSession(token)
-    res.json({ ok: true })
+  app.post('/api/auth/logout', async (req, res) => {
+    try {
+      const token = req.headers.authorization?.replace(/^Bearer\s+/i, '')
+      if (token) {
+        const payload = verifyToken(token)
+        const userId = payload?.sub || payload?.id
+        if (userId) await repository.deleteAllRefreshTokensForUser(userId).catch(() => {})
+        await repository.deleteSession(token).catch(() => {})
+      }
+    } catch { /* silent */ }
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    })
+    res.json({ ok: true, success: true })
   })
 
   // ── Settings ──
@@ -1230,6 +1242,18 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
       const userId = req.user.sub || req.user.id
       let user = await repository.findUserById(userId)
       if (!user) return res.status(404).json({ success: false, message: 'User not found.' })
+
+      if (user.role === 'team' || (user.email && user.email.toLowerCase().trim() === 'yashmalik015@gmail.com')) {
+        // Master admin retains team role always
+        user.role = 'team'
+        const sessionRes = await createAuthResponse(user)
+        return res.json({
+          success: true,
+          user: sessionRes.user,
+          accessToken: sessionRes.accessToken,
+          token: sessionRes.accessToken,
+        })
+      }
 
       await repository.updateUserRole(userId, targetRole)
       user = await repository.findUserById(userId)

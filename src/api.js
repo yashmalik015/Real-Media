@@ -8,12 +8,25 @@ const API_BASE = import.meta.env.VITE_API_URL
 const TOKEN_KEY = 'realmedia_token'
 
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY)
+  try {
+    return sessionStorage.getItem(TOKEN_KEY)
+  } catch {
+    return null
+  }
 }
 
 export function setToken(token) {
-  if (token) localStorage.setItem(TOKEN_KEY, token)
-  else localStorage.removeItem(TOKEN_KEY)
+  try {
+    if (token) {
+      sessionStorage.setItem(TOKEN_KEY, token)
+    } else {
+      sessionStorage.removeItem(TOKEN_KEY)
+    }
+    // Also remove legacy persistent localStorage token to prevent lingering logins
+    localStorage.removeItem(TOKEN_KEY)
+  } catch {
+    // Ignore storage errors in restricted iframe/browser modes
+  }
 }
 
 async function request(path, options = {}) {
@@ -34,8 +47,8 @@ async function request(path, options = {}) {
     throw new Error('Cannot reach the server. Start the backend with: npm run dev:full')
   }
 
-  // Auto-refresh on 401 (access token expired or missing in memory)
-  if (res.status === 401 && !path.includes('/auth/refresh') && !path.includes('/auth/login') && !path.includes('/auth/team/login')) {
+  // Auto-refresh on 401 ONLY if the tab currently had an active session token
+  if (token && res.status === 401 && !path.includes('/auth/refresh') && !path.includes('/auth/login') && !path.includes('/auth/team/login')) {
     try {
       const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
         method: 'POST',

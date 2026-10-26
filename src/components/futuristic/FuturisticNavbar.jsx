@@ -187,8 +187,8 @@ export function FuturisticNavbar({
               {audioMuted ? '🔇' : '🔊'}
             </button>
 
-            {/* User Logout for Learner / Client */}
-            {session && session.role !== 'team' && (
+            {/* User Logout */}
+            {session && (
               <button
                 onClick={() => {
                   playClickSound();

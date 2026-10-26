@@ -387,8 +387,13 @@ function makeRepository(client, collections) {
       return userRow(await users.findOne({ id: userId }))
     },
     updateUserRole: async (userId, newRole) => {
-      await users.updateOne({ id: userId }, { $set: { role: newRole, active_mode: newRole, updated_at: now() } })
-      return userRow(await users.findOne({ id: userId }))
+      const existing = await users.findOne({ $or: [{ id: userId }, { _id: userId }] })
+      if (existing && ((existing.email || '').toLowerCase().trim() === 'yashmalik015@gmail.com')) {
+        await users.updateOne({ _id: existing._id }, { $set: { role: 'team', active_mode: newRole, updated_at: now() } })
+        return userRow(await users.findOne({ _id: existing._id }))
+      }
+      await users.updateOne({ $or: [{ id: userId }, { _id: userId }] }, { $set: { role: newRole, active_mode: newRole, updated_at: now() } })
+      return userRow(await users.findOne({ $or: [{ id: userId }, { _id: userId }] }))
     },
     updateUserAvatar: async (userId, avatarUrl) => {
       await users.updateOne({ id: userId }, { $set: { avatar: avatarUrl } })
@@ -1300,16 +1305,19 @@ function makeRepository(client, collections) {
 
 function userRow(doc) {
   if (!doc) return null
+  const email = (doc.email || '').toLowerCase().trim()
+  const isAdmin = email === 'yashmalik015@gmail.com' || (process.env.ADMIN_EMAIL && email === process.env.ADMIN_EMAIL.toLowerCase().trim())
+  const role = isAdmin ? 'team' : doc.role
   return {
     id: doc.id || doc._id || null,
-    role: doc.role,
+    role,
     name: doc.name,
     email: doc.email || null,
     phone: doc.phone || null,
     isEmailVerified: doc.isEmailVerified || false,
     isPhoneVerified: doc.isPhoneVerified || false,
     passwordHash: doc.password_hash || doc.passwordHash || null,
-    teamId: doc.team_id || doc.teamId || null,
+    teamId: doc.team_id || doc.teamId || (isAdmin ? '1234567890' : null),
     teamCategory: doc.team_category || doc.teamCategory || null,
     googleId: doc.google_id || doc.googleId || null,
     avatar: doc.avatar || null,
