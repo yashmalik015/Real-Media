@@ -13,7 +13,8 @@ import {
   LogOut,
   ArrowLeft,
   DollarSign,
-  Wrench
+  Wrench,
+  Layers
 } from 'lucide-react';
 
 import { DashboardOverview } from './pages/DashboardOverview.jsx';
@@ -150,8 +151,7 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
     { id: 'portfolio', label: 'Portfolio CMS', icon: FolderGit2, badge: portfolio.length },
     { id: 'courses', label: 'Courses LMS', icon: BookOpen, badge: courses.length },
     { id: 'testimonials', label: 'Testimonials', icon: Star, badge: testimonials.length },
-    { id: 'skills', label: 'Skills/Services', icon: Wrench, badge: skills.length },
-    { id: 'pricing', label: 'Pricing', icon: DollarSign },
+    { id: 'skills', label: 'Services & Pricing', icon: Layers, badge: skills.length },
     { id: 'requests', label: 'Client Requests', icon: Inbox, badge: inquiries.filter((i) => i.status === 'New').length || undefined, badgeColor: '#ff2d55' },
     { id: 'media', label: 'Media Library', icon: ImageIcon, badge: (portfolio.length + courses.length) || undefined },
     { id: 'settings', label: 'Settings', icon: Settings }
@@ -434,15 +434,9 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
             </DashboardErrorBoundary>
           )}
 
-          {activeNav === 'pricing' && (
-            <DashboardErrorBoundary title="PRICING MANAGER">
-              <PricingManager showToast={showToast} />
-            </DashboardErrorBoundary>
-          )}
-
-          {activeNav === 'skills' && (
-            <DashboardErrorBoundary title="SKILLS / SERVICES MANAGER">
-              <SkillManager showToast={showToast} />
+          {(activeNav === 'skills' || activeNav === 'pricing') && (
+            <DashboardErrorBoundary title="SERVICES & PRICING MANAGER">
+              <SkillManager showToast={showToast} onLoad={loadAllData} />
             </DashboardErrorBoundary>
           )}
 

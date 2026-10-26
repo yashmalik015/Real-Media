@@ -38,7 +38,8 @@ export function FuturisticVideoPlayer({
   initialDuration = 0,
   onEnded,
   className = '',
-  style = {}
+  style = {},
+  shareUrl = ''
 }) {
   const containerRef = useRef(null);
   const videoRef = useRef(null);
@@ -65,7 +66,7 @@ export function FuturisticVideoPlayer({
 
   // Share video action
   const handleShare = async () => {
-    const url = window.location.href;
+    const url = shareUrl || window.location.href;
     if (navigator.share) {
       try {
         await navigator.share({

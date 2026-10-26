@@ -186,7 +186,7 @@ const EMPTY_FORM = {
   tiers: DEFAULT_STARTER_TIERS
 };
 
-export function SkillManager({ showToast }) {
+export function SkillManager({ showToast, onLoad }) {
   const [skills, setSkills] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -269,7 +269,9 @@ export function SkillManager({ showToast }) {
     try {
       await api.deleteSkill(id);
       showToast('Skill deleted.');
+      window.dispatchEvent(new Event('skills:changed'));
       loadSkills();
+      if (onLoad) onLoad();
     } catch (_e) {
       showToast('Failed to delete skill.');
     }
@@ -397,7 +399,9 @@ export function SkillManager({ showToast }) {
 
       showToast(`Saved "${form.title}" and ${formattedTiers.length} pricing packages successfully!`);
       setIsModalOpen(false);
+      window.dispatchEvent(new Event('skills:changed'));
       loadSkills();
+      if (onLoad) onLoad();
     } catch (e) {
       showToast(e.message || 'Failed to save skill.');
     }
@@ -415,10 +419,10 @@ export function SkillManager({ showToast }) {
             SERVICE CATALOGUE & PACKAGES
           </div>
           <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.4rem', color: '#fff', margin: 0, letterSpacing: '0.04em' }}>
-            Skills & Services Manager
+            Services & Pricing Manager
           </h2>
           <p style={{ color: 'rgba(255,255,255,0.5)', margin: '4px 0 0', fontSize: '0.9rem' }}>
-            Create and edit services and their pricing tiers directly. All packages update live on the website.
+            Add, edit, or delete services and their package pricing tiers. All packages reflect dynamically on the website's Services and Pricing pages.
           </p>
         </div>
         <button

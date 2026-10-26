@@ -1,73 +1,156 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { playClickSound, playHoverSound } from '../../utils/audio.js';
 import { AnimatedSectionTitle, AnimatedParagraph, AnimatedButtonText } from './CinematicTypography.jsx';
+import { PUBLIC_SERVICES } from '../../data/siteData.js';
 
 gsap.registerPlugin(ScrollTrigger);
 
-export function FuturisticPricing({ onSelectPlan, pricingData }) {
-  const plans = pricingData || [];
+const DEFAULT_STARTER_TIERS = [
+  {
+    name: 'Starter',
+    price: 4999,
+    deliveryTime: '3-5 days',
+    inclusions: 'Color Grading, Sound FX, Normal Cuts, 4K Export',
+    features: '1 Final Deliverable, 2 Revisions, Commercial License',
+    desc: 'Essential package for standard projects and high-engagement social content.',
+    highlight: false
+  },
+  {
+    name: 'Professional',
+    price: 14999,
+    deliveryTime: '48-72 hrs',
+    inclusions: 'Advanced Color Grading, Custom Motion Graphics, Sound Design & Mixing, Subtitles',
+    features: '3 Deliverables, Unlimited Revisions, Raw Files Included, Priority Support',
+    desc: 'High-retention package with motion graphics, sound design, and custom pacing.',
+    highlight: true
+  },
+  {
+    name: 'Premium',
+    price: 29999,
+    deliveryTime: '24-48 hrs',
+    inclusions: 'Full Production, VFX Compositing, Sound FX & Mixing, 4K Delivery',
+    features: 'Full Campaign Bundle, Priority Delivery, Dedicated Handler, Source Files',
+    desc: 'Commercial-grade production for brand launches, keynotes, and viral campaigns.',
+    highlight: false
+  }
+];
+
+export function FuturisticPricing({ onSelectPlan, skills = [], pricingData = [] }) {
+  const [selectedService, setSelectedService] = useState('All');
   const [currency, setCurrency] = useState('INR'); // Default to INR
   const EXCHANGE_RATE = 83; // 1 USD = 83 INR
 
-  const formatPrice = (priceStr) => {
-    const raw = String(priceStr).replace(/[^0-9.]/g, '');
-    const num = Number(raw);
-    if (isNaN(num) || !raw) return priceStr;
-    if (currency === 'INR') {
-      return `₹${(num * EXCHANGE_RATE).toLocaleString('en-IN')}`;
+  // Build unified plans list from the website's active services
+  const plans = useMemo(() => {
+    const list = [];
+    // Prioritize skills from MongoDB/Admin CMS
+    let sourceSkills = Array.isArray(skills) && skills.length > 0 ? skills : [];
+
+    // Fallback to PUBLIC_SERVICES if no skills in DB
+    if (sourceSkills.length === 0) {
+      sourceSkills = PUBLIC_SERVICES.map(s => ({
+        ...s,
+        tiers: DEFAULT_STARTER_TIERS
+      }));
     }
-    return `$${num.toLocaleString('en-US')}`;
+
+    sourceSkills.forEach(skill => {
+      const tiers = Array.isArray(skill.tiers) && skill.tiers.length > 0
+        ? skill.tiers
+        : DEFAULT_STARTER_TIERS;
+
+      tiers.forEach((tier, idx) => {
+        const rawNum = typeof tier.price === 'number'
+          ? tier.price
+          : Number(String(tier.price || '').replace(/[^0-9.]/g, '')) || 0;
+
+        const inclusions = Array.isArray(tier.inclusions)
+          ? tier.inclusions
+          : (typeof tier.inclusions === 'string'
+              ? tier.inclusions.split(',').map(s => s.trim()).filter(Boolean)
+              : []);
+
+        const features = Array.isArray(tier.features)
+          ? tier.features
+          : (typeof tier.features === 'string'
+              ? tier.features.split(',').map(s => s.trim()).filter(Boolean)
+              : []);
+
+        list.push({
+          id: tier.id || `${skill.id || skill.title}_tier_${idx}`,
+          service: skill.title,
+          serviceIcon: skill.icon || '⚡',
+          category: skill.category || 'Service',
+          name: tier.name || `Plan ${idx + 1}`,
+          numericPrice: rawNum,
+          priceRaw: tier.price,
+          period: tier.deliveryTime || tier.turnaround || 'project',
+          desc: tier.desc || `${tier.name} package for ${skill.title}.`,
+          inclusions,
+          features: features.length > 0 ? features : inclusions,
+          popular: Boolean(tier.highlight || tier.popular),
+        });
+      });
+    });
+
+    return list;
+  }, [skills]);
+
+  // Unique service names for category filters
+  const serviceOptions = useMemo(() => {
+    const unique = ['All', ...new Set(plans.map(p => p.service))];
+    return unique;
+  }, [plans]);
+
+  // Filtered plans based on selected service
+  const filteredPlans = useMemo(() => {
+    if (selectedService === 'All') return plans;
+    return plans.filter(p => p.service === selectedService);
+  }, [plans, selectedService]);
+
+  const formatPrice = (plan) => {
+    const num = plan.numericPrice;
+    if (!num) return 'Custom Quote';
+    if (currency === 'INR') {
+      return `₹${num.toLocaleString('en-IN')}`;
+    }
+    const usdVal = Math.max(1, Math.round(num / EXCHANGE_RATE));
+    return `$${usdVal.toLocaleString('en-US')}`;
   };
 
   useEffect(() => {
-    if (plans.length === 0) return;
+    if (filteredPlans.length === 0) return;
     const ctx = gsap.context(() => {
       gsap.fromTo(
         '.price-card',
-        { y: 60, opacity: 0 },
+        { y: 40, opacity: 0 },
         {
           y: 0,
           opacity: 1,
-          duration: 0.8,
-          stagger: 0.15,
+          duration: 0.6,
+          stagger: 0.1,
           ease: 'power3.out',
-          scrollTrigger: {
-            trigger: '#pricing-grid',
-            start: 'top 85%',
-          }
         }
       );
     });
     return () => ctx.revert();
-  }, [plans]);
-
-  if (plans.length === 0) {
-    return (
-      <section className="relative w-full py-32 bg-[#07070a] text-center" id="pricing">
-        <h2 className="font-bebas text-5xl md:text-7xl mb-6 text-white tracking-wider" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>
-          <span className="text-[#ff2d55]" style={{ color: '#ff2d55' }}>AGENCY</span> PRICING
-        </h2>
-        <p className="text-white/50 font-mono text-sm uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>
-          Custom packages available. Contact our team.
-        </p>
-      </section>
-    );
-  }
+  }, [filteredPlans, selectedService]);
 
   return (
-    <section id="pricing" style={{ padding: '100px 32px', position: 'relative' }}>
+    <section id="pricing" style={{ padding: '100px 32px', position: 'relative', background: '#050508' }}>
       <div style={{ maxWidth: 1440, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+        <div style={{ textAlign: 'center', marginBottom: 40 }}>
           <AnimatedSectionTitle
-            label="TRANSPARENT DEPLOYMENT TIERS"
+            label="TRANSPARENT SERVICE PACKAGES"
             title="PRODUCTION PRICING MATRIX"
-            sub="No hidden fees. Transparent, outcome-focused pricing designed for fast turnaround and maximum ROI."
+            sub="No hidden fees. Every service package is customized for high retention, fast delivery, and maximum impact."
             animationStyle="pricing"
           />
-          
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 32 }}>
+
+          {/* Controls Bar: Currency Switcher + Quick Info */}
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, marginTop: 28, flexWrap: 'wrap' }}>
             <div style={{
               display: 'flex', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: 30, padding: 4, position: 'relative'
@@ -78,17 +161,17 @@ export function FuturisticPricing({ onSelectPlan, pricingData }) {
                 transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)', zIndex: 0
               }} />
               <button
-                onClick={() => setCurrency('INR')}
+                onClick={() => { playClickSound(); setCurrency('INR'); }}
                 style={{
                   position: 'relative', zIndex: 1, padding: '8px 24px', background: 'none', border: 'none',
                   color: currency === 'INR' ? '#fff' : 'rgba(255,255,255,0.5)', fontFamily: 'monospace',
                   fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', transition: 'color 0.3s ease'
                 }}
               >
-                INR ($)
+                INR (₹)
               </button>
               <button
-                onClick={() => setCurrency('USD')}
+                onClick={() => { playClickSound(); setCurrency('USD'); }}
                 style={{
                   position: 'relative', zIndex: 1, padding: '8px 24px', background: 'none', border: 'none',
                   color: currency === 'USD' ? '#fff' : 'rgba(255,255,255,0.5)', fontFamily: 'monospace',
@@ -99,6 +182,59 @@ export function FuturisticPricing({ onSelectPlan, pricingData }) {
               </button>
             </div>
           </div>
+
+          {/* Service Filter Tabs (Only website services) */}
+          <div style={{
+            display: 'flex',
+            gap: 10,
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+            marginTop: 28,
+            maxWidth: 1100,
+            margin: '28px auto 0'
+          }}>
+            {serviceOptions.map((svc) => {
+              const isSelected = selectedService === svc;
+              const count = svc === 'All'
+                ? plans.length
+                : plans.filter(p => p.service === svc).length;
+
+              return (
+                <button
+                  key={svc}
+                  onClick={() => { playClickSound(); setSelectedService(svc); }}
+                  onMouseEnter={playHoverSound}
+                  style={{
+                    padding: '8px 18px',
+                    borderRadius: 999,
+                    border: isSelected ? '1px solid #ff2d55' : '1px solid rgba(255,255,255,0.08)',
+                    background: isSelected ? 'rgba(255, 45, 85, 0.15)' : 'rgba(255,255,255,0.03)',
+                    color: isSelected ? '#ffffff' : 'rgba(255,255,255,0.65)',
+                    fontSize: '0.84rem',
+                    fontWeight: isSelected ? 700 : 500,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    transition: 'all 0.2s ease',
+                    boxShadow: isSelected ? '0 0 16px rgba(255,45,85,0.25)' : 'none'
+                  }}
+                >
+                  <span>{svc}</span>
+                  <span style={{
+                    fontSize: '0.72rem',
+                    padding: '2px 6px',
+                    borderRadius: 999,
+                    background: isSelected ? '#ff2d55' : 'rgba(255,255,255,0.08)',
+                    color: '#fff',
+                    fontFamily: 'monospace'
+                  }}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Pricing Cards Grid */}
@@ -106,94 +242,133 @@ export function FuturisticPricing({ onSelectPlan, pricingData }) {
           id="pricing-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-            gap: 32,
-            alignItems: 'center'
+            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+            gap: 28,
+            alignItems: 'stretch'
           }}
         >
-          {plans.map((plan) => (
+          {filteredPlans.map((plan) => (
             <div
-              key={plan.name}
+              key={plan.id}
               onMouseEnter={playHoverSound}
               style={{
                 position: 'relative',
-                padding: 40,
-                borderRadius: 32,
-                backgroundColor: plan.popular ? 'rgba(16, 16, 24, 0.92)' : 'rgba(12, 12, 16, 0.8)',
-                border: plan.popular ? '2px solid #ff2d55' : '1px solid rgba(255, 45, 85, 0.25)',
+                padding: 36,
+                borderRadius: 28,
+                backgroundColor: plan.popular ? 'rgba(18, 18, 26, 0.95)' : 'rgba(12, 12, 18, 0.82)',
+                border: plan.popular ? '2px solid #ff2d55' : '1px solid rgba(255, 45, 85, 0.22)',
                 backdropFilter: 'blur(28px)',
                 boxShadow: plan.popular
-                  ? '0 30px 80px rgba(255, 45, 85, 0.35), inset 0 0 30px rgba(255, 45, 85, 0.15)'
-                  : '0 20px 50px rgba(0,0,0,0.8)',
-                transform: plan.popular ? 'scale(1.05)' : 'scale(1)',
-                transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                  ? '0 24px 60px rgba(255, 45, 85, 0.3), inset 0 0 24px rgba(255, 45, 85, 0.1)'
+                  : '0 16px 40px rgba(0,0,0,0.7)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
                 overflow: 'hidden'
               }}
               className="price-card"
             >
-              {plan.popular && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 18,
-                    right: 24,
-                    padding: '4px 14px',
+              <div>
+                {/* Header Row: Service Badge + Recommended Tag */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <span style={{
+                    padding: '5px 12px',
                     borderRadius: 999,
-                    backgroundColor: '#ff2d55',
-                    color: '#ffffff',
-                    fontSize: '0.68rem',
+                    backgroundColor: 'rgba(255, 45, 85, 0.12)',
+                    border: '1px solid rgba(255, 45, 85, 0.3)',
+                    color: '#ff7b92',
+                    fontSize: '0.72rem',
                     fontWeight: 700,
-                    letterSpacing: '0.15em',
-                    boxShadow: '0 0 15px #ff2d55'
-                  }}
-                >
-                  RECOMMENDED TIER
-                </div>
-              )}
-
-              {plan.service && (
-                <div style={{ marginBottom: 16 }}>
-                  <span style={{ 
-                    padding: '4px 10px', 
-                    borderRadius: 6, 
-                    backgroundColor: 'rgba(255,255,255,0.05)', 
-                    border: '1px solid rgba(255,255,255,0.1)', 
-                    color: 'rgba(255,255,255,0.7)', 
-                    fontSize: '0.65rem', 
-                    fontWeight: 600, 
-                    letterSpacing: '0.1em', 
-                    textTransform: 'uppercase' 
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
                   }}>
-                    {plan.service}
+                    <span>{plan.serviceIcon}</span>
+                    <span>{plan.service}</span>
+                  </span>
+
+                  {plan.popular && (
+                    <div
+                      style={{
+                        padding: '4px 12px',
+                        borderRadius: 999,
+                        backgroundColor: '#ff2d55',
+                        color: '#ffffff',
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        letterSpacing: '0.12em',
+                        boxShadow: '0 0 12px #ff2d55'
+                      }}
+                    >
+                      RECOMMENDED
+                    </div>
+                  )}
+                </div>
+
+                {/* Plan Name */}
+                <h3 style={{
+                  fontFamily: "'Bebas Neue', sans-serif",
+                  fontSize: '2.2rem',
+                  color: '#ffffff',
+                  margin: '0 0 8px 0',
+                  letterSpacing: '0.04em',
+                  lineHeight: 1.1
+                }}>
+                  {plan.name}
+                </h3>
+
+                {/* Plan Description */}
+                <p style={{
+                  fontSize: '0.86rem',
+                  color: 'rgba(255,255,255,0.6)',
+                  minHeight: 40,
+                  lineHeight: 1.5,
+                  marginBottom: 20
+                }}>
+                  {plan.desc}
+                </p>
+
+                {/* Price Display */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: 8,
+                  marginBottom: 28,
+                  paddingBottom: 20,
+                  borderBottom: '1px solid rgba(255,255,255,0.08)'
+                }}>
+                  <span style={{
+                    fontFamily: "'Bebas Neue', sans-serif",
+                    fontSize: '3.4rem',
+                    color: plan.popular ? '#ff2d55' : '#ffffff',
+                    lineHeight: 1,
+                    letterSpacing: '0.02em'
+                  }}>
+                    {formatPrice(plan)}
+                  </span>
+                  <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
+                    / {plan.period}
                   </span>
                 </div>
-              )}
-              
-              <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', color: '#ffffff', margin: '0 0 8px 0', letterSpacing: '0.05em' }}>
-                {plan.name}
-              </h3>
-              <AnimatedParagraph style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.55)', minHeight: 42, lineHeight: 1.5, marginBottom: 24 }}>
-                {plan.desc}
-              </AnimatedParagraph>
 
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 32 }}>
-                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '3.6rem', color: plan.popular ? '#ff2d55' : '#ffffff', lineHeight: 1 }}>
-                  {formatPrice(plan.price)}
-                </span>
-                <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
-                  / {plan.period}
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 36 }}>
-                {plan.features.map((feat) => (
-                  <div key={feat} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.9rem', color: 'rgba(255,255,255,0.85)' }}>
-                    <span style={{ color: '#ff2d55', fontWeight: 700 }}>✓</span>
-                    <span>{feat}</span>
+                {/* Deliverables / Features List */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
+                  <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700 }}>
+                    Package Deliverables:
                   </div>
-                ))}
+                  {plan.features.slice(0, 5).map((feat, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: '0.88rem', color: 'rgba(255,255,255,0.85)', lineHeight: 1.4 }}>
+                      <span style={{ color: '#ff2d55', fontWeight: 800, fontSize: '1rem', lineHeight: 1 }}>✓</span>
+                      <span>{feat}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
+              {/* Action Button */}
               <button
                 onClick={() => {
                   playClickSound();
@@ -201,19 +376,22 @@ export function FuturisticPricing({ onSelectPlan, pricingData }) {
                 }}
                 style={{
                   width: '100%',
-                  padding: '16px 28px',
+                  padding: '15px 24px',
                   borderRadius: 999,
-                  background: plan.popular ? 'linear-gradient(135deg, #ff2d55, #c81e42)' : 'rgba(255,255,255,0.06)',
+                  background: plan.popular
+                    ? 'linear-gradient(135deg, #ff2d55, #c81e42)'
+                    : 'rgba(255,255,255,0.06)',
                   border: plan.popular ? 'none' : '1px solid rgba(255,45,85,0.4)',
                   color: '#ffffff',
                   fontWeight: 700,
-                  fontSize: '0.92rem',
-                  boxShadow: plan.popular ? '0 0 35px rgba(255,45,85,0.5)' : 'none',
+                  fontSize: '0.9rem',
+                  letterSpacing: '0.06em',
+                  boxShadow: plan.popular ? '0 0 28px rgba(255,45,85,0.45)' : 'none',
                   cursor: 'pointer',
                   transition: 'all 0.25s ease'
                 }}
               >
-                <AnimatedButtonText label="SELECT TIER & START" />
+                <AnimatedButtonText label={`START ${plan.service.toUpperCase()} PROJECT`} />
               </button>
             </div>
           ))}
@@ -222,8 +400,9 @@ export function FuturisticPricing({ onSelectPlan, pricingData }) {
 
       <style>{`
         .price-card:hover {
-          transform: translateY(-10px) scale(1.03);
-          border-color: rgba(255, 45, 85, 0.7) !important;
+          transform: translateY(-8px);
+          border-color: rgba(255, 45, 85, 0.8) !important;
+          box-shadow: 0 28px 70px rgba(255, 45, 85, 0.35) !important;
         }
       `}</style>
     </section>

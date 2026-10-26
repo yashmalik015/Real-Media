@@ -148,24 +148,24 @@ function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricin
   const [currency, setCurrency] = useState('INR'); // Default to INR
   const EXCHANGE_RATE = 83; // 1 USD = 83 INR
 
-  // Combine DB pricing plans, skill.tiers, and PRICING_DATA fallbacks
+  // Combine skill.tiers from DB and PRICING_DATA fallbacks
   const plans = useMemo(() => {
-    const dbPlans = pricingData.filter((p) => p.service === safeTitle || p.category === safeTitle);
-    if (dbPlans.length > 0) return dbPlans;
-
-    const skillObj = skillsData.find((s) => s.title === safeTitle);
+    const skillObj = skillsData.find((s) => s.title?.toLowerCase() === safeTitle?.toLowerCase());
     if (skillObj && Array.isArray(skillObj.tiers) && skillObj.tiers.length > 0) {
       return skillObj.tiers.map((t, idx) => ({
         _id: t.id || t._id || `tier_${idx}_${safeTitle}`,
         name: t.name || t.title || `Plan ${idx + 1}`,
-        price: typeof t.price === 'number' ? `$${t.price.toLocaleString('en-US')}` : (t.price || 'Custom Quote'),
+        price: typeof t.price === 'number' ? `₹${t.price.toLocaleString('en-IN')}` : (t.price || 'Custom Quote'),
         deliveryTime: t.deliveryTime || t.turnaround || '3-5 days',
-        inclusions: t.inclusions || [],
-        features: t.features || [],
+        inclusions: Array.isArray(t.inclusions) ? t.inclusions : (typeof t.inclusions === 'string' ? t.inclusions.split(',').map(s => s.trim()).filter(Boolean) : []),
+        features: Array.isArray(t.features) ? t.features : (typeof t.features === 'string' ? t.features.split(',').map(s => s.trim()).filter(Boolean) : []),
         highlight: Boolean(t.highlight || t.popular),
         service: safeTitle
       }));
     }
+
+    const dbPlans = pricingData.filter((p) => p.service === safeTitle || p.category === safeTitle);
+    if (dbPlans.length > 0) return dbPlans;
 
     const staticCategory = PRICING_DATA[safeTitle];
     if (staticCategory && staticCategory.length > 0) {
@@ -182,9 +182,9 @@ function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricin
     }
 
     return [
-      { _id: `fallback_1_${safeTitle}`, name: "Starter", price: "$4,999", features: ["Essential editing & cuts", "Full HD export"], deliveryTime: "3-5 days", inclusions: ["Normal cuts", "Color grading", "Sound FX", "4K Export"] },
-      { _id: `fallback_2_${safeTitle}`, name: "Professional", price: "$14,999", features: ["Advanced motion graphics", "Sound FX & mixing", "4K delivery"], deliveryTime: "48-72 hrs", inclusions: ["Custom cuts", "Color grading", "Sound design", "Motion graphics"], highlight: true },
-      { _id: `fallback_3_${safeTitle}`, name: "Premium", price: "$29,999", features: ["Full cinematic production", "VFX & Compositing", "Unlimited revisions"], deliveryTime: "24-48 hrs", inclusions: ["Full production", "VFX compositing", "Sound FX", "Priority support"] },
+      { _id: `fallback_1_${safeTitle}`, name: "Starter", price: "₹4,999", features: ["Essential editing & cuts", "Full HD export"], deliveryTime: "3-5 days", inclusions: ["Normal cuts", "Color grading", "Sound FX", "4K Export"] },
+      { _id: `fallback_2_${safeTitle}`, name: "Professional", price: "₹14,999", features: ["Advanced motion graphics", "Sound FX & mixing", "4K delivery"], deliveryTime: "48-72 hrs", inclusions: ["Custom cuts", "Color grading", "Sound design", "Motion graphics"], highlight: true },
+      { _id: `fallback_3_${safeTitle}`, name: "Premium", price: "₹29,999", features: ["Full cinematic production", "VFX & Compositing", "Unlimited revisions"], deliveryTime: "24-48 hrs", inclusions: ["Full production", "VFX compositing", "Sound FX", "Priority support"] },
     ];
   }, [pricingData, skillsData, safeTitle]);
 
@@ -271,7 +271,7 @@ function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricin
                   <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.9rem', color: '#fff', margin: '0 0 12px', letterSpacing: '0.03em' }}>{plan.name}</h3>
                   <div style={{ marginBottom: 20 }}>
                     <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.8rem', color: plan.highlight ? '#ff2d55' : '#fff' }}>
-                      {isCustom ? 'CUSTOM' : currency === 'INR' ? `₹${(Number(rawPrice) * EXCHANGE_RATE).toLocaleString('en-IN')}` : `$${Number(rawPrice).toLocaleString('en-US')}`}
+                      {isCustom ? 'CUSTOM' : currency === 'INR' ? `₹${Number(rawPrice).toLocaleString('en-IN')}` : `$${Math.max(1, Math.round(Number(rawPrice) / EXCHANGE_RATE)).toLocaleString('en-US')}`}
                     </span>
                     {!isCustom && plan.period && <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', marginLeft: 4 }}>{plan.period}</span>}
                   </div>
@@ -379,8 +379,9 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
   const featureList = plan ? (Array.isArray(plan.features) ? plan.features : String(plan.features || '').split(',').map(f => f.trim()).filter(Boolean)) : [];
   const inclusionList = plan ? (Array.isArray(plan.inclusions) ? plan.inclusions : String(plan.inclusions || '').split(',').map(i => i.trim()).filter(Boolean)) : [];
   const rawPrice = plan ? Number(String(plan.price).replace(/[^\d]/g, '')) : 0;
-  const isCustom = !rawPrice || String(plan?.price || '').toLowerCase().includes('custom');
-  const priceInPaise = rawPrice * 83 * 100; // Convert USD to INR paise (1 USD = 83 INR)
+  const isExplicitUsd = String(plan?.price || '').startsWith('$') || (rawPrice < 500 && rawPrice > 0);
+  const inrAmount = isCustom ? 0 : (isExplicitUsd ? rawPrice * 83 : rawPrice);
+  const priceInPaise = Math.round(inrAmount * 100);
 
   const handleRazorpay = async () => {
     if (!form.name || !form.email) { showToast("Please enter your name and email."); return; }
@@ -1164,7 +1165,7 @@ function GlobalSearch({ onClose, onNavigate }) {
 }
 
 // ── YouTube-style Learning Page ────────────────────────────────────────────────
-function LearningPage({ user, onBack, onOpenLesson, showToast }) {
+function LearningPage({ user, onBack, onOpenLesson, showToast, initialCourseId, initialLessonId, onRequireAuth }) {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -1187,6 +1188,46 @@ function LearningPage({ user, onBack, onOpenLesson, showToast }) {
 
   useEffect(() => { loadCourses(); }, [loadCourses]);
 
+  // Handle deep-linked course & lesson from share link
+  useEffect(() => {
+    if (initialCourseId && courses.length > 0 && !activeCourse) {
+      const foundCourse = courses.find(c => c.id === initialCourseId || c._id === initialCourseId || String(c.id) === String(initialCourseId));
+      if (foundCourse) {
+        setActiveCourse(foundCourse);
+        let foundLesson = null;
+        if (initialLessonId && foundCourse.modules) {
+          for (const m of foundCourse.modules) {
+            foundLesson = (m.lessons || []).find(l => l.id === initialLessonId || l._id === initialLessonId || String(l.id) === String(initialLessonId));
+            if (foundLesson) {
+              foundLesson = { ...foundLesson, moduleTitle: m.title };
+              break;
+            }
+          }
+        }
+        if (!foundLesson && foundCourse.modules?.[0]?.lessons?.[0]) {
+          foundLesson = { ...foundCourse.modules[0].lessons[0], moduleTitle: foundCourse.modules[0].title };
+        }
+        if (foundLesson) {
+          setActiveLesson(foundLesson);
+        }
+      }
+    }
+  }, [initialCourseId, initialLessonId, courses, activeCourse]);
+
+  // Keep browser address bar in sync when navigating lessons
+  useEffect(() => {
+    if (activeCourse && activeLesson) {
+      const deepLink = `/?page=learning&courseId=${encodeURIComponent(activeCourse.id || activeCourse._id)}&lessonId=${encodeURIComponent(activeLesson.id || activeLesson._id)}`;
+      window.history.replaceState({ page: 'learning', courseId: activeCourse.id, lessonId: activeLesson.id }, '', deepLink);
+    }
+  }, [activeCourse, activeLesson]);
+
+  const handleBackToCourses = () => {
+    setActiveLesson(null);
+    setActiveCourse(null);
+    window.history.replaceState({}, '', '/?page=learning');
+  };
+
   const onSearch = (val) => {
     setSearch(val);
     clearTimeout(searchTimer.current);
@@ -1204,9 +1245,10 @@ function LearningPage({ user, onBack, onOpenLesson, showToast }) {
         lesson={activeLesson}
         courses={courses}
         user={user}
-        onBack={() => { setActiveLesson(null); setActiveCourse(null); }}
+        onBack={handleBackToCourses}
         onSelectLesson={(course, lesson) => { setActiveCourse(course); setActiveLesson(lesson); }}
         showToast={showToast}
+        onRequireAuth={onRequireAuth}
       />
     );
   }
@@ -1528,8 +1570,116 @@ function CourseCard({ course, onOpen }) {
   );
 }
 
+// ── Rich Formatted Lesson Description Component ─────────────────────────────
+function FormattedLessonDescription({ text }) {
+  if (!text) return null;
+
+  // Normalize string: ensure markdown headings, bullet points, and special sections have newlines even if stored inline
+  const normalized = text
+    .replace(/\s*(#{1,6}\s+)/g, '\n\n$1')
+    .replace(/\s*([•\-\*]\s+)/g, '\n$1')
+    .replace(/\s*(\*\*Next lesson:\*\*)/gi, '\n\n$1')
+    .replace(/\s*(\*\*Assets Weber Academy[^\*]*\*\*)/gi, '\n\n$1');
+
+  const rawLines = normalized.split('\n').map(l => l.trim()).filter(Boolean);
+  const elements = [];
+  let currentList = [];
+
+  const renderInline = (str) => {
+    const parts = [];
+    const regex = /(\*\*[^*]+\*\*|`[^`]+`)/g;
+    let lastIdx = 0;
+    let match;
+
+    while ((match = regex.exec(str)) !== null) {
+      if (match.index > lastIdx) {
+        parts.push(str.substring(lastIdx, match.index));
+      }
+      const token = match[0];
+      if (token.startsWith('**') && token.endsWith('**')) {
+        parts.push(<strong key={match.index} style={{ color: '#ffffff', fontWeight: 700 }}>{token.slice(2, -2)}</strong>);
+      } else if (token.startsWith('`') && token.endsWith('`')) {
+        parts.push(
+          <code key={match.index} style={{
+            background: 'rgba(255,45,85,0.12)',
+            border: '1px solid rgba(255,45,85,0.3)',
+            borderRadius: 6,
+            padding: '2px 7px',
+            color: '#ff7b92',
+            fontFamily: 'monospace',
+            fontSize: '0.86em',
+            margin: '0 2px'
+          }}>
+            {token.slice(1, -1)}
+          </code>
+        );
+      }
+      lastIdx = regex.lastIndex;
+    }
+    if (lastIdx < str.length) {
+      parts.push(str.substring(lastIdx));
+    }
+    return parts.length > 0 ? parts : str;
+  };
+
+  const flushList = () => {
+    if (currentList.length > 0) {
+      elements.push(
+        <div key={`list-${elements.length}`} style={{ margin: '14px 0 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {currentList.map((item, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: '.92rem', color: 'rgba(255,255,255,0.85)', lineHeight: 1.6 }}>
+              <span style={{ color: '#ff2d55', fontWeight: 800, fontSize: '1rem', lineHeight: 1 }}>•</span>
+              <div style={{ flex: 1 }}>{renderInline(item)}</div>
+            </div>
+          ))}
+        </div>
+      );
+      currentList = [];
+    }
+  };
+
+  for (let i = 0; i < rawLines.length; i++) {
+    const line = rawLines[i];
+
+    if (/^#{1,6}\s+/.test(line)) {
+      flushList();
+      const title = line.replace(/^#{1,6}\s+/, '');
+      elements.push(
+        <div key={`heading-${i}`} style={{
+          color: '#ffffff',
+          fontFamily: "'Bebas Neue', sans-serif",
+          fontSize: '1.45rem',
+          letterSpacing: '.05em',
+          marginTop: 20,
+          marginBottom: 10,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          borderLeft: '3px solid #ff2d55',
+          paddingLeft: 12
+        }}>
+          {title}
+        </div>
+      );
+    } else if (/^[•\-\*]\s*/.test(line)) {
+      const itemText = line.replace(/^[•\-\*]\s*/, '');
+      currentList.push(itemText);
+    } else {
+      flushList();
+      elements.push(
+        <p key={`p-${i}`} style={{ color: 'rgba(255,255,255,0.72)', lineHeight: 1.8, fontSize: '.93rem', marginBottom: 14 }}>
+          {renderInline(line)}
+        </p>
+      );
+    }
+  }
+  flushList();
+
+  return <div className="formatted-lesson-description" style={{ marginTop: 10 }}>{elements}</div>;
+}
+
 // ── Lesson Player Page ────────────────────────────────────────────────────────
-function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, showToast }) {
+function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, showToast, onRequireAuth }) {
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
   const [loadingComments, setLoadingComments] = useState(false);
@@ -1540,6 +1690,9 @@ function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, s
   const currentIndex = lessons.findIndex(l => l.id === lesson.id);
   const prev = lessons[currentIndex - 1];
   const next = lessons[currentIndex + 1];
+
+  // Clean, canonical share URL for deep linking directly to this lesson
+  const shareUrl = `${window.location.origin}/?page=learning&courseId=${encodeURIComponent(course.id || course._id)}&lessonId=${encodeURIComponent(lesson.id || lesson._id)}`;
 
   // Load comments + track progress
   useEffect(() => {
@@ -1554,7 +1707,11 @@ function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, s
 
   const addComment = async () => {
     if (!commentText.trim()) return;
-    if (!user) { showToast("Please login to comment."); return; }
+    if (!user) {
+      if (onRequireAuth) onRequireAuth();
+      else showToast("Please login to comment.");
+      return;
+    }
     try {
       const { comment } = await api.addComment(lesson.id, commentText.trim(), course.id);
       setComments(prev => [comment, ...prev]);
@@ -1570,7 +1727,11 @@ function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, s
   };
 
   const toggleLike = async () => {
-    if (!user) { showToast("Please login to like."); return; }
+    if (!user) {
+      if (onRequireAuth) onRequireAuth();
+      else showToast("Please login to like.");
+      return;
+    }
     try {
       const { liked: newLiked } = await api.likeLesson(lesson.id);
       setLiked(newLiked);
@@ -1580,7 +1741,11 @@ function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, s
   };
 
   const toggleDislike = () => {
-    if (!user) { showToast("Please login to react."); return; }
+    if (!user) {
+      if (onRequireAuth) onRequireAuth();
+      else showToast("Please login to react.");
+      return;
+    }
     setDisliked(prev => {
       const next = !prev;
       if (next && liked) setLiked(false);
@@ -1590,19 +1755,21 @@ function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, s
   };
 
   const shareVideo = async () => {
-    const url = window.location.href;
     if (navigator.share) {
       try {
         await navigator.share({
-          title: lesson.title,
-          text: `Watch "${lesson.title}" on Assets Weber Academy!`,
-          url,
+          title: `${lesson.title} · Assets Weber Academy`,
+          text: `Watch "${lesson.title}" on Assets Weber Academy:`,
+          url: shareUrl,
         });
+        showToast("Share sheet opened!");
         return;
-      } catch (_) {}
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+      }
     }
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(shareUrl);
       showToast("Video link copied to clipboard!");
     } catch (_) {
       showToast("Failed to copy link.");
@@ -1642,6 +1809,7 @@ function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, s
               title={lesson.title}
               initialDuration={lesson.duration}
               autoPlay={false}
+              shareUrl={shareUrl}
               onEnded={() => {
                 if (next) onSelectLesson(course, next);
               }}
@@ -1672,9 +1840,9 @@ function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, s
 
             {/* Description + Notes + Resources */}
             {lesson.description && (
-              <div style={{ border: "1px solid var(--line)", borderRadius: 18, padding: 20, background: "rgba(255,255,255,.03)", marginBottom: 16 }}>
+              <div style={{ border: "1px solid var(--line)", borderRadius: 18, padding: 24, background: "rgba(255,255,255,.03)", marginBottom: 16 }}>
                 <div className="dashboard-label">Description</div>
-                <p style={{ color: "var(--muted)", lineHeight: 1.75, marginTop: 8 }}>{lesson.description}</p>
+                <FormattedLessonDescription text={lesson.description} />
               </div>
             )}
             {lesson.notes && (
@@ -1691,38 +1859,101 @@ function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, s
             )}
 
             {/* Comments */}
-            <div id="lesson-comments-section" style={{ marginTop: 24 }}>
-              <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.6rem", letterSpacing: ".06em", marginBottom: 16 }}>Comments · {comments.length}</div>
-              {user && (
-                <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--red)", display: "grid", placeItems: "center", flexShrink: 0, fontWeight: 700 }}>
-                    {user.name?.[0]?.toUpperCase()}
-                  </div>
-                  <input value={commentText} onChange={(e) => setCommentText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addComment()} placeholder="Add a comment…" style={{ flex: 1, border: "1px solid var(--line2)", borderRadius: 999, background: "rgba(255,255,255,.05)", color: "#fff", padding: "10px 16px", outline: "none" }} />
-                  <button className="btn-primary" style={{ padding: "10px 20px", fontSize: ".88rem" }} onClick={addComment}>Post</button>
+            <div id="lesson-comments-section" style={{ marginTop: 28 }}>
+              <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.8rem", letterSpacing: ".06em", marginBottom: 20 }}>
+                Comments · {comments.length}
+              </div>
+
+              {/* Comment Input Box (Visible to ALL users & guests) */}
+              <div style={{
+                display: "flex",
+                gap: 12,
+                marginBottom: 24,
+                alignItems: "center",
+                padding: "12px 18px",
+                borderRadius: 18,
+                background: "rgba(255,255,255,.03)",
+                border: "1px solid var(--line2)"
+              }}>
+                <div style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: "50%",
+                  background: user ? "var(--red)" : "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,45,85,0.3)",
+                  display: "grid",
+                  placeItems: "center",
+                  flexShrink: 0,
+                  fontWeight: 700,
+                  fontSize: ".9rem",
+                  color: "#fff"
+                }}>
+                  {user ? (user.name?.[0]?.toUpperCase() || 'U') : '👤'}
                 </div>
-              )}
-              {loadingComments ? <Skeleton h={80} /> : comments.length === 0 ? (
-                <div style={{ color: "var(--muted)", padding: "24px 0", textAlign: "center" }}>No comments yet. Be the first!</div>
-              ) : comments.map(c => (
-                <div key={c.id} style={{ border: "1px solid var(--line)", borderRadius: 16, padding: 16, marginBottom: 12, background: "rgba(255,255,255,.02)" }}>
-                  <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                    <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(229,57,53,.3)", display: "grid", placeItems: "center", fontSize: ".82rem", fontWeight: 700, flexShrink: 0 }}>
-                      {c.userName?.[0]?.toUpperCase()}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                        <div style={{ fontWeight: 600, fontSize: ".88rem" }}>{c.userName}</div>
-                        <div style={{ color: "var(--muted)", fontSize: ".76rem" }}>{new Date(c.createdAt).toLocaleDateString()}</div>
+                <input
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (user ? addComment() : (onRequireAuth && onRequireAuth()))}
+                  placeholder={user ? "Add a public comment…" : "Add a public comment… (Sign in to join the conversation)"}
+                  onClick={() => {
+                    if (!user && onRequireAuth) onRequireAuth();
+                  }}
+                  style={{
+                    flex: 1,
+                    border: "none",
+                    background: "transparent",
+                    color: "#fff",
+                    padding: "8px 6px",
+                    outline: "none",
+                    fontSize: ".92rem"
+                  }}
+                />
+                {user ? (
+                  <button
+                    className="btn-primary"
+                    style={{ padding: "8px 22px", fontSize: ".88rem", borderRadius: 999 }}
+                    onClick={addComment}
+                  >
+                    Post
+                  </button>
+                ) : (
+                  <button
+                    className="btn-primary"
+                    style={{ padding: "8px 22px", fontSize: ".88rem", borderRadius: 999 }}
+                    onClick={onRequireAuth}
+                  >
+                    Sign In
+                  </button>
+                )}
+              </div>
+
+              {loadingComments ? (
+                <Skeleton h={80} />
+              ) : comments.length === 0 ? (
+                <div style={{ color: "var(--muted)", padding: "24px 0", textAlign: "center" }}>
+                  No comments yet. Be the first to share your thoughts!
+                </div>
+              ) : (
+                comments.map(c => (
+                  <div key={c.id} style={{ border: "1px solid var(--line)", borderRadius: 16, padding: 16, marginBottom: 12, background: "rgba(255,255,255,.02)" }}>
+                    <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                      <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(229,57,53,.3)", display: "grid", placeItems: "center", fontSize: ".82rem", fontWeight: 700, flexShrink: 0 }}>
+                        {c.userName?.[0]?.toUpperCase()}
                       </div>
-                      <div style={{ color: "var(--muted2)", lineHeight: 1.65 }}>{c.text}</div>
-                      {user?.id === c.userId && (
-                        <button style={{ marginTop: 8, color: "rgba(229,57,53,.7)", fontSize: ".78rem", background: "none", border: "none", cursor: "pointer" }} onClick={() => deleteComment(c.id)}>Delete</button>
-                      )}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <div style={{ fontWeight: 600, fontSize: ".88rem" }}>{c.userName}</div>
+                          <div style={{ color: "var(--muted)", fontSize: ".76rem" }}>{new Date(c.createdAt).toLocaleDateString()}</div>
+                        </div>
+                        <div style={{ color: "var(--muted2)", lineHeight: 1.65 }}>{c.text}</div>
+                        {(user?.id === c.userId || user?.role === "team") && (
+                          <button style={{ marginTop: 8, color: "rgba(229,57,53,.7)", fontSize: ".78rem", background: "none", border: "none", cursor: "pointer" }} onClick={() => deleteComment(c.id)}>Delete</button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -2307,6 +2538,8 @@ export default function App() {
   const [pricing, setPricing] = useState([]);
   const [skills, setSkills] = useState([]);
   const [homeCourses, setHomeCourses] = useState([]);
+  const [deepLinkCourseId, setDeepLinkCourseId] = useState(null);
+  const [deepLinkLessonId, setDeepLinkLessonId] = useState(null);
   const [settings, setSettings] = useState({ whatsappNumber: "+919416085060", bookingUrl: "https://calendly.com/" });
   const [dataLoading, setDataLoading] = useState(true);
   const toastTimer = useRef(null);
@@ -2418,26 +2651,84 @@ export default function App() {
     return () => { window.removeEventListener("focus", refresh); window.removeEventListener("portfolio:changed", refresh); };
   }, [refreshPortfolio]);
 
+  // Keep skills current when updated in the admin CMS
+  useEffect(() => {
+    const refreshSkills = () => api.getSkills().then(res => setSkills(res.skills || [])).catch(() => {});
+    window.addEventListener("skills:changed", refreshSkills);
+    return () => window.removeEventListener("skills:changed", refreshSkills);
+  }, []);
+
   useEffect(() => {
     const syncRoute = () => {
-      const match = window.location.pathname.match(/^\/services\/([^/]+)$/);
-      if (!match) {
-        if (window.location.pathname !== '/' && window.location.pathname !== '') {
+      let rawPath = '';
+      try {
+        rawPath = decodeURIComponent(window.location.pathname || '').trim();
+      } catch (_) {
+        rawPath = window.location.pathname || '';
+      }
+
+      const searchParams = new URLSearchParams(window.location.search);
+      const pageParam = searchParams.get('page');
+      const courseIdParam = searchParams.get('courseId');
+      const lessonIdParam = searchParams.get('lessonId');
+
+      // 1. Check query parameters first (e.g. ?page=learning&courseId=...&lessonId=...)
+      if (courseIdParam || pageParam === 'learning') {
+        if (courseIdParam) setDeepLinkCourseId(courseIdParam);
+        if (lessonIdParam) setDeepLinkLessonId(lessonIdParam);
+        setPage('learning');
+        return;
+      }
+      if (pageParam === 'pricing') { setPage('pricing'); return; }
+      if (pageParam === 'services') { setPage('services'); return; }
+      if (pageParam === 'portfolio') { setPage('portfolio'); return; }
+      if (pageParam === 'contact') { setPage('contact'); return; }
+      if (pageParam === 'process' || pageParam === 'pipeline') { setPage('process'); return; }
+      if (pageParam === 'testimonials' || pageParam === 'reviews') { setPage('testimonials'); return; }
+
+      // 2. If pathname is root, do not trigger 404
+      if (rawPath === '/' || rawPath === '') {
+        return;
+      }
+
+      // 3. Service details route
+      const serviceMatch = rawPath.match(/^\/services\/([^/]+)$/);
+      if (serviceMatch) {
+        const slug = serviceMatch[1];
+        const foundInPublic = PUBLIC_SERVICES.find((item) => serviceSlug(item.title) === slug);
+        const foundInSkills = skills.find((item) => serviceSlug(item.title) === slug);
+        const matched = foundInPublic || foundInSkills;
+
+        if (matched) {
+          setSelectedService(matched.title);
+          setPage("service");
+        } else {
           setPage("404");
         }
         return;
       }
-      const slug = match[1];
-      const foundInPublic = PUBLIC_SERVICES.find((item) => serviceSlug(item.title) === slug);
-      const foundInSkills = skills.find((item) => serviceSlug(item.title) === slug);
-      const matched = foundInPublic || foundInSkills;
 
-      if (matched) {
-        setSelectedService(matched.title);
-        setPage("service");
-      } else {
-        setPage("404");
+      // 4. Standard path routes
+      if (rawPath === '/learning' || rawPath === '/courses') {
+        setPage('learning');
+        return;
       }
+      if (rawPath === '/pricing') { setPage('pricing'); return; }
+      if (rawPath === '/portfolio') { setPage('portfolio'); return; }
+      if (rawPath === '/contact') { setPage('contact'); return; }
+      if (rawPath === '/services') { setPage('services'); return; }
+      if (rawPath === '/process' || rawPath === '/pipeline') { setPage('process'); return; }
+      if (rawPath === '/testimonials' || rawPath === '/reviews') { setPage('testimonials'); return; }
+
+      // 5. Catch accidentally shared video text in pathname (e.g. /%20Watch%20"What%20REALLY%20Happens...)
+      const lowerPath = rawPath.toLowerCase();
+      if (lowerPath.includes('watch') || lowerPath.includes('academy') || lowerPath.includes('lesson') || lowerPath.includes('video') || lowerPath.includes('course')) {
+        window.history.replaceState({}, '', '/?page=learning');
+        setPage('learning');
+        return;
+      }
+
+      setPage("404");
     };
 
     syncRoute();
@@ -2611,9 +2902,12 @@ export default function App() {
         ) : page === "learning" ? (
           <div className="page" key="learning-page" style={{ paddingTop: 100 }}>
             <LearningPage
-              user={session?.role === "learner" ? session : null}
+              user={session}
               onBack={() => requestPage("home")}
               showToast={showToast}
+              initialCourseId={deepLinkCourseId}
+              initialLessonId={deepLinkLessonId}
+              onRequireAuth={() => setShowAuth(true)}
             />
             <FuturisticFooter onNavigate={requestPage} />
           </div>
@@ -2693,7 +2987,7 @@ export default function App() {
           </div>
         ) : page === "pricing" ? (
           <div className="page" style={{ paddingTop: 100 }}>
-            <FuturisticPricing onSelectPlan={(plan, svc) => { setSelectedPlan({ plan, service: svc || '' }); setShowInquiry(true); }} pricingData={pricing} />
+            <FuturisticPricing onSelectPlan={(plan, svc) => { setSelectedPlan({ plan, service: svc || '' }); setShowInquiry(true); }} skills={skills} />
             <FuturisticFooter onNavigate={requestPage} />
           </div>
         ) : page === "404" ? (
@@ -2724,7 +3018,7 @@ export default function App() {
             <HolographicTestimonials testimonials={testimonials} />
 
             {/* 7. Transparent Pricing */}
-            <FuturisticPricing onSelectPlan={(plan, svc) => { setSelectedPlan({ plan, service: svc || '' }); setShowInquiry(true); }} pricingData={pricing} />
+            <FuturisticPricing onSelectPlan={(plan, svc) => { setSelectedPlan({ plan, service: svc || '' }); setShowInquiry(true); }} skills={skills} />
 
             {/* 8. Command Center Contact Form */}
             <CommandCenterContact showToast={showToast} />
