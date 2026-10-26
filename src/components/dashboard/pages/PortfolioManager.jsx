@@ -138,6 +138,34 @@ export function PortfolioManager({ portfolio = [], onLoad, showToast, onPortfoli
     }
   };
 
+  const [togglingId, setTogglingId] = useState(null);
+
+  const handleToggleFeatured = async (item) => {
+    playClickSound();
+    setTogglingId(item.id);
+    const newFeatured = !item.featured;
+    try {
+      if (api.togglePortfolioFeatured) {
+        await api.togglePortfolioFeatured(item.id, newFeatured);
+      } else {
+        const fd = new FormData();
+        fd.append('featured', String(newFeatured));
+        await api.updatePortfolio(item.id, fd);
+      }
+      showToast(
+        newFeatured
+          ? `Added "${item.title}" to Landing Page Showcase!`
+          : `Removed "${item.title}" from Landing Page Showcase.`
+      );
+      await onLoad();
+      await onPortfolioChanged?.();
+    } catch (err) {
+      showToast(err.message || 'Failed to update landing page showcase.');
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 28, position: 'relative' }}>
       {/* Top Header & Statistics */}
@@ -472,8 +500,8 @@ export function PortfolioManager({ portfolio = [], onLoad, showToast, onPortfoli
                   />
                 )}
                 {item.featured && (
-                  <span style={{ position: 'absolute', top: 12, left: 12, padding: '4px 10px', borderRadius: 999, backgroundColor: 'rgba(255, 45, 85, 0.9)', color: '#fff', fontSize: '0.7rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Sparkles size={12} /> FEATURED
+                  <span style={{ position: 'absolute', top: 12, left: 12, padding: '4px 10px', borderRadius: 999, backgroundColor: 'rgba(255, 184, 0, 0.95)', color: '#050508', fontSize: '0.7rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 4, boxShadow: '0 0 15px rgba(255, 184, 0, 0.6)' }}>
+                    <Sparkles size={12} fill="#050508" /> ON LANDING PAGE
                   </span>
                 )}
                 <span style={{ position: 'absolute', bottom: 12, right: 12, padding: '4px 10px', borderRadius: 8, backgroundColor: 'rgba(0,0,0,0.75)', color: '#ff2d55', fontSize: '0.7rem', fontFamily: 'monospace' }}>
@@ -492,6 +520,41 @@ export function PortfolioManager({ portfolio = [], onLoad, showToast, onPortfoli
                   Client: {item.client || 'Assets Weber'} • Views: {item.views || 0}
                 </div>
               </div>
+            </div>
+
+            {/* Quick Toggle Landing Page Showcase */}
+            <div style={{ padding: '0 20px 14px' }}>
+              <button
+                type="button"
+                onClick={() => handleToggleFeatured(item)}
+                disabled={togglingId === item.id}
+                title={item.featured ? 'Remove from Home Showcase' : 'Add to Landing Page Home Showcase'}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: 10,
+                  backgroundColor: item.featured ? 'rgba(255, 184, 0, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                  border: item.featured ? '1px solid rgba(255, 184, 0, 0.6)' : '1px solid rgba(255, 255, 255, 0.15)',
+                  color: item.featured ? '#ffb800' : 'rgba(255, 255, 255, 0.85)',
+                  fontSize: '0.78rem',
+                  fontFamily: 'monospace',
+                  fontWeight: 700,
+                  cursor: togglingId === item.id ? 'wait' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  transition: 'all 0.2s ease',
+                  boxShadow: item.featured ? '0 0 16px rgba(255, 184, 0, 0.2)' : 'none'
+                }}
+              >
+                <Sparkles size={14} color={item.featured ? '#ffb800' : 'rgba(255,255,255,0.7)'} />
+                {togglingId === item.id
+                  ? 'UPDATING...'
+                  : item.featured
+                  ? '★ ON LANDING PAGE (CLICK TO REMOVE)'
+                  : '+ ADD TO LANDING PAGE SHOWCASE'}
+              </button>
             </div>
 
             <div style={{ display: 'flex', gap: 8, padding: '16px 20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>

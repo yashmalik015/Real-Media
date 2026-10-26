@@ -856,8 +856,15 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
       completionDate: body.completionDate ?? existing.completionDate ?? '',
       tags: parseJsonSafely(body.tags, existing.tags),
       cta: body.cta ?? existing.cta ?? '',
-      featured: body.featured === 'true' || body.featured === true,
+      featured: body.featured !== undefined ? (body.featured === 'true' || body.featured === true) : existing.featured,
       sortOrder: body.sortOrder !== undefined ? Number(body.sortOrder) : existing.sortOrder,
+      mediaUrl: existing.mediaUrl || existing.media_url || '',
+      mediaPublicId: existing.mediaPublicId || existing.media_public_id || '',
+      mediaType: existing.mediaType || existing.media_type || 'image',
+      mediaName: existing.mediaName || existing.media_name || '',
+      thumbnail: existing.thumbnail || '',
+      videoUrl: existing.videoUrl || existing.video_url || '',
+      galleryImages: existing.galleryImages || existing.gallery_images || [],
       updatedAt: now(),
     }
 
@@ -892,6 +899,21 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
 
     await repository.updatePortfolioFull(req.params.id, updates)
     res.json({ portfolioItem: await repository.portfolioById(req.params.id) })
+  })
+
+  // Quick toggle featured status for Landing Page Showcase
+  app.patch('/api/portfolio/:id/feature', requireAuth, async (req, res) => {
+    if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
+    const existing = await repository.portfolioById(req.params.id)
+    if (!existing) return res.status(404).json({ message: 'Portfolio item not found.' })
+    const targetState = req.body?.featured !== undefined ? Boolean(req.body.featured) : !existing.featured
+    await repository.updatePortfolioFull(req.params.id, {
+      ...existing,
+      featured: targetState,
+      updatedAt: now()
+    })
+    const updated = await repository.portfolioById(req.params.id)
+    res.json({ success: true, portfolioItem: updated })
   })
 
   app.post('/api/portfolio/reorder', requireAuth, async (req, res) => {

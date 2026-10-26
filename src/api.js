@@ -440,8 +440,8 @@ export const api = {
   // ── Global Search & Bulk Actions ──
   globalSearch: (q) => request(`/api/search?q=${encodeURIComponent(q)}`),
   bulkDelete: (collection, ids) => request('/api/bulk/delete', { method: 'POST', body: { collection, ids } }),
-  bulkPublish: (collection, ids, published) => request('/api/bulk/publish', { method: 'POST', body: { collection, ids, published } }),
   updatePortfolio: (id, formData) => request(`/api/portfolio/${id}`, { method: 'PUT', body: formData }),
+  togglePortfolioFeatured: (id, featured) => request(`/api/portfolio/${id}/feature`, { method: 'PATCH', body: { featured } }),
 
   // ── Persona Mode Switch & WhatsApp Client Chat ──
   switchMode: (targetRole) => request('/api/auth/switch-mode', { method: 'POST', body: { targetRole } }),

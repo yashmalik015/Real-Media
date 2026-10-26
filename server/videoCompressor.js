@@ -50,17 +50,17 @@ export async function compressVideo(inputPath, outputPath) {
     console.log(`[Video Compressor] Starting YouTube-grade compression for: ${path.basename(inputPath)}...`)
     const startTime = Date.now()
 
-    // -vf "scale='min(1920,iw)':-2" ensures max 1920 width, keeps aspect ratio and guarantees divisible by 2
+    // YouTube-grade master encoding: CRF 20 ensures visually lossless 1080p quality, preserving sharp text in tutorials
     const args = [
       '-y',
       '-i', inputPath,
       '-c:v', 'libx264',
-      '-crf', '24',
+      '-crf', '20',
       '-preset', 'faster',
       '-pix_fmt', 'yuv420p',
       '-vf', "scale='min(1920,iw)':-2",
       '-c:a', 'aac',
-      '-b:a', '128k',
+      '-b:a', '192k',
       '-movflags', '+faststart',
       outputPath,
     ]

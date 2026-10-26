@@ -110,9 +110,16 @@ export function FuturisticPortfolio({ portfolio = [], isStandalone = false, onNa
 
   const categories = ['All', 'Video Editing', 'Web Development', 'App Development', 'Digital Marketing', 'Graphic Design', 'UI/UX Design', 'VFX'];
 
-  // Home Page logic (isStandalone === false): Only display items marked as featured (or fallback to top 4 recent)
+  // Home Page logic (isStandalone === false): Display 4 items on the landing page showcase
+  // Prioritize projects marked as featured, and fill any remaining slots up to 4 with video portfolio items
   const featuredItems = portfolio.filter((item) => Boolean(item.featured));
-  const homeDisplayItems = featuredItems.length > 0 ? featuredItems.slice(0, 4) : portfolio.slice(0, 4);
+  const otherItems = portfolio.filter((item) => !item.featured);
+  const sortedOthers = [...otherItems].sort((a, b) => {
+    const aVid = isVideoItem(a) ? 1 : 0;
+    const bVid = isVideoItem(b) ? 1 : 0;
+    return bVid - aVid;
+  });
+  const homeDisplayItems = [...featuredItems, ...sortedOthers].slice(0, 4);
 
   // Dedicated Portfolio Page logic (isStandalone === true): Display EVERY portfolio project uploaded with category/search filters
   const fullFilteredItems = portfolio.filter((item) => {

@@ -15,11 +15,26 @@ import {
 } from 'lucide-react';
 import { mediaUrl, optimizedMediaUrl } from '../../api.js';
 
+function parseDuration(val) {
+  if (!val) return 0;
+  if (typeof val === 'number') return Number.isFinite(val) ? val : 0;
+  const str = String(val).trim();
+  if (!str) return 0;
+  if (str.includes(':')) {
+    const parts = str.split(':').map((p) => parseFloat(p) || 0);
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+  }
+  const num = parseFloat(str);
+  return Number.isFinite(num) ? num : 0;
+}
+
 export function FuturisticVideoPlayer({
   src = '',
   poster = '',
   title = '',
   autoPlay = false,
+  initialDuration = 0,
   onEnded,
   className = '',
   style = {}
@@ -27,10 +42,12 @@ export function FuturisticVideoPlayer({
   const containerRef = useRef(null);
   const videoRef = useRef(null);
   const controlsTimeoutRef = useRef(null);
+  const savedTimeRef = useRef(0);
+  const wasPlayingRef = useRef(false);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [duration, setDuration] = useState(() => parseDuration(initialDuration));
   const [bufferedEnd, setBufferedEnd] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
@@ -41,6 +58,8 @@ export function FuturisticVideoPlayer({
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+  const [quality, setQuality] = useState('1080p'); // Default to full 1080p crisp fidelity
+  const [showQualityMenu, setShowQualityMenu] = useState(false);
 
   // Normalize source URL
   const rawUrl = (src || '').trim();
@@ -48,8 +67,49 @@ export function FuturisticVideoPlayer({
   const isDrive = rawUrl.includes('drive.google.com');
   const isExternalEmbed = isYouTube || isDrive;
 
-  // Optimized video source (uses Cloudinary auto-compression & faststart if applicable)
-  const videoSrc = !isExternalEmbed && rawUrl ? optimizedMediaUrl(rawUrl, { width: 1920, quality: 'auto' }) : '';
+  // Initialize duration from prop if available
+  useEffect(() => {
+    const initSec = parseDuration(initialDuration);
+    if (initSec > 0) {
+      setDuration((prev) => (initSec > prev || prev === 0 ? initSec : prev));
+    }
+  }, [initialDuration]);
+
+  // Generate video source URL based on selected quality
+  const getVideoSrcForQuality = useCallback((url, q) => {
+    if (!url || isExternalEmbed) return '';
+    const cleanUrl = mediaUrl(url);
+    if (!cleanUrl.includes('res.cloudinary.com')) return cleanUrl;
+
+    let transform = 'f_auto,q_auto:best,w_1920,c_limit';
+    if (q === '720p') transform = 'f_auto,q_auto,w_1280,c_limit';
+    else if (q === '480p') transform = 'f_auto,q_auto:eco,w_854,c_limit';
+    else if (q === 'auto') transform = 'f_auto,q_auto';
+    else transform = 'f_auto,q_auto:best,w_1920,c_limit'; // 1080p
+
+    // Replace existing transformation segment if present
+    if (/\/upload\/(?:[a-zA-Z0-9_,:]+\/)?(v\d+\/)/.test(cleanUrl)) {
+      return cleanUrl.replace(/\/upload\/(?:[a-zA-Z0-9_,:]+\/)?(v\d+\/)/, `/upload/${transform}/$1`);
+    }
+    return cleanUrl.replace('/upload/', `/upload/${transform}/`);
+  }, [isExternalEmbed]);
+
+  const videoSrc = getVideoSrcForQuality(rawUrl, quality);
+
+  // Quality change handler preserving playback state & position
+  const handleQualityChange = (newQuality) => {
+    if (newQuality === quality) {
+      setShowQualityMenu(false);
+      return;
+    }
+    if (videoRef.current) {
+      savedTimeRef.current = videoRef.current.currentTime || 0;
+      wasPlayingRef.current = !videoRef.current.paused;
+    }
+    setQuality(newQuality);
+    setShowQualityMenu(false);
+    setIsLoading(true);
+  };
 
   // Extract YouTube ID
   const getYouTubeEmbedUrl = (url) => {
@@ -65,11 +125,16 @@ export function FuturisticVideoPlayer({
     return `https://drive.google.com/file/d/${driveId}/preview`;
   };
 
-  // Format seconds to mm:ss
+  // Format seconds to mm:ss or hh:mm:ss
   const formatTime = (seconds) => {
-    if (isNaN(seconds) || seconds < 0) return '00:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
+    if (!Number.isFinite(seconds) || seconds < 0) return '00:00';
+    const s = Math.floor(seconds);
+    const hrs = Math.floor(s / 3600);
+    const mins = Math.floor((s % 3600) / 60);
+    const secs = s % 60;
+    if (hrs > 0) {
+      return `${hrs}:${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    }
     return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
@@ -303,16 +368,51 @@ export function FuturisticVideoPlayer({
         preload="metadata"
         autoPlay={autoPlay}
         onClick={togglePlay}
+        onLoadedMetadata={() => {
+          if (videoRef.current) {
+            const d = videoRef.current.duration;
+            if (Number.isFinite(d) && d > 0) {
+              setDuration((prev) => (d > prev || prev === 0 ? d : prev));
+            }
+            if (savedTimeRef.current > 0) {
+              videoRef.current.currentTime = savedTimeRef.current;
+              savedTimeRef.current = 0;
+            }
+            if (wasPlayingRef.current) {
+              videoRef.current.play().catch(() => {});
+              setIsPlaying(true);
+            }
+          }
+          setIsLoading(false);
+        }}
+        onCanPlay={() => {
+          setIsLoading(false);
+          if (savedTimeRef.current > 0 && videoRef.current) {
+            videoRef.current.currentTime = savedTimeRef.current;
+            savedTimeRef.current = 0;
+          }
+          if (wasPlayingRef.current && videoRef.current && videoRef.current.paused) {
+            videoRef.current.play().catch(() => {});
+          }
+        }}
         onTimeUpdate={() => {
-          if (videoRef.current) setCurrentTime(videoRef.current.currentTime);
+          if (videoRef.current) {
+            const ct = videoRef.current.currentTime;
+            if (Number.isFinite(ct)) setCurrentTime(ct);
+          }
         }}
         onDurationChange={() => {
-          if (videoRef.current) setDuration(videoRef.current.duration);
+          if (videoRef.current) {
+            const d = videoRef.current.duration;
+            // CRITICAL FIX: Only update duration if d is finite and positive
+            if (Number.isFinite(d) && d > 0) {
+              setDuration((prev) => (d > prev || prev === 0 ? d : prev));
+            }
+          }
         }}
         onProgress={handleProgress}
         onWaiting={() => setIsLoading(true)}
         onLoadStart={() => setIsLoading(true)}
-        onCanPlay={() => setIsLoading(false)}
         onPlaying={() => {
           setIsLoading(false);
           setIsPlaying(true);
@@ -677,12 +777,109 @@ export function FuturisticVideoPlayer({
             </div>
           </div>
 
-          {/* Right Actions: Speed, Fullscreen */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative' }}>
+          {/* Right Actions: Quality, Speed, Fullscreen */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative' }}>
+            {/* Quality Selector */}
+            {!isExternalEmbed && (
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => {
+                    setShowQualityMenu(!showQualityMenu);
+                    setShowSpeedMenu(false);
+                  }}
+                  title="Video Quality Settings"
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: 6,
+                    backgroundColor: quality === '1080p' ? 'rgba(255,45,85,0.2)' : 'rgba(255,255,255,0.08)',
+                    border: quality === '1080p' ? '1px solid rgba(255,45,85,0.5)' : '1px solid rgba(255,255,255,0.15)',
+                    color: quality === '1080p' ? '#ff2d55' : '#ffffff',
+                    fontSize: '0.74rem',
+                    fontFamily: 'monospace',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4
+                  }}
+                >
+                  <Settings size={12} />
+                  <span>{quality.toUpperCase()}</span>
+                </button>
+
+                {showQualityMenu && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 34,
+                      right: 0,
+                      backgroundColor: 'rgba(12, 12, 16, 0.95)',
+                      border: '1px solid rgba(255, 45, 85, 0.4)',
+                      backdropFilter: 'blur(20px)',
+                      borderRadius: 10,
+                      padding: 6,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2,
+                      zIndex: 60,
+                      minWidth: 140,
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.85)'
+                    }}
+                  >
+                    <div style={{ fontSize: '0.64rem', fontFamily: 'monospace', color: '#ff2d55', padding: '4px 8px', letterSpacing: '0.12em', fontWeight: 700 }}>
+                      QUALITY // SELECTOR
+                    </div>
+                    {[
+                      { id: '1080p', label: '1080p FHD', badge: 'HIGH' },
+                      { id: '720p', label: '720p HD', badge: 'MED' },
+                      { id: '480p', label: '480p SD', badge: 'LOW' },
+                      { id: 'auto', label: 'Auto Stream', badge: 'AUTO' }
+                    ].map((q) => (
+                      <button
+                        key={q.id}
+                        onClick={() => handleQualityChange(q.id)}
+                        style={{
+                          padding: '6px 10px',
+                          border: 'none',
+                          borderRadius: 6,
+                          backgroundColor: quality === q.id ? 'rgba(255,45,85,0.2)' : 'transparent',
+                          color: quality === q.id ? '#ff2d55' : '#ffffff',
+                          fontSize: '0.74rem',
+                          fontFamily: 'monospace',
+                          fontWeight: quality === q.id ? 700 : 400,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 8,
+                          textAlign: 'left'
+                        }}
+                      >
+                        <span>{q.label}</span>
+                        <span style={{
+                          fontSize: '0.62rem',
+                          padding: '2px 5px',
+                          borderRadius: 4,
+                          backgroundColor: quality === q.id ? 'rgba(255,45,85,0.35)' : 'rgba(255,255,255,0.1)',
+                          color: quality === q.id ? '#fff' : 'rgba(255,255,255,0.5)',
+                          fontWeight: 700
+                        }}>
+                          {q.badge}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Speed Selector */}
             <div style={{ position: 'relative' }}>
               <button
-                onClick={() => setShowSpeedMenu(!showSpeedMenu)}
+                onClick={() => {
+                  setShowSpeedMenu(!showSpeedMenu);
+                  setShowQualityMenu(false);
+                }}
                 style={{
                   padding: '3px 8px',
                   borderRadius: 6,

@@ -1598,6 +1598,7 @@ function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, s
               src={lesson.videoUrl || lesson.driveLink || ''}
               poster={lesson.thumbnail || course.thumbnail || ''}
               title={lesson.title}
+              initialDuration={lesson.duration}
               autoPlay={false}
               onEnded={() => {
                 if (next) onSelectLesson(course, next);
