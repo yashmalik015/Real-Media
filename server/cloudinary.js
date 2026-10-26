@@ -47,7 +47,7 @@ export function uploadToCloudinaryStream(buffer, { folder = 'assetsweber/uploads
         }
         let url = result.secure_url
         if (result.resource_type === 'video' && url.includes('/upload/')) {
-          url = url.replace('/upload/', '/upload/f_auto,q_auto,fl_faststart,w_1280,c_limit/')
+          url = url.replace('/upload/', '/upload/f_auto,q_auto,w_1280,c_limit/')
         } else if (url.includes('/upload/')) {
           url = url.replace('/upload/', '/upload/f_auto,q_auto,w_1920,c_limit/')
         }
@@ -71,17 +71,26 @@ export function uploadToCloudinaryStream(buffer, { folder = 'assetsweber/uploads
  */
 export async function uploadToCloudinaryLarge(filePath, { folder = 'assetsweber/uploads', resourceType = 'video' } = {}) {
   initCloudinary()
-  const result = await cloudinary.uploader.upload_large(filePath, {
-    folder,
-    resource_type: resourceType,
-    chunk_size: 6000000, // 6MB chunks
-    unique_filename: true,
-    overwrite: false,
+  const result = await new Promise((resolve, reject) => {
+    cloudinary.uploader.upload_large(
+      filePath,
+      {
+        folder,
+        resource_type: resourceType,
+        chunk_size: 6000000, // 6MB chunks
+        unique_filename: true,
+        overwrite: false,
+      },
+      (err, res) => {
+        if (err) reject(err)
+        else resolve(res)
+      }
+    )
   })
 
   let url = result.secure_url || result.url
   if (result.resource_type === 'video' && url.includes('/upload/')) {
-    url = url.replace('/upload/', '/upload/f_auto,q_auto,fl_faststart,w_1280,c_limit/')
+    url = url.replace('/upload/', '/upload/f_auto,q_auto,w_1280,c_limit/')
   }
 
   return {

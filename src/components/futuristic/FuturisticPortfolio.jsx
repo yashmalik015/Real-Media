@@ -4,6 +4,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { playClickSound, playHoverSound } from '../../utils/audio.js';
 import { mediaUrl, optimizedMediaUrl } from '../../api.js';
 import { AnimatedSectionTitle, AnimatedParagraph, AnimatedButtonText } from './CinematicTypography.jsx';
+import { FuturisticVideoPlayer } from '../ui/FuturisticVideoPlayer.jsx';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -24,10 +25,14 @@ function getMediaSrc(item, options = {}) {
 function PortfolioMediaPreview({ item }) {
   const videoRef = useRef(null);
   const [videoError, setVideoError] = useState(false);
+  const isVideo = isVideoItem(item);
   // Request lightweight 720p compressed preview URL for card thumbnails
   const src = getMediaSrc(item, { width: 720 });
-  const isVideo = isVideoItem(item);
-  const poster = item.thumbnail ? optimizedMediaUrl(item.thumbnail, { width: 720 }) : undefined;
+  const poster = item.thumbnail
+    ? optimizedMediaUrl(item.thumbnail, { width: 720 })
+    : (src && src.includes('res.cloudinary.com') && isVideo
+        ? src.replace(/\.(mp4|webm|mov|mkv)/i, '.jpg').replace('/video/upload/', '/video/upload/so_0,')
+        : undefined);
 
   useEffect(() => {
     if (isVideo && videoRef.current) {
@@ -51,6 +56,18 @@ function PortfolioMediaPreview({ item }) {
         muted
         preload="metadata"
         onError={() => setVideoError(true)}
+      />
+    );
+  }
+
+  if (poster) {
+    return (
+      <img
+        src={poster}
+        alt={item.title}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }}
+        className="port-img"
+        loading="lazy"
       />
     );
   }
@@ -464,47 +481,13 @@ export function FuturisticPortfolio({ portfolio = [], isStandalone = false, onNa
             </h2>
 
             {/* Modal media: video or image */}
-            {isVideoItem(selectedItem) && !selectedVideoError ? (
-              <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                width: '100%',
-                marginBottom: 24,
-                backgroundColor: 'rgba(0, 0, 0, 0.65)',
-                borderRadius: 24,
-                padding: isVideoVertical ? '20px 0' : '0',
-                border: '1px solid rgba(255, 45, 85, 0.3)',
-                overflow: 'hidden',
-                boxShadow: 'inset 0 0 30px rgba(0,0,0,0.8)'
-              }}>
-                <video
-                  ref={selectedVideoRef}
-                  src={getMediaSrc(selectedItem, { width: 1280 })}
-                  onLoadedMetadata={(e) => {
-                    if (e.target.videoHeight > e.target.videoWidth) {
-                      setIsVideoVertical(true);
-                    } else {
-                      setIsVideoVertical(false);
-                    }
-                  }}
-                  style={{
-                    width: isVideoVertical ? 'auto' : '100%',
-                    maxWidth: isVideoVertical ? '320px' : '100%',
-                    maxHeight: isVideoVertical ? '65vh' : '55vh',
-                    height: isVideoVertical ? '520px' : 'auto',
-                    aspectRatio: isVideoVertical ? '9/16' : 'auto',
-                    objectFit: 'contain',
-                    borderRadius: isVideoVertical ? 20 : 16,
-                    boxShadow: isVideoVertical ? '0 15px 40px rgba(0,0,0,0.9), 0 0 25px rgba(255,45,85,0.3)' : 'none',
-                    border: isVideoVertical ? '1px solid rgba(255,45,85,0.4)' : 'none',
-                  }}
-                  controls
-                  autoPlay
-                  muted
-                  playsInline
-                  preload="metadata"
-                  onError={() => setSelectedVideoError(true)}
+            {isVideoItem(selectedItem) ? (
+              <div style={{ width: '100%', marginBottom: 24 }}>
+                <FuturisticVideoPlayer
+                  src={selectedItem.mediaUrl || selectedItem.videoUrl || selectedItem.fileUrl}
+                  poster={selectedItem.thumbnail || (getMediaSrc(selectedItem).includes('res.cloudinary.com') ? getMediaSrc(selectedItem).replace(/\.(mp4|webm|mov|mkv)/i, '.jpg').replace('/video/upload/', '/video/upload/so_0,') : '')}
+                  title={selectedItem.title}
+                  autoPlay={true}
                 />
               </div>
             ) : getMediaSrc(selectedItem) ? (
