@@ -153,7 +153,7 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
     { id: 'skills', label: 'Skills/Services', icon: Wrench, badge: skills.length },
     { id: 'pricing', label: 'Pricing', icon: DollarSign },
     { id: 'requests', label: 'Client Requests', icon: Inbox, badge: inquiries.filter((i) => i.status === 'New').length || undefined, badgeColor: '#ff2d55' },
-    { id: 'media', label: 'Media Library', icon: ImageIcon },
+    { id: 'media', label: 'Media Library', icon: ImageIcon, badge: (portfolio.length + courses.length) || undefined },
     { id: 'settings', label: 'Settings', icon: Settings }
   ];
 

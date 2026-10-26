@@ -1218,16 +1218,152 @@ function makeRepository(client, collections) {
 
     // ── Media Library ──
     getMedia: async () => {
-      return (await media.find({}).sort({ created_at: -1 }).toArray()).map(m => ({
-        id: m.id || m._id,
-        name: m.name,
-        url: m.url,
-        type: m.type || 'image',
-        size: m.size || '0 KB',
-        folder: m.folder || 'General',
-        usedBy: m.used_by || 'Unassigned',
-        createdAt: m.created_at
-      }))
+      const [directMedia, coursesList, portfolioList, testimonialsList] = await Promise.all([
+        media.find({}).sort({ created_at: -1 }).toArray(),
+        courses.find({}).toArray(),
+        portfolioItems.find({}).toArray(),
+        testimonials.find({}).toArray()
+      ])
+
+      const items = []
+      const seenUrls = new Set()
+
+      // 1. Direct uploads to Media Library
+      for (const m of directMedia) {
+        if (m.url && !seenUrls.has(m.url)) {
+          seenUrls.add(m.url)
+          items.push({
+            id: m.id || m._id?.toString(),
+            name: m.name || 'Media Asset',
+            url: m.url,
+            type: m.type || (/\.(mp4|webm|mov|mkv)/i.test(m.url) ? 'video' : 'image'),
+            size: m.size || 'Direct Upload',
+            folder: m.folder || 'General',
+            usedBy: m.used_by || 'Media Library',
+            createdAt: m.created_at || m.createdAt || null
+          })
+        }
+      }
+
+      // 2. Course assets (thumbnails, promo videos, lesson videos)
+      for (const cr of coursesList) {
+        if (cr.thumbnail && !seenUrls.has(cr.thumbnail)) {
+          seenUrls.add(cr.thumbnail)
+          items.push({
+            id: 'course_thumb_' + (cr.id || cr._id),
+            name: (cr.title ? cr.title.slice(0, 40) : 'Course') + ' Thumbnail',
+            url: cr.thumbnail,
+            type: 'image',
+            size: 'Course Image',
+            folder: 'Courses',
+            usedBy: cr.title || 'Course LMS',
+            createdAt: cr.created_at || cr.createdAt || null
+          })
+        }
+        const courseVid = cr.video_url || cr.videoUrl
+        if (courseVid && !seenUrls.has(courseVid)) {
+          seenUrls.add(courseVid)
+          items.push({
+            id: 'course_vid_' + (cr.id || cr._id),
+            name: (cr.title ? cr.title.slice(0, 40) : 'Course') + ' Promo Video',
+            url: courseVid,
+            type: 'video',
+            size: 'Course Video',
+            folder: 'Courses',
+            usedBy: cr.title || 'Course LMS',
+            createdAt: cr.created_at || cr.createdAt || null
+          })
+        }
+        if (Array.isArray(cr.lessons)) {
+          for (let i = 0; i < cr.lessons.length; i++) {
+            const l = cr.lessons[i]
+            const lVid = l?.video_url || l?.videoUrl
+            if (lVid && !seenUrls.has(lVid)) {
+              seenUrls.add(lVid)
+              items.push({
+                id: 'lesson_vid_' + (cr.id || cr._id) + '_' + i,
+                name: (l.title ? l.title.slice(0, 35) : `Lesson ${i+1}`) + ' Video',
+                url: lVid,
+                type: 'video',
+                size: 'Lesson Video',
+                folder: 'Courses',
+                usedBy: cr.title || 'Course LMS',
+                createdAt: cr.created_at || cr.createdAt || null
+              })
+            }
+          }
+        }
+      }
+
+      // 3. Portfolio assets (media, thumbnails, gallery)
+      for (const p of portfolioList) {
+        const pUrl = p.media_url || p.mediaUrl
+        if (pUrl && !seenUrls.has(pUrl)) {
+          seenUrls.add(pUrl)
+          const isVid = p.media_type === 'video' || /\.(mp4|webm|mov|mkv)/i.test(pUrl)
+          items.push({
+            id: 'port_media_' + (p.id || p._id),
+            name: p.media_name || (p.title ? p.title.slice(0, 40) : 'Portfolio') + (isVid ? ' Video' : ' Image'),
+            url: pUrl,
+            type: isVid ? 'video' : 'image',
+            size: p.category || 'Portfolio CMS',
+            folder: 'Portfolio',
+            usedBy: p.title || 'Portfolio CMS',
+            createdAt: p.created_at || p.createdAt || null
+          })
+        }
+        if (p.thumbnail && !seenUrls.has(p.thumbnail)) {
+          seenUrls.add(p.thumbnail)
+          items.push({
+            id: 'port_thumb_' + (p.id || p._id),
+            name: (p.title ? p.title.slice(0, 40) : 'Portfolio') + ' Thumbnail',
+            url: p.thumbnail,
+            type: 'image',
+            size: 'Portfolio Thumb',
+            folder: 'Portfolio',
+            usedBy: p.title || 'Portfolio CMS',
+            createdAt: p.created_at || p.createdAt || null
+          })
+        }
+        if (Array.isArray(p.gallery_images)) {
+          for (let gIdx = 0; gIdx < p.gallery_images.length; gIdx++) {
+            const gUrl = p.gallery_images[gIdx]
+            if (gUrl && !seenUrls.has(gUrl)) {
+              seenUrls.add(gUrl)
+              items.push({
+                id: 'port_gallery_' + (p.id || p._id) + '_' + gIdx,
+                name: (p.title ? p.title.slice(0, 35) : 'Portfolio') + ` Gallery #${gIdx+1}`,
+                url: gUrl,
+                type: 'image',
+                size: 'Portfolio Gallery',
+                folder: 'Portfolio',
+                usedBy: p.title || 'Portfolio CMS',
+                createdAt: p.created_at || p.createdAt || null
+              })
+            }
+          }
+        }
+      }
+
+      // 4. Testimonials (avatars/photos)
+      for (const t of testimonialsList) {
+        const tImg = t.image || t.avatar || t.photo
+        if (tImg && !seenUrls.has(tImg)) {
+          seenUrls.add(tImg)
+          items.push({
+            id: 'test_img_' + (t.id || t._id),
+            name: (t.name || 'Client') + ' Photo',
+            url: tImg,
+            type: 'image',
+            size: 'Avatar',
+            folder: 'Testimonials',
+            usedBy: t.name || 'Testimonials',
+            createdAt: t.created_at || t.createdAt || null
+          })
+        }
+      }
+
+      return items
     },
     createMedia: async (data) => {
       const item = {
@@ -1245,7 +1381,17 @@ function makeRepository(client, collections) {
       return item
     },
     deleteMedia: async (mediaId) => {
-      await media.deleteOne({ id: mediaId })
+      if (typeof mediaId === 'string' && mediaId.startsWith('course_thumb_')) {
+        const courseId = mediaId.replace('course_thumb_', '')
+        await courses.updateOne({ $or: [{ id: courseId }, { _id: courseId }] }, { $set: { thumbnail: '' } })
+        return true
+      }
+      if (typeof mediaId === 'string' && mediaId.startsWith('port_media_')) {
+        const portId = mediaId.replace('port_media_', '')
+        await portfolioItems.deleteOne({ $or: [{ id: portId }, { _id: portId }] })
+        return true
+      }
+      await media.deleteOne({ $or: [{ id: mediaId }, { _id: mediaId }] })
       return true
     },
 
