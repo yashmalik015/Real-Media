@@ -187,6 +187,89 @@ export const api = {
     })
   },
 
+  /**
+   * Upload large files (up to 3GB) by slicing into 5MB chunks.
+   * Completely bypasses Nginx/Cloudflare/Hostinger HTTP 413 "Request Entity Too Large" errors!
+   */
+  uploadFileInChunks: async (file, { folder = 'courses/videos', chunkSize = 5 * 1024 * 1024, onProgress } = {}) => {
+    const totalSize = file.size
+    const totalChunks = Math.ceil(totalSize / chunkSize)
+    const uploadId = `up_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+    const token = getToken()
+
+    let result = null
+
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+      const start = chunkIndex * chunkSize
+      const end = Math.min(start + chunkSize, totalSize)
+      const chunkBlob = file.slice(start, end)
+
+      const fd = new FormData()
+      fd.append('chunk', chunkBlob, file.name)
+      fd.append('uploadId', uploadId)
+      fd.append('chunkIndex', String(chunkIndex))
+      fd.append('totalChunks', String(totalChunks))
+      fd.append('filename', file.name)
+      fd.append('folder', folder)
+
+      let retries = 3
+      let chunkSuccess = false
+      let lastError = null
+
+      while (retries > 0 && !chunkSuccess) {
+        try {
+          const headers = {}
+          if (token) headers.Authorization = `Bearer ${token}`
+
+          const res = await fetch(`${API_BASE}/api/upload/chunk`, {
+            method: 'POST',
+            headers,
+            body: fd,
+            credentials: 'include',
+          })
+
+          if (!res.ok) {
+            let errorMsg = `Upload failed with status ${res.status}`
+            try {
+              const errJson = await res.json()
+              errorMsg = errJson.message || errorMsg
+            } catch {}
+            throw new Error(errorMsg)
+          }
+
+          const data = await res.json()
+          chunkSuccess = true
+
+          const percent = Math.min(99, Math.round(((chunkIndex + 1) / totalChunks) * 100))
+          if (onProgress) {
+            onProgress(percent, chunkIndex + 1, totalChunks)
+          }
+
+          if (data.done) {
+            result = data
+            if (onProgress) onProgress(100, totalChunks, totalChunks)
+          }
+        } catch (err) {
+          lastError = err
+          retries--
+          if (retries > 0) {
+            await new Promise((r) => setTimeout(r, 1200))
+          }
+        }
+      }
+
+      if (!chunkSuccess) {
+        throw new Error(`Failed to upload chunk ${chunkIndex + 1} of ${totalChunks}: ${lastError?.message || 'Network error'}`)
+      }
+    }
+
+    if (!result?.url) {
+      throw new Error('Video upload completed but no URL was returned by server.')
+    }
+
+    return result
+  },
+
   getSettings: () => request('/api/settings'),
   updateSettings: (payload) => request('/api/settings', { method: 'PUT', body: payload }),
 

@@ -43,6 +43,7 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
   const [lessonForm, setLessonForm] = useState(emptyLessonForm);
   const [lessonVideo, setLessonVideo] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatusText, setUploadStatusText] = useState('');
   const [videoSourceType, setVideoSourceType] = useState('link');
   const [editingLesson, setEditingLesson] = useState(null);
   const [expandedModules, setExpandedModules] = useState({});
@@ -162,34 +163,47 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
       if (isExternalLink || videoSourceType === 'link') {
         videoUrl = driveLink || videoUrl;
       } else if (lessonVideo) {
-        // Priority 2: Direct file upload
-        if (lessonVideo.size > 100 * 1024 * 1024) {
+        // Direct file upload (supports files up to 3GB via 5MB chunked upload)
+        if (lessonVideo.size > 3 * 1024 * 1024 * 1024) {
           throw new Error(
-            `File is ${(lessonVideo.size / (1024 * 1024)).toFixed(1)} MB! Direct web upload is limited to 100MB. Please use the YouTube / Google Drive link option.`
+            `File is ${(lessonVideo.size / (1024 * 1024 * 1024)).toFixed(2)} GB! Maximum supported upload size is 3GB.`
           );
         }
 
         let uploadedUrl = null;
-        // 1. Attempt direct upload to Cloudinary (bypasses Hostinger reverse proxy 413 limit completely)
-        try {
-          const sigRes = await api.getCloudinarySignature('courses/videos');
-          if (sigRes?.enabled && sigRes?.signature) {
-            setUploadProgress(1);
-            const directRes = await api.uploadDirectToCloudinary(lessonVideo, sigRes, (pct) => {
-              setUploadProgress(pct);
-            });
-            uploadedUrl = directRes.url;
+
+        // If file is smaller than 95MB, try direct Cloudinary upload first
+        if (lessonVideo.size <= 95 * 1024 * 1024) {
+          try {
+            const sigRes = await api.getCloudinarySignature('courses/videos');
+            if (sigRes?.enabled && sigRes?.signature) {
+              setUploadProgress(1);
+              setUploadStatusText('Uploading to cloud storage...');
+              const directRes = await api.uploadDirectToCloudinary(lessonVideo, sigRes, (pct) => {
+                setUploadProgress(pct);
+                setUploadStatusText(`Uploading to cloud (${pct}%)...`);
+              });
+              uploadedUrl = directRes.url;
+            }
+          } catch (cloudErr) {
+            console.warn('[Cloudinary Direct Fallback] Uploading via chunked upload:', cloudErr.message || cloudErr);
           }
-        } catch (cloudErr) {
-          console.warn('[Cloudinary Direct Fallback] Uploading via server:', cloudErr.message || cloudErr);
         }
 
-        // 2. Fallback to server upload if direct upload is not available
+        // Chunked upload: Slices large files (up to 3GB) into 5MB chunks.
+        // Completely bypasses Hostinger/Nginx 413 "Request Entity Too Large" limits!
         if (!uploadedUrl) {
-          const fd = new FormData();
-          fd.append('video', lessonVideo);
-          const uploadRes = await api.uploadLessonVideo(playlistCourse.id, lessonId, fd);
-          uploadedUrl = uploadRes.url;
+          setUploadProgress(1);
+          setUploadStatusText('Starting chunked upload...');
+          const chunkRes = await api.uploadFileInChunks(lessonVideo, {
+            folder: 'courses/videos',
+            chunkSize: 5 * 1024 * 1024,
+            onProgress: (pct, currentChunk, totalChunks) => {
+              setUploadProgress(pct);
+              setUploadStatusText(`Uploading chunk ${currentChunk} of ${totalChunks} (${pct}%)...`);
+            }
+          });
+          uploadedUrl = chunkRes.url;
         }
 
         if (uploadedUrl) {
@@ -232,6 +246,7 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
     } finally {
       setLoading(false);
       setUploadProgress(0);
+      setUploadStatusText('');
     }
   };
 
@@ -254,33 +269,45 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
       if (isExternalLink || videoSourceType === 'link') {
         videoUrl = driveLink || videoUrl;
       } else if (lessonVideo) {
-        if (lessonVideo.size > 100 * 1024 * 1024) {
+        if (lessonVideo.size > 3 * 1024 * 1024 * 1024) {
           throw new Error(
-            `File is ${(lessonVideo.size / (1024 * 1024)).toFixed(1)} MB! Direct web upload is limited to 100MB. Please use the YouTube / Google Drive link option.`
+            `File is ${(lessonVideo.size / (1024 * 1024 * 1024)).toFixed(2)} GB! Maximum supported upload size is 3GB.`
           );
         }
 
         let uploadedUrl = null;
-        // 1. Attempt direct upload to Cloudinary (bypasses Hostinger reverse proxy 413 limit completely)
-        try {
-          const sigRes = await api.getCloudinarySignature('courses/videos');
-          if (sigRes?.enabled && sigRes?.signature) {
-            setUploadProgress(1);
-            const directRes = await api.uploadDirectToCloudinary(lessonVideo, sigRes, (pct) => {
-              setUploadProgress(pct);
-            });
-            uploadedUrl = directRes.url;
+
+        // If file is smaller than 95MB, try direct Cloudinary upload first
+        if (lessonVideo.size <= 95 * 1024 * 1024) {
+          try {
+            const sigRes = await api.getCloudinarySignature('courses/videos');
+            if (sigRes?.enabled && sigRes?.signature) {
+              setUploadProgress(1);
+              setUploadStatusText('Uploading to cloud storage...');
+              const directRes = await api.uploadDirectToCloudinary(lessonVideo, sigRes, (pct) => {
+                setUploadProgress(pct);
+                setUploadStatusText(`Uploading to cloud (${pct}%)...`);
+              });
+              uploadedUrl = directRes.url;
+            }
+          } catch (cloudErr) {
+            console.warn('[Cloudinary Direct Fallback] Uploading via chunked upload:', cloudErr.message || cloudErr);
           }
-        } catch (cloudErr) {
-          console.warn('[Cloudinary Direct Fallback] Uploading via server:', cloudErr.message || cloudErr);
         }
 
-        // 2. Fallback to server upload if direct upload is not available
+        // Chunked upload: Slices large files (up to 3GB) into 5MB chunks.
         if (!uploadedUrl) {
-          const fd = new FormData();
-          fd.append('video', lessonVideo);
-          const uploadRes = await api.uploadLessonVideo(playlistCourse.id, lessonId, fd);
-          uploadedUrl = uploadRes.url;
+          setUploadProgress(1);
+          setUploadStatusText('Starting chunked upload...');
+          const chunkRes = await api.uploadFileInChunks(lessonVideo, {
+            folder: 'courses/videos',
+            chunkSize: 5 * 1024 * 1024,
+            onProgress: (pct, currentChunk, totalChunks) => {
+              setUploadProgress(pct);
+              setUploadStatusText(`Uploading chunk ${currentChunk} of ${totalChunks} (${pct}%)...`);
+            }
+          });
+          uploadedUrl = chunkRes.url;
         }
 
         if (uploadedUrl) {
@@ -319,6 +346,7 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
     } finally {
       setLoading(false);
       setUploadProgress(0);
+      setUploadStatusText('');
     }
   };
 
@@ -360,6 +388,7 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
     setLessonForm(emptyLessonForm);
     setLessonVideo(null);
     setUploadProgress(0);
+    setUploadStatusText('');
     setVideoSourceType('link');
     setEditingLesson(null);
     setActiveModuleId(null);
@@ -495,7 +524,7 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
                   transition: 'all 0.2s ease'
                 }}
               >
-                <span>📁 Upload MP4 File (Max 100MB)</span>
+                <span>📁 Upload MP4 File (Supports up to 3GB)</span>
               </button>
             </div>
 
@@ -523,7 +552,7 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
                 {lessonVideo && (
                   <div style={{ marginTop: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: '0.75rem', color: lessonVideo.size > 100 * 1024 * 1024 ? '#ff453a' : '#34c759', fontWeight: 600 }}>
+                      <span style={{ fontSize: '0.75rem', color: lessonVideo.size > 3 * 1024 * 1024 * 1024 ? '#ff453a' : '#34c759', fontWeight: 600 }}>
                         {lessonVideo.name} ({(lessonVideo.size / (1024 * 1024)).toFixed(1)} MB)
                       </span>
                       <button
@@ -534,9 +563,16 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
                         Remove file
                       </button>
                     </div>
-                    {lessonVideo.size > 100 * 1024 * 1024 && (
+                    {lessonVideo.size > 3 * 1024 * 1024 * 1024 ? (
                       <div style={{ fontSize: '0.75rem', color: '#ff453a', marginTop: 6, padding: '8px 12px', borderRadius: 6, backgroundColor: 'rgba(255,69,58,0.15)', border: '1px solid rgba(255,69,58,0.3)' }}>
-                        ⚠️ <strong>File is {(lessonVideo.size / (1024 * 1024)).toFixed(1)} MB!</strong> Direct web uploads are limited to 100MB (larger files trigger Error 413). Please switch to the <strong>YouTube / Google Drive Link</strong> tab above!
+                        ⚠️ <strong>File is {(lessonVideo.size / (1024 * 1024 * 1024)).toFixed(2)} GB!</strong> Uploads are capped at 3GB. Please compress the video or switch to the <strong>YouTube / Google Drive Link</strong> tab above!
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '0.75rem', color: '#30d158', marginTop: 6, padding: '8px 12px', borderRadius: 6, backgroundColor: 'rgba(50,215,75,0.12)', border: '1px solid rgba(50,215,75,0.25)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span>⚡</span>
+                        <span>
+                          <strong>{(lessonVideo.size / (1024 * 1024)).toFixed(1)} MB</strong> file selected. Will be uploaded safely via chunked upload (5MB slices) without 413 limits!
+                        </span>
                       </div>
                     )}
                   </div>
@@ -547,7 +583,7 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
           {uploadProgress > 0 && (
             <div style={{ gridColumn: 'span 2', marginTop: 4 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#ff2d55', marginBottom: 4 }}>
-                <span>Uploading Video Directly to Cloud...</span>
+                <span>{uploadStatusText || 'Uploading Video...'}</span>
                 <span>{uploadProgress}%</span>
               </div>
               <div style={{ width: '100%', height: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 4, overflow: 'hidden' }}>
@@ -562,7 +598,7 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
               disabled={loading}
               style={{ flex: 1, padding: '10px', borderRadius: 8, backgroundColor: '#ff2d55', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
             >
-              {loading ? (uploadProgress > 0 ? `Uploading (${uploadProgress}%)...` : 'Saving...') : isEditing ? 'Save Changes' : 'Add Video Lesson'}
+              {loading ? (uploadProgress > 0 ? (uploadStatusText || `Uploading (${uploadProgress}%)...`) : 'Saving...') : isEditing ? 'Save Changes' : 'Add Video Lesson'}
             </button>
             <button
               type="button"

@@ -57,7 +57,11 @@ export async function uploadFile(file, folder) {
   const isVideo = file.mimetype?.startsWith('video/')
   const defaultResourceType = isVideo ? 'video' : 'auto'
 
-  if (isCloudinaryConfigured()) {
+  // Videos larger than 95MB exceed Cloudinary standard plan limits (100MB).
+  // Save directly to local disk storage to avoid Cloudinary 400 errors and timeouts.
+  const isTooLargeForCloudinary = isVideo && file.size && file.size > 95 * 1024 * 1024
+
+  if (isCloudinaryConfigured() && !isTooLargeForCloudinary) {
     try {
       const cleanFolder = folder.toLowerCase().replace(/[^a-z0-9/_\\-]+/g, '-')
       const cloudinaryFolder = `assetsweber/${cleanFolder}`

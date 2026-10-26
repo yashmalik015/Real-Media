@@ -1672,9 +1672,14 @@ function LegacyTeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
       }
       const lessonId = uid("les");
       if (videoFile && !driveLink) {
-        const fd = new FormData(); fd.append("video", videoFile);
-        const { url } = await api.uploadLessonVideo(selectedCourse.id, lessonId, fd);
-        videoUrl = url;
+        if (videoFile.size > 50 * 1024 * 1024) {
+          const chunkRes = await api.uploadFileInChunks(videoFile, { folder: 'courses/videos' });
+          videoUrl = chunkRes.url;
+        } else {
+          const fd = new FormData(); fd.append("video", videoFile);
+          const { url } = await api.uploadLessonVideo(selectedCourse.id, lessonId, fd);
+          videoUrl = url;
+        }
       }
       const lesson = { id: lessonId, ...lessonForm, videoUrl };
       const modules = selectedCourse.modules.map(m => m.id === modId ? { ...m, lessons: [...(m.lessons || []), lesson] } : m);

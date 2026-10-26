@@ -1,8 +1,10 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { id, now } from './database.js'
 import { courseToDb } from './database.js'
 import { verifyIdToken } from './firebaseAdmin.js'
 import { deleteFromCloudinary, generateCloudinarySignature } from './cloudinary.js'
-import { isCloudinaryConfigured } from './fileStorage.js'
+import { isCloudinaryConfigured, uploadsDirectory } from './fileStorage.js'
 import { sendInquiryNotification, sendVerificationEmail, sendVerificationSMS } from './utils/notifications.js'
 
 function parseJsonSafely(val, fallback = []) {
@@ -551,6 +553,96 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
     } catch (err) {
       console.error('[Lesson Video Upload Error]:', err.message || err)
       res.status(500).json({ message: `Video upload failed: ${err.message || 'Unknown error'}` })
+    }
+  })
+
+  // ── Chunked Upload Endpoint (Bypasses Nginx 413 & Hostinger body limits for files up to 3GB) ──
+  const chunkUploadsDir = path.resolve(uploadsDirectory(), 'temp', 'chunks')
+  try {
+    fs.mkdirSync(chunkUploadsDir, { recursive: true })
+    // Clean up stale chunks older than 24 hours on boot
+    fs.readdir(chunkUploadsDir, (err, files) => {
+      if (err || !files) return
+      const nowMs = Date.now()
+      for (const file of files) {
+        const fp = path.join(chunkUploadsDir, file)
+        fs.stat(fp, (e, st) => {
+          if (!e && st && nowMs - st.mtimeMs > 24 * 60 * 60 * 1000) {
+            fs.unlink(fp, () => {})
+          }
+        })
+      }
+    })
+  } catch {}
+
+  app.post('/api/upload/chunk', requireAuth, upload.single('chunk'), async (req, res) => {
+    if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
+    if (!req.file) return res.status(400).json({ message: 'Chunk file is required.' })
+
+    const uploadId = (req.body.uploadId || '').replace(/[^a-zA-Z0-9_\-]/g, '')
+    const chunkIndex = parseInt(req.body.chunkIndex, 10)
+    const totalChunks = parseInt(req.body.totalChunks, 10)
+    const filename = (req.body.filename || 'video.mp4').replace(/[^\w.\-() ]+/g, '_')
+    const folder = (req.body.folder || 'courses/videos').replace(/[^a-zA-Z0-9_\-/]/g, '')
+
+    if (!uploadId || isNaN(chunkIndex) || isNaN(totalChunks) || totalChunks <= 0) {
+      if (req.file.path) fs.promises.unlink(req.file.path).catch(() => {})
+      return res.status(400).json({ message: 'Invalid chunk parameters.' })
+    }
+
+    const tempPartFile = path.join(chunkUploadsDir, `${uploadId}.part`)
+
+    try {
+      const chunkData = req.file.path
+        ? await fs.promises.readFile(req.file.path)
+        : req.file.buffer
+
+      if (chunkIndex === 0) {
+        await fs.promises.writeFile(tempPartFile, chunkData)
+      } else {
+        await fs.promises.appendFile(tempPartFile, chunkData)
+      }
+
+      if (req.file.path) {
+        await fs.promises.unlink(req.file.path).catch(() => {})
+      }
+
+      // If this was the final chunk, finalize and move to permanent storage
+      if (chunkIndex === totalChunks - 1) {
+        const assembledStat = await fs.promises.stat(tempPartFile)
+        const assembledFile = {
+          originalname: filename,
+          mimetype: 'video/mp4',
+          path: tempPartFile,
+          size: assembledStat.size,
+        }
+
+        const uploaded = await uploadFile(assembledFile, folder)
+
+        if (fs.existsSync(tempPartFile)) {
+          await fs.promises.unlink(tempPartFile).catch(() => {})
+        }
+
+        return res.json({
+          done: true,
+          url: uploaded.url,
+          filename: uploaded.filename,
+          mediaType: 'video',
+          size: assembledStat.size,
+        })
+      }
+
+      return res.json({
+        done: false,
+        uploadId,
+        chunkIndex,
+        totalChunks,
+        progress: Math.round(((chunkIndex + 1) / totalChunks) * 100),
+      })
+    } catch (err) {
+      console.error('[Chunk Upload Error]:', err)
+      if (req.file?.path) fs.promises.unlink(req.file.path).catch(() => {})
+      return res.status(500).json({ message: `Chunk upload failed: ${err.message || err}` })
     }
   })
 
