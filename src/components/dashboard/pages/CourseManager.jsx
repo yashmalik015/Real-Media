@@ -42,6 +42,7 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
   const [activeModuleId, setActiveModuleId] = useState(null);
   const [lessonForm, setLessonForm] = useState(emptyLessonForm);
   const [lessonVideo, setLessonVideo] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [editingLesson, setEditingLesson] = useState(null);
   const [expandedModules, setExpandedModules] = useState({});
 
@@ -141,15 +142,44 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
   const handleAddLesson = async (modId) => {
     if (!lessonForm.title.trim() || !playlistCourse) return;
     setLoading(true);
+    setUploadProgress(0);
     try {
       const lessonId = `les_${Date.now()}`;
-      let videoUrl = lessonForm.videoUrl.trim();
+      let videoUrl = lessonForm.videoUrl?.trim() || '';
+      const driveLink = lessonForm.driveLink?.trim() || '';
+
+      // If YouTube or Google Drive link is provided and no videoUrl is set, use it as the playable videoUrl
+      if (!videoUrl && driveLink) {
+        videoUrl = driveLink;
+      }
 
       if (lessonVideo) {
-        const fd = new FormData();
-        fd.append('video', lessonVideo);
-        const uploadRes = await api.uploadLessonVideo(playlistCourse.id, lessonId, fd);
-        videoUrl = uploadRes.url || videoUrl;
+        let uploadedUrl = null;
+        // 1. Attempt direct upload to Cloudinary (bypasses Hostinger reverse proxy 413 limit completely)
+        try {
+          const sigRes = await api.getCloudinarySignature('courses/videos');
+          if (sigRes?.enabled && sigRes?.signature) {
+            setUploadProgress(1);
+            const directRes = await api.uploadDirectToCloudinary(lessonVideo, sigRes, (pct) => {
+              setUploadProgress(pct);
+            });
+            uploadedUrl = directRes.url;
+          }
+        } catch (cloudErr) {
+          console.warn('[Cloudinary Direct Fallback] Uploading via server:', cloudErr.message || cloudErr);
+        }
+
+        // 2. Fallback to server upload if direct upload is not available
+        if (!uploadedUrl) {
+          const fd = new FormData();
+          fd.append('video', lessonVideo);
+          const uploadRes = await api.uploadLessonVideo(playlistCourse.id, lessonId, fd);
+          uploadedUrl = uploadRes.url;
+        }
+
+        if (uploadedUrl) {
+          videoUrl = uploadedUrl;
+        }
       }
 
       const newLesson = {
@@ -180,20 +210,49 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
       showToast(err.message);
     } finally {
       setLoading(false);
+      setUploadProgress(0);
     }
   };
 
   const handleUpdateLesson = async (modId, lessonId) => {
     if (!lessonForm.title.trim() || !playlistCourse) return;
     setLoading(true);
+    setUploadProgress(0);
     try {
-      let videoUrl = lessonForm.videoUrl.trim();
+      let videoUrl = lessonForm.videoUrl?.trim() || '';
+      const driveLink = lessonForm.driveLink?.trim() || '';
+
+      if (!videoUrl && driveLink) {
+        videoUrl = driveLink;
+      }
 
       if (lessonVideo) {
-        const fd = new FormData();
-        fd.append('video', lessonVideo);
-        const uploadRes = await api.uploadLessonVideo(playlistCourse.id, lessonId, fd);
-        videoUrl = uploadRes.url || videoUrl;
+        let uploadedUrl = null;
+        // 1. Attempt direct upload to Cloudinary (bypasses Hostinger reverse proxy 413 limit completely)
+        try {
+          const sigRes = await api.getCloudinarySignature('courses/videos');
+          if (sigRes?.enabled && sigRes?.signature) {
+            setUploadProgress(1);
+            const directRes = await api.uploadDirectToCloudinary(lessonVideo, sigRes, (pct) => {
+              setUploadProgress(pct);
+            });
+            uploadedUrl = directRes.url;
+          }
+        } catch (cloudErr) {
+          console.warn('[Cloudinary Direct Fallback] Uploading via server:', cloudErr.message || cloudErr);
+        }
+
+        // 2. Fallback to server upload if direct upload is not available
+        if (!uploadedUrl) {
+          const fd = new FormData();
+          fd.append('video', lessonVideo);
+          const uploadRes = await api.uploadLessonVideo(playlistCourse.id, lessonId, fd);
+          uploadedUrl = uploadRes.url;
+        }
+
+        if (uploadedUrl) {
+          videoUrl = uploadedUrl;
+        }
       }
 
       const updatedModules = (playlistCourse.modules || []).map((m) => {
@@ -226,6 +285,7 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
       showToast(err.message);
     } finally {
       setLoading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -262,6 +322,7 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
   const cancelLessonForm = () => {
     setLessonForm(emptyLessonForm);
     setLessonVideo(null);
+    setUploadProgress(0);
     setEditingLesson(null);
     setActiveModuleId(null);
   };
@@ -349,8 +410,11 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
               style={{ width: '100%', padding: '10px', borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', marginTop: 4, resize: 'vertical' }}
             />
           </div>
+          <div style={{ gridColumn: 'span 2', fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', padding: '8px 12px', borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            💡 <strong>Recommendation:</strong> For 1080p/4K lessons, simply paste a <strong>YouTube or Google Drive link</strong> (zero file upload wait, zero server size limits). You can also upload an MP4 file directly below.
+          </div>
           <div>
-            <label style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>YOUTUBE / DRIVE LINK</label>
+            <label style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>YOUTUBE / DRIVE LINK (RECOMMENDED)</label>
             <input
               type="text"
               placeholder="https://youtube.com/watch?v=..."
@@ -360,10 +424,32 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
             />
           </div>
           <div>
-            <label style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>UPLOAD VIDEO FILE</label>
+            <label style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>OR UPLOAD VIDEO FILE (MP4, WEBM)</label>
             <input type="file" accept="video/*" onChange={(e) => setLessonVideo(e.target.files?.[0] || null)} style={{ width: '100%', marginTop: 8, color: '#fff', fontSize: '0.8rem' }} />
-            {lessonVideo && <div style={{ fontSize: '0.72rem', color: '#34c759', marginTop: 4 }}>{lessonVideo.name}</div>}
+            {lessonVideo && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                <span style={{ fontSize: '0.72rem', color: '#34c759' }}>{lessonVideo.name} ({(lessonVideo.size / (1024 * 1024)).toFixed(1)} MB)</span>
+                <button
+                  type="button"
+                  onClick={() => setLessonVideo(null)}
+                  style={{ background: 'none', border: 'none', color: '#ff453a', fontSize: '0.72rem', cursor: 'pointer', padding: '0 4px', textDecoration: 'underline' }}
+                >
+                  Remove file
+                </button>
+              </div>
+            )}
           </div>
+          {uploadProgress > 0 && (
+            <div style={{ gridColumn: 'span 2', marginTop: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#ff2d55', marginBottom: 4 }}>
+                <span>Uploading Video Directly to Cloud...</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <div style={{ width: '100%', height: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 4, overflow: 'hidden' }}>
+                <div style={{ width: `${uploadProgress}%`, height: '100%', backgroundColor: '#ff2d55', transition: 'width 0.2s ease' }} />
+              </div>
+            </div>
+          )}
           <div style={{ gridColumn: 'span 2', display: 'flex', gap: 10 }}>
             <button
               type="button"
@@ -371,7 +457,7 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
               disabled={loading}
               style={{ flex: 1, padding: '10px', borderRadius: 8, backgroundColor: '#ff2d55', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
             >
-              {loading ? 'Saving...' : isEditing ? 'Save Changes' : 'Add Video Lesson'}
+              {loading ? (uploadProgress > 0 ? `Uploading (${uploadProgress}%)...` : 'Saving...') : isEditing ? 'Save Changes' : 'Add Video Lesson'}
             </button>
             <button
               type="button"

@@ -1,7 +1,8 @@
 import { id, now } from './database.js'
 import { courseToDb } from './database.js'
 import { verifyIdToken } from './firebaseAdmin.js'
-import { deleteFromCloudinary } from './cloudinary.js'
+import { deleteFromCloudinary, generateCloudinarySignature } from './cloudinary.js'
+import { isCloudinaryConfigured } from './fileStorage.js'
 import { sendInquiryNotification, sendVerificationEmail, sendVerificationSMS } from './utils/notifications.js'
 
 function parseJsonSafely(val, fallback = []) {
@@ -504,30 +505,53 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
     res.json({ course, url: uploaded.url })
   })
 
+  app.get('/api/cloudinary/signature', requireAuth, async (req, res) => {
+    if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
+    if (!isCloudinaryConfigured()) {
+      return res.json({ enabled: false, message: 'Cloudinary credentials are not configured on the server.' })
+    }
+    try {
+      const cleanFolder = req.query.folder ? `assetsweber/${req.query.folder.replace(/[^a-z0-9/_\\-]+/g, '-')}` : 'assetsweber/courses/videos'
+      const sigData = generateCloudinarySignature({ folder: cleanFolder })
+      if (!sigData) {
+        return res.status(500).json({ enabled: false, message: 'Could not generate upload signature.' })
+      }
+      res.json({ enabled: true, ...sigData })
+    } catch (err) {
+      console.error('[Cloudinary Signature Error]:', err.message || err)
+      res.status(500).json({ enabled: false, message: err.message || 'Signature error' })
+    }
+  })
+
   app.post('/api/courses/:courseId/lessons/:lessonId/video', requireAuth, upload.single('video'), async (req, res) => {
     if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
     if (!req.file) return res.status(400).json({ message: 'Video required.' })
-    const uploaded = await uploadFile(req.file, 'courses/videos')
-    const course = await v2.courseById(req.params.courseId)
-    if (!course) return res.status(404).json({ message: 'Course not found.' })
-    
-    // Update if lesson exists, otherwise just return the URL for frontend to save.
-    let updated = course
-    let lessonExists = false
-    const modules = course.modules.map((m) => ({
-      ...m,
-      lessons: m.lessons.map((l) => {
-        if (l.id === req.params.lessonId) {
-          lessonExists = true
-          return { ...l, videoUrl: uploaded.url, uploadedAt: now() }
-        }
-        return l
-      }),
-    }))
-    if (lessonExists) {
-      updated = await v2.updateCourse(req.params.courseId, { modules })
+    try {
+      const uploaded = await uploadFile(req.file, 'courses/videos')
+      const course = await v2.courseById(req.params.courseId)
+      if (!course) return res.status(404).json({ message: 'Course not found.' })
+      
+      // Update if lesson exists, otherwise just return the URL for frontend to save.
+      let updated = course
+      let lessonExists = false
+      const modules = (course.modules || []).map((m) => ({
+        ...m,
+        lessons: (m.lessons || []).map((l) => {
+          if (l.id === req.params.lessonId) {
+            lessonExists = true
+            return { ...l, videoUrl: uploaded.url, uploadedAt: now() }
+          }
+          return l
+        }),
+      }))
+      if (lessonExists) {
+        updated = await v2.updateCourse(req.params.courseId, { modules })
+      }
+      res.json({ course: updated, url: uploaded.url })
+    } catch (err) {
+      console.error('[Lesson Video Upload Error]:', err.message || err)
+      res.status(500).json({ message: `Video upload failed: ${err.message || 'Unknown error'}` })
     }
-    res.json({ course: updated, url: uploaded.url })
   })
 
   app.post('/api/courses/:courseId/lessons/:lessonId/thumbnail', requireAuth, upload.single('thumbnail'), async (req, res) => {

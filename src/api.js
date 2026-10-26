@@ -66,7 +66,9 @@ async function request(path, options = {}) {
       throw new Error(data.message || 'Backend server is not running. Start it with: npm run dev:full')
     }
     let msg = data.message || data.error || `Server error ${res.status}`
-    if (res.status === 401 && (msg.includes('Authorization') || msg.includes('token') || msg.includes('authenticated'))) {
+    if (res.status === 413) {
+      msg = data.message || 'Video file is too large for direct server upload (HTTP 413). Please use a YouTube / Google Drive link, or increase client_max_body_size on your web server.'
+    } else if (res.status === 401 && (msg.includes('Authorization') || msg.includes('token') || msg.includes('authenticated'))) {
       msg = 'Team authorization session expired. Please log in to Team Dashboard again.'
     }
     const err = new Error(msg)
@@ -138,6 +140,52 @@ export const api = {
   uploadCourseThumbnail: (id, formData) => request(`/api/courses/${id}/thumbnail`, { method: 'POST', body: formData }),
   uploadLessonVideo: (courseId, lessonId, formData) => request(`/api/courses/${courseId}/lessons/${lessonId}/video`, { method: 'POST', body: formData }),
   uploadLessonThumbnail: (courseId, lessonId, formData) => request(`/api/courses/${courseId}/lessons/${lessonId}/thumbnail`, { method: 'POST', body: formData }),
+  getCloudinarySignature: (folder) => request(`/api/cloudinary/signature?folder=${encodeURIComponent(folder || 'courses/videos')}`),
+  uploadDirectToCloudinary: (file, sigData, onProgress) => {
+    const url = `https://api.cloudinary.com/v1_1/${sigData.cloudName}/auto/upload`
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('api_key', sigData.apiKey)
+    fd.append('timestamp', sigData.timestamp)
+    fd.append('signature', sigData.signature)
+    fd.append('folder', sigData.folder)
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      xhr.open('POST', url)
+      if (xhr.upload && onProgress) {
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100)
+            onProgress(percent)
+          }
+        }
+      }
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const res = JSON.parse(xhr.responseText)
+            let finalUrl = res.secure_url || res.url
+            if (res.resource_type === 'video' && finalUrl.includes('/upload/')) {
+              finalUrl = finalUrl.replace('/upload/', '/upload/f_auto,q_auto,w_1280,c_limit/')
+            }
+            resolve({ url: finalUrl, publicId: res.public_id, resourceType: res.resource_type })
+          } catch {
+            reject(new Error('Failed to parse Cloudinary response.'))
+          }
+        } else {
+          try {
+            const errRes = JSON.parse(xhr.responseText)
+            reject(new Error(errRes.error?.message || `Cloudinary upload failed (HTTP ${xhr.status})`))
+          } catch {
+            reject(new Error(`Cloudinary upload failed (HTTP ${xhr.status})`))
+          }
+        }
+      }
+      xhr.onerror = () => reject(new Error('Network error during direct video upload.'))
+      xhr.send(fd)
+    })
+  },
 
   getSettings: () => request('/api/settings'),
   updateSettings: (payload) => request('/api/settings', { method: 'PUT', body: payload }),

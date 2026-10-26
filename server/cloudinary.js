@@ -62,6 +62,60 @@ export function uploadToCloudinaryStream(buffer, { folder = 'assetsweber/uploads
 }
 
 /**
+ * Upload a large file (especially video) directly from disk using Cloudinary upload_large (chunked).
+ * @param {string} filePath - Absolute path to temporary file on disk
+ * @param {Object} options - Upload options
+ * @returns {Promise<{ url: string, publicId: string, resourceType: string }>}
+ */
+export async function uploadToCloudinaryLarge(filePath, { folder = 'assetsweber/uploads', resourceType = 'video' } = {}) {
+  initCloudinary()
+  const result = await cloudinary.uploader.upload_large(filePath, {
+    folder,
+    resource_type: resourceType,
+    chunk_size: 6000000, // 6MB chunks
+    unique_filename: true,
+    overwrite: false,
+  })
+
+  let url = result.secure_url || result.url
+  if (result.resource_type === 'video' && url.includes('/upload/')) {
+    url = url.replace('/upload/', '/upload/f_auto,q_auto,w_1280,c_limit/')
+  }
+
+  return {
+    url,
+    publicId: result.public_id,
+    resourceType: result.resource_type,
+  }
+}
+
+/**
+ * Generate a signature for client-side direct upload to Cloudinary.
+ * Bypasses reverse proxy size limits (such as Nginx/Hostinger 413) entirely.
+ */
+export function generateCloudinarySignature(params = {}) {
+  initCloudinary()
+  const timestamp = Math.round(new Date().getTime() / 1000)
+  const cleanFolder = (params.folder || 'assetsweber/uploads').replace(/^\/+|\/+$/g, '')
+  const paramsToSign = {
+    folder: cleanFolder,
+    timestamp,
+  }
+  const apiSecret = process.env.CLOUDINARY_API_SECRET
+  if (!apiSecret || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_CLOUD_NAME) {
+    return null
+  }
+  const signature = cloudinary.utils.api_sign_request(paramsToSign, apiSecret)
+  return {
+    signature,
+    timestamp,
+    folder: cleanFolder,
+    apiKey: process.env.CLOUDINARY_API_KEY,
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+  }
+}
+
+/**
  * Delete an asset from Cloudinary using publicId.
  * @param {string} publicId - The public_id of the Cloudinary asset
  * @param {string} [resourceType='image'] - 'image' or 'video' or 'raw'

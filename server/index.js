@@ -98,7 +98,8 @@ app.use(cors({
   },
   credentials: true,
 }))
-app.use(express.json({ limit: '2mb' }))
+app.use(express.json({ limit: '100mb' }))
+app.use(express.urlencoded({ extended: true, limit: '100mb' }))
 app.use(cookieParser())
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -137,8 +138,18 @@ if (fs.existsSync(distDir)) {
   })
 }
 
+const tempUploadsDir = path.resolve(uploadsDirectory(), 'temp')
+fs.mkdirSync(tempUploadsDir, { recursive: true })
+
 const upload = multer({
-  storage: multer.memoryStorage(),
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, tempUploadsDir),
+    filename: (req, file, cb) => {
+      const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+      const ext = path.extname(file.originalname).toLowerCase()
+      cb(null, `${unique}${ext}`)
+    }
+  }),
   limits: { fileSize: MAX_UPLOAD_GB * 1024 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase()
@@ -983,6 +994,27 @@ async function startServer() {
     TEAM_ACCESS_ID,
     TEAM_ACCESS_PASSWORD,
     io
+  })
+
+  // Central error handling middleware for Multer, body size limits, and uncaught route errors
+  app.use((err, req, res, next) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({
+          message: `File is too large for direct upload (limit: ${MAX_UPLOAD_GB}GB). For videos, consider using YouTube or Google Drive links, or check your web server upload limits.`,
+          code: 'LIMIT_FILE_SIZE',
+        })
+      }
+      return res.status(400).json({ message: `Upload error: ${err.message}`, code: err.code })
+    }
+    if (err.status === 413 || err.statusCode === 413 || err.type === 'entity.too.large') {
+      return res.status(413).json({
+        message: 'Request payload too large (413). Please reduce the file size or increase proxy client_max_body_size.',
+        code: 'PAYLOAD_TOO_LARGE',
+      })
+    }
+    console.error('[Express Error Handler]:', err.message || err)
+    res.status(err.status || 500).json({ message: err.message || 'Internal server error' })
   })
 
   server.on('error', (err) => {

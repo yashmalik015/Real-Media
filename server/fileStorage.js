@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { uploadToCloudinaryStream } from './cloudinary.js'
+import { uploadToCloudinaryStream, uploadToCloudinaryLarge } from './cloudinary.js'
 import { safeStorageName, uploadToFirebaseStorage } from './firebaseStorage.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -26,11 +26,22 @@ async function uploadToLocalStorage(file, folder) {
   const relativePath = buildRelativePath(folder, file.originalname)
   const fullPath = path.join(uploadsRoot(), relativePath)
   fs.mkdirSync(path.dirname(fullPath), { recursive: true })
-  await fs.promises.writeFile(fullPath, file.buffer)
+
+  if (file.path) {
+    try {
+      await fs.promises.rename(file.path, fullPath)
+    } catch (_crossDeviceErr) {
+      // Fallback if renaming across different filesystem mounts
+      await fs.promises.copyFile(file.path, fullPath)
+      await fs.promises.unlink(file.path).catch(() => {})
+    }
+  } else if (file.buffer) {
+    await fs.promises.writeFile(fullPath, file.buffer)
+  }
   return { filename: relativePath, url: `/uploads/${relativePath}`, publicId: null }
 }
 
-function isCloudinaryConfigured() {
+export function isCloudinaryConfigured() {
   return (
     process.env.USE_CLOUDINARY === 'true' ||
     Boolean(process.env.CLOUDINARY_URL) ||
@@ -50,10 +61,23 @@ export async function uploadFile(file, folder) {
     try {
       const cleanFolder = folder.toLowerCase().replace(/[^a-z0-9/_\\-]+/g, '-')
       const cloudinaryFolder = `assetsweber/${cleanFolder}`
-      const result = await uploadToCloudinaryStream(file.buffer, {
-        folder: cloudinaryFolder,
-        resourceType: defaultResourceType,
-      })
+      
+      let result
+      if (file.path) {
+        // Use chunked upload_large from disk for video or large files
+        result = await uploadToCloudinaryLarge(file.path, {
+          folder: cloudinaryFolder,
+          resourceType: defaultResourceType,
+        })
+        // Clean up temporary disk file
+        await fs.promises.unlink(file.path).catch(() => {})
+      } else {
+        result = await uploadToCloudinaryStream(file.buffer, {
+          folder: cloudinaryFolder,
+          resourceType: defaultResourceType,
+        })
+      }
+
       return {
         filename: result.publicId,
         url: result.url,

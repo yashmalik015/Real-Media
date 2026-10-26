@@ -1398,25 +1398,27 @@ function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, s
             {/* Video */}
             <div style={{ border: "1px solid var(--line2)", borderRadius: 24, overflow: "hidden", background: "#050505" }}>
               <div style={{ aspectRatio: "16/9" }}>
-                {lesson.videoUrl ? (
-                  (() => {
-                    const isYT = lesson.videoUrl.includes("youtube.com") || lesson.videoUrl.includes("youtu.be");
-                    const isDrive = lesson.videoUrl.includes("drive.google.com");
-                    if (isYT) {
-                      const ytId = lesson.videoUrl.match(/(?:v=|youtu\.be\/)([^&?/]+)/)?.[1];
-                      return <iframe src={`https://www.youtube.com/embed/${ytId}?autoplay=1`} style={{ width: "100%", height: "100%", border: "none" }} allow="autoplay; fullscreen" allowFullScreen />;
-                    }
-                    if (isDrive) {
-                      const driveId = lesson.videoUrl.match(/\/d\/([^/]+)/)?.[1];
-                      return <iframe src={`https://drive.google.com/file/d/${driveId}/preview`} style={{ width: "100%", height: "100%", border: "none" }} allow="autoplay; fullscreen" allowFullScreen />;
-                    }
-                    return <video key={lesson.videoUrl} src={mediaUrl(lesson.videoUrl)} controls playsInline style={{ width: "100%", height: "100%", objectFit: "cover", backgroundColor: "#000" }} />;
-                  })()
-                ) : (
-                  <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", color: "var(--muted)", fontSize: ".9rem" }}>
-                    <div><div style={{ fontSize: "3rem", textAlign: "center", marginBottom: 12 }}>▶</div>No video uploaded yet.</div>
-                  </div>
-                )}
+                {(() => {
+                  const activeVideo = (lesson.videoUrl || lesson.driveLink || '').trim();
+                  if (!activeVideo) {
+                    return (
+                      <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", color: "var(--muted)", fontSize: ".9rem" }}>
+                        <div><div style={{ fontSize: "3rem", textAlign: "center", marginBottom: 12 }}>▶</div>No video uploaded yet.</div>
+                      </div>
+                    );
+                  }
+                  const isYT = activeVideo.includes("youtube.com") || activeVideo.includes("youtu.be");
+                  const isDrive = activeVideo.includes("drive.google.com");
+                  if (isYT) {
+                    const ytId = activeVideo.match(/(?:v=|youtu\.be\/|embed\/)([^&?/\s]+)/)?.[1];
+                    return <iframe src={`https://www.youtube.com/embed/${ytId}?autoplay=1`} style={{ width: "100%", height: "100%", border: "none" }} allow="autoplay; fullscreen" allowFullScreen />;
+                  }
+                  if (isDrive) {
+                    const driveId = activeVideo.match(/\/d\/([^/]+)/)?.[1];
+                    return <iframe src={`https://drive.google.com/file/d/${driveId}/preview`} style={{ width: "100%", height: "100%", border: "none" }} allow="autoplay; fullscreen" allowFullScreen />;
+                  }
+                  return <video key={activeVideo} src={mediaUrl(activeVideo)} controls playsInline style={{ width: "100%", height: "100%", objectFit: "cover", backgroundColor: "#000" }} />;
+                })()}
               </div>
             </div>
 
