@@ -3,6 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { uploadToCloudinaryStream, uploadToCloudinaryLarge, uploadToCloudinaryFile } from './cloudinary.js'
 import { safeStorageName, uploadToFirebaseStorage } from './firebaseStorage.js'
+import { compressVideo, compressImage } from './videoCompressor.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
@@ -57,11 +58,41 @@ export async function uploadFile(file, folder) {
   const isVideo = file.mimetype?.startsWith('video/')
   const defaultResourceType = isVideo ? 'video' : 'image'
 
-  // Videos larger than 95MB exceed Cloudinary standard plan limits (100MB).
-  // Save directly to local disk storage to avoid Cloudinary 400 errors and timeouts.
-  const isTooLargeForCloudinary = isVideo && file.size && file.size > 95 * 1024 * 1024
+  // If this is a video with a temporary file on disk, compress using FFmpeg (YouTube-grade perceptual compression)
+  if (isVideo && file.path && fs.existsSync(file.path)) {
+    try {
+      const compressedTempPath = `${file.path}_optimized.mp4`
+      const didCompress = await compressVideo(file.path, compressedTempPath)
+      if (didCompress && fs.existsSync(compressedTempPath)) {
+        await fs.promises.unlink(file.path).catch(() => {})
+        file.path = compressedTempPath
+        const stat = fs.statSync(compressedTempPath)
+        file.size = stat.size
+      }
+    } catch (compErr) {
+      console.warn('[Video Compression Warning] Continuing with original file:', compErr.message)
+    }
+  }
 
-  if (isCloudinaryConfigured() && !isTooLargeForCloudinary) {
+  // If this is an image with a temporary file on disk (>1MB), compress using FFmpeg
+  const isImage = file.mimetype?.startsWith('image/')
+  if (isImage && file.path && fs.existsSync(file.path) && file.size && file.size > 1024 * 1024) {
+    try {
+      const ext = path.extname(file.originalname) || '.jpg'
+      const compressedTempPath = `${file.path}_opt${ext}`
+      const didCompress = await compressImage(file.path, compressedTempPath)
+      if (didCompress && fs.existsSync(compressedTempPath)) {
+        await fs.promises.unlink(file.path).catch(() => {})
+        file.path = compressedTempPath
+        const stat = fs.statSync(compressedTempPath)
+        file.size = stat.size
+      }
+    } catch (imgErr) {
+      console.warn('[Image Compression Warning]:', imgErr.message)
+    }
+  }
+
+  if (isCloudinaryConfigured()) {
     try {
       const cleanFolder = folder.toLowerCase().replace(/[^a-z0-9/_\\-]+/g, '-')
       const cloudinaryFolder = `assetsweber/${cleanFolder}`

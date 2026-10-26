@@ -472,7 +472,9 @@ export function optimizedMediaUrl(url, { width = 1280, quality = 'auto' } = {}) 
     if (fullUrl.includes('/q_auto') || fullUrl.includes('/f_auto')) {
       return fullUrl
     }
-    const transformStr = width ? `f_auto,q_${quality},w_${width},c_limit` : `f_auto,q_${quality}`
+    const isVideo = /\.(mp4|webm|mov|mkv|m4v)/i.test(fullUrl) || fullUrl.includes('/video/upload/')
+    const faststart = isVideo ? ',fl_faststart' : ''
+    const transformStr = width ? `f_auto,q_${quality}${faststart},w_${width},c_limit` : `f_auto,q_${quality}${faststart}`
     return fullUrl.replace('/upload/', `/upload/${transformStr}/`)
   }
   return fullUrl

@@ -116,6 +116,59 @@ const authRateLimiter = rateLimit({
   message: { message: 'Too many login attempts from this IP, please try again after 15 minutes.' }
 })
 app.use('/api/auth', authRateLimiter)
+// Progressive HTTP 206 Partial Content streaming for uploaded video playback
+app.get('/uploads/*', (req, res, next) => {
+  const relPath = req.params[0]
+  if (!relPath) return next()
+  const filePath = path.join(uploadsDirectory(), relPath)
+  if (!fs.existsSync(filePath)) return next()
+
+  const ext = path.extname(filePath).toLowerCase()
+  const isVideo = ['.mp4', '.webm', '.mov', '.mkv', '.avi', '.m4v'].includes(ext)
+  if (!isVideo) return next()
+
+  const stat = fs.statSync(filePath)
+  const fileSize = stat.size
+  const range = req.headers.range
+
+  const mimeMap = {
+    '.mp4': 'video/mp4',
+    '.webm': 'video/webm',
+    '.mov': 'video/quicktime',
+    '.mkv': 'video/x-matroska',
+    '.avi': 'video/x-msvideo',
+    '.m4v': 'video/x-m4v',
+  }
+  const contentType = mimeMap[ext] || 'video/mp4'
+
+  if (range) {
+    const parts = range.replace(/bytes=/, '').split('-')
+    const start = parseInt(parts[0], 10)
+    // 2MB chunk buffer for instant zero-buffering playback & seeking
+    const end = parts[1] ? parseInt(parts[1], 10) : Math.min(start + 2 * 1024 * 1024 - 1, fileSize - 1)
+    const chunkSize = end - start + 1
+    const fileStream = fs.createReadStream(filePath, { start, end })
+
+    res.writeHead(206, {
+      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': chunkSize,
+      'Content-Type': contentType,
+      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'public, max-age=31536000, immutable',
+    })
+    fileStream.pipe(res)
+  } else {
+    res.writeHead(200, {
+      'Content-Length': fileSize,
+      'Content-Type': contentType,
+      'Accept-Ranges': 'bytes',
+      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'public, max-age=31536000, immutable',
+    })
+    fs.createReadStream(filePath).pipe(res)
+  }
+})
 app.use('/uploads', express.static(uploadsDirectory()))
 
 app.use('/assets', express.static(path.join(rootDir, 'public', 'assets')))

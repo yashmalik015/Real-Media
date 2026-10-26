@@ -47,7 +47,9 @@ export function uploadToCloudinaryStream(buffer, { folder = 'assetsweber/uploads
         }
         let url = result.secure_url
         if (result.resource_type === 'video' && url.includes('/upload/')) {
-          url = url.replace('/upload/', '/upload/f_auto,q_auto,w_1280,c_limit/')
+          url = url.replace('/upload/', '/upload/f_auto,q_auto,fl_faststart,w_1280,c_limit/')
+        } else if (url.includes('/upload/')) {
+          url = url.replace('/upload/', '/upload/f_auto,q_auto,w_1920,c_limit/')
         }
         resolve({
           url,
@@ -79,7 +81,7 @@ export async function uploadToCloudinaryLarge(filePath, { folder = 'assetsweber/
 
   let url = result.secure_url || result.url
   if (result.resource_type === 'video' && url.includes('/upload/')) {
-    url = url.replace('/upload/', '/upload/f_auto,q_auto,w_1280,c_limit/')
+    url = url.replace('/upload/', '/upload/f_auto,q_auto,fl_faststart,w_1280,c_limit/')
   }
 
   return {
@@ -105,10 +107,13 @@ export async function uploadToCloudinaryFile(filePath, { folder = 'assetsweber/u
   })
 
   let url = result.secure_url || result.url
+  if (url.includes('/upload/')) {
+    url = url.replace('/upload/', '/upload/f_auto,q_auto,w_1920,c_limit/')
+  }
   return {
     url,
     publicId: result.public_id,
-    resourceType: result.resource_type,
+    resourceType: result.resource_type || 'image',
   }
 }
 

@@ -22,6 +22,7 @@ import { TeamDashboard } from "./components/dashboard/TeamDashboard.jsx";
 import { ClientPortal } from "./components/ClientPortal.jsx";
 import GlobalErrorBoundary from "./components/ErrorBoundary.jsx";
 import NotFound from "./components/NotFound.jsx";
+import { FuturisticVideoPlayer } from "./components/ui/FuturisticVideoPlayer.jsx";
 
 // ── Error Boundary ──────────────────────────────────────────────────────────
 class ErrorBoundary extends React.Component {
@@ -1591,32 +1592,17 @@ function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, s
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 340px", gap: 24, alignItems: "start" }}>
           {/* Main player */}
           <div>
-            {/* Video */}
-            <div style={{ border: "1px solid var(--line2)", borderRadius: 24, overflow: "hidden", background: "#050505" }}>
-              <div style={{ aspectRatio: "16/9" }}>
-                {(() => {
-                  const activeVideo = (lesson.videoUrl || lesson.driveLink || '').trim();
-                  if (!activeVideo) {
-                    return (
-                      <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", color: "var(--muted)", fontSize: ".9rem" }}>
-                        <div><div style={{ fontSize: "3rem", textAlign: "center", marginBottom: 12 }}>▶</div>No video uploaded yet.</div>
-                      </div>
-                    );
-                  }
-                  const isYT = activeVideo.includes("youtube.com") || activeVideo.includes("youtu.be");
-                  const isDrive = activeVideo.includes("drive.google.com");
-                  if (isYT) {
-                    const ytId = activeVideo.match(/(?:v=|youtu\.be\/|embed\/)([^&?/\s]+)/)?.[1];
-                    return <iframe src={`https://www.youtube.com/embed/${ytId}?autoplay=1`} style={{ width: "100%", height: "100%", border: "none" }} allow="autoplay; fullscreen" allowFullScreen />;
-                  }
-                  if (isDrive) {
-                    const driveId = activeVideo.match(/\/d\/([^/]+)/)?.[1];
-                    return <iframe src={`https://drive.google.com/file/d/${driveId}/preview`} style={{ width: "100%", height: "100%", border: "none" }} allow="autoplay; fullscreen" allowFullScreen />;
-                  }
-                  return <video key={activeVideo} src={mediaUrl(activeVideo)} controls playsInline style={{ width: "100%", height: "100%", objectFit: "cover", backgroundColor: "#000" }} />;
-                })()}
-              </div>
-            </div>
+            {/* Futuristic Video Player with HUD controls & loading rings */}
+            <FuturisticVideoPlayer
+              key={lesson.id || (lesson.videoUrl || lesson.driveLink || '')}
+              src={lesson.videoUrl || lesson.driveLink || ''}
+              poster={lesson.thumbnail || course.thumbnail || ''}
+              title={lesson.title}
+              autoPlay={false}
+              onEnded={() => {
+                if (next) onSelectLesson(course, next);
+              }}
+            />
 
             {/* Title + actions */}
             <div style={{ marginTop: 20, marginBottom: 16 }}>
@@ -2763,12 +2749,13 @@ function PortfolioCard({ item, onStartProject }) {
           <div style={{ position: "absolute", top: 20, right: 20, display: "flex", gap: 16, zIndex: 100000 }}>
             <button onClick={(e) => { e.stopPropagation(); setModalOpen(false); }} style={{ background: "transparent", border: "none", color: "#fff", fontSize: "2rem", cursor: "pointer" }}>✕</button>
           </div>
-          <div style={{ maxWidth: "100%", maxHeight: "80vh", width: "100%" }} onClick={e => e.stopPropagation()}>
-            {videoError ? (
-              <div style={{ color: "#fff", padding: 24, textAlign: "center" }}>Video preview failed. <a href={src} target="_blank" rel="noreferrer" style={{ color: "var(--red)" }}>Open directly →</a></div>
-            ) : (
-              <video src={src} style={{ maxWidth: "100%", maxHeight: "80vh", borderRadius: 8 }} controls autoPlay muted playsInline preload="metadata" onError={() => setVideoError(true)} />
-            )}
+          <div style={{ maxWidth: 960, width: "100%" }} onClick={e => e.stopPropagation()}>
+            <FuturisticVideoPlayer
+              src={src}
+              poster={item.thumbnail}
+              title={item.title}
+              autoPlay={true}
+            />
           </div>
           <div style={{ marginTop: 20, textAlign: "center", maxWidth: 800 }} onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: "1.5rem", marginBottom: 8, color: "#fff" }}>{item.title}</h3>
