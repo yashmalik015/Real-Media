@@ -652,6 +652,7 @@ export function FuturisticVideoPlayer({
 
       {/* Cyberpunk HUD Controls Bar */}
       <div
+        className="fui-player-controls"
         style={{
           position: 'absolute',
           bottom: 0,
@@ -752,6 +753,7 @@ export function FuturisticVideoPlayer({
             <button
               onClick={() => skipTime(-10)}
               title="Skip -10s"
+              className="fui-skip-btn"
               style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', padding: 2 }}
             >
               <RotateCcw size={16} />
@@ -760,6 +762,7 @@ export function FuturisticVideoPlayer({
             <button
               onClick={() => skipTime(10)}
               title="Skip +10s"
+              className="fui-skip-btn"
               style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', padding: 2 }}
             >
               <RotateCw size={16} />
@@ -780,6 +783,7 @@ export function FuturisticVideoPlayer({
                 step="0.05"
                 value={isMuted ? 0 : volume}
                 onChange={handleVolumeChange}
+                className="fui-volume-slider"
                 style={{
                   width: 60,
                   height: 4,
@@ -790,7 +794,7 @@ export function FuturisticVideoPlayer({
             </div>
 
             {/* Time Stamp (Monospace) */}
-            <div style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'rgba(255,255,255,0.85)', letterSpacing: '0.05em' }}>
+            <div className="fui-timestamp" style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'rgba(255,255,255,0.85)', letterSpacing: '0.05em' }}>
               <span style={{ color: '#ffffff', fontWeight: 700 }}>{formatTime(currentTime)}</span>
               <span style={{ color: 'rgba(255,255,255,0.4)', margin: '0 4px' }}>/</span>
               <span>{formatTime(duration)}</span>

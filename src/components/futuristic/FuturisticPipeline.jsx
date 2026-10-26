@@ -44,7 +44,7 @@ export function FuturisticPipeline({ onStartProject }) {
   ];
 
   return (
-    <section id="process" style={{ padding: '100px 32px', position: 'relative' }}>
+    <section id="process" style={{ padding: 'clamp(60px, 8vw, 100px) clamp(16px, 4vw, 32px)', position: 'relative' }}>
       <div style={{ maxWidth: 1440, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 64 }}>
           <AnimatedSectionTitle
@@ -65,7 +65,9 @@ export function FuturisticPipeline({ onStartProject }) {
             marginBottom: 48,
             gap: 16,
             overflowX: 'auto',
-            paddingBottom: 20
+            paddingBottom: 20,
+            scrollbarWidth: 'none',
+            WebkitOverflowScrolling: 'touch'
           }}
         >
           {/* Animated Connecting Energy Path Line */}
@@ -154,9 +156,10 @@ export function FuturisticPipeline({ onStartProject }) {
 
         {/* Selected Stage Detail Card */}
         <div
+          className="pipeline-detail-card"
           style={{
             position: 'relative',
-            padding: 48,
+            padding: 'clamp(24px, 4vw, 48px)',
             borderRadius: 32,
             backgroundColor: 'rgba(12, 12, 18, 0.85)',
             border: '1px solid rgba(255, 45, 85, 0.4)',
@@ -164,7 +167,7 @@ export function FuturisticPipeline({ onStartProject }) {
             boxShadow: '0 30px 80px rgba(0, 0, 0, 0.9), 0 0 50px rgba(255, 45, 85, 0.15)',
             display: 'grid',
             gridTemplateColumns: '1.2fr 0.8fr',
-            gap: 48,
+            gap: 'clamp(24px, 4vw, 48px)',
             alignItems: 'center'
           }}
         >
@@ -172,7 +175,7 @@ export function FuturisticPipeline({ onStartProject }) {
             <div style={{ fontSize: '0.78rem', fontFamily: 'monospace', color: '#ff2d55', letterSpacing: '0.2em', marginBottom: 12 }}>
               PIPELINE PHASE {steps[activeStep].num} // {steps[activeStep].subtitle.toUpperCase()}
             </div>
-            <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '3rem', color: '#ffffff', margin: '0 0 16px 0', lineHeight: 1 }}>
+            <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2rem, 5vw, 3rem)', color: '#ffffff', margin: '0 0 16px 0', lineHeight: 1 }}>
               {steps[activeStep].title}
             </h3>
             <AnimatedParagraph style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '1.05rem', lineHeight: 1.8, marginBottom: 32 }}>

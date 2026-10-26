@@ -164,9 +164,10 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
   }, [activeNav]);
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 100px)', backgroundColor: '#0c0c10', color: '#ffffff', fontFamily: "'Inter', sans-serif" }}>
+    <div className="team-dashboard-wrap" style={{ display: 'flex', height: 'calc(100vh - 100px)', backgroundColor: '#0c0c10', color: '#ffffff', fontFamily: "'Inter', sans-serif" }}>
       {/* Sidebar Navigation */}
       <aside
+        className="team-dashboard-aside"
         style={{
           width: 280,
           backgroundColor: 'rgba(10, 10, 14, 0.95)',
@@ -194,7 +195,7 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
           </div>
 
           {/* Navigation Links */}
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <nav className="team-dashboard-nav" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeNav === item.id;
@@ -289,7 +290,7 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
       </aside>
 
       {/* Main Panel Content */}
-      <main id="team-dashboard-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowY: 'auto' }}>
+      <main id="team-dashboard-main" className="team-dashboard-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowY: 'auto' }}>
         {/* Top bar with Global Search & Quick Notifications */}
         <header
           style={{

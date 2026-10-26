@@ -220,8 +220,8 @@ export function FuturisticPortfolio({ portfolio = [], isStandalone = false, onNa
   }, [selectedItem]);
 
   return (
-    <section id="portfolio" style={{ padding: '100px 0', position: 'relative', overflow: 'hidden' }}>
-      <div style={{ maxWidth: 1440, margin: '0 auto', padding: '0 32px 32px' }}>
+    <section id="portfolio" style={{ padding: 'clamp(60px, 8vw, 100px) 0', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ maxWidth: 1440, margin: '0 auto', padding: '0 clamp(16px, 4vw, 32px) 32px' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-end', gap: 20 }}>
           <div>
             <AnimatedSectionTitle
@@ -351,7 +351,7 @@ export function FuturisticPortfolio({ portfolio = [], isStandalone = false, onNa
         </div>
       ) : isStandalone ? (
         /* Standalone Page Responsive Grid */
-        <div style={{ maxWidth: 1440, margin: '0 auto', padding: '0 32px 40px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 32 }}>
+        <div style={{ maxWidth: 1440, margin: '0 auto', padding: '0 clamp(16px, 4vw, 32px) 40px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: 24 }}>
           {items.map((item, idx) => (
             <div
               key={item.id || idx}
@@ -419,8 +419,8 @@ export function FuturisticPortfolio({ portfolio = [], isStandalone = false, onNa
         <div
           ref={scrollContainerRef}
           style={{
-            display: 'flex', gap: 32, overflowX: 'auto',
-            scrollSnapType: 'x mandatory', padding: '20px 32px 40px',
+            display: 'flex', gap: 24, overflowX: 'auto',
+            scrollSnapType: 'x mandatory', padding: '20px clamp(16px, 4vw, 32px) 40px',
             scrollbarWidth: 'none'
           }}
         >
@@ -430,7 +430,7 @@ export function FuturisticPortfolio({ portfolio = [], isStandalone = false, onNa
               onClick={() => { playClickSound(); setSelectedItem(item); }}
               onMouseEnter={playHoverSound}
               style={{
-                flex: '0 0 420px', scrollSnapAlign: 'start', borderRadius: 28,
+                flex: '0 0 clamp(280px, 85vw, 420px)', scrollSnapAlign: 'start', borderRadius: 28,
                 backgroundColor: 'rgba(14, 14, 20, 0.8)',
                 border: '1px solid rgba(255, 45, 85, 0.3)',
                 backdropFilter: 'blur(24px)',
@@ -498,7 +498,7 @@ export function FuturisticPortfolio({ portfolio = [], isStandalone = false, onNa
           style={{
             position: 'fixed', inset: 0, zIndex: 99999,
             backgroundColor: 'rgba(2, 2, 4, 0.88)', backdropFilter: 'blur(32px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(10px, 3vw, 24px)'
           }}
         >
           <div
@@ -506,18 +506,18 @@ export function FuturisticPortfolio({ portfolio = [], isStandalone = false, onNa
             style={{
               position: 'relative', width: '100%', maxWidth: 780,
               backgroundColor: 'rgba(14, 14, 20, 0.95)',
-              border: '1px solid rgba(255, 45, 85, 0.5)', borderRadius: 32,
-              padding: 40, boxShadow: '0 30px 100px rgba(0,0,0,0.95), 0 0 60px rgba(255, 45, 85, 0.3)',
-              maxHeight: '90vh', overflowY: 'auto'
+              border: '1px solid rgba(255, 45, 85, 0.5)', borderRadius: 28,
+              padding: 'clamp(20px, 4vw, 40px)', boxShadow: '0 30px 100px rgba(0,0,0,0.95), 0 0 60px rgba(255, 45, 85, 0.3)',
+              maxHeight: '92dvh', overflowY: 'auto'
             }}
           >
             <button
               onClick={() => { playClickSound(); setSelectedItem(null); }}
               style={{
-                position: 'absolute', top: 24, right: 24, width: 40, height: 40,
-                borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff',
-                fontSize: '1.2rem', cursor: 'pointer'
+                position: 'absolute', top: 18, right: 18, width: 38, height: 38,
+                borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.2)', color: '#ffffff',
+                fontSize: '1.2rem', cursor: 'pointer', zIndex: 10
               }}
             >
               ✕
@@ -526,7 +526,7 @@ export function FuturisticPortfolio({ portfolio = [], isStandalone = false, onNa
             <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#ff2d55', letterSpacing: '0.2em' }}>
               PROJECT INSPECTION // {selectedItem.service || selectedItem.category || 'DEPLOYMENT'}
             </span>
-            <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '3rem', color: '#ffffff', margin: '8px 0 20px 0' }}>
+            <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.8rem, 5vw, 3rem)', color: '#ffffff', margin: '8px 0 20px 0', lineHeight: 1 }}>
               {selectedItem.title}
             </h2>
 

@@ -133,6 +133,7 @@ export function FuturisticHero({ onStartProject, onExploreServices, onLearningCl
     >
       <div
         ref={gridRef}
+        className="hero-grid"
         style={{
           maxWidth: 1440,
           margin: '0 auto',
@@ -194,7 +195,7 @@ export function FuturisticHero({ onStartProject, onExploreServices, onLearningCl
           </AnimatedParagraph>
 
           {/* Action Buttons */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'center' }}>
+          <div className="hero-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'center' }}>
             <button
               ref={ctaBtnRef}
               onClick={triggerParticleExplosion}
@@ -241,6 +242,7 @@ export function FuturisticHero({ onStartProject, onExploreServices, onLearningCl
 
           {/* Odometer Animated Counters */}
           <div
+            className="hero-counters"
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(3, 1fr)',
@@ -316,9 +318,14 @@ export function FuturisticHero({ onStartProject, onExploreServices, onLearningCl
           0%, 100% { transform: translateY(0px) rotate(0deg); }
           50% { transform: translateY(-12px) rotate(0.8deg); }
         }
-        @media (max-width: 900px) {
-          section { padding-top: 80px !important; }
-          div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; gap: 40px !important; }
+        @media (max-width: 960px) {
+          section { padding-top: 100px !important; }
+          .hero-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+        }
+        @media (max-width: 600px) {
+          .hero-actions { flex-direction: column !important; width: 100% !important; }
+          .hero-actions button { width: 100% !important; justify-content: center !important; }
+          .hero-counters { grid-template-columns: 1fr !important; gap: 14px !important; }
         }
       `}</style>
     </section>

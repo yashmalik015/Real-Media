@@ -49,7 +49,7 @@ export function FuturisticFooter({ onNavigate }) {
         position: 'relative',
         backgroundColor: '#020203',
         borderTop: '1px solid rgba(255, 45, 85, 0.3)',
-        padding: '80px 32px 40px',
+        padding: 'clamp(60px, 8vw, 80px) clamp(16px, 4vw, 32px) 40px',
         overflow: 'hidden'
       }}
     >
@@ -69,11 +69,12 @@ export function FuturisticFooter({ onNavigate }) {
 
       <div style={{ maxWidth: 1440, margin: '0 auto', position: 'relative', zIndex: 2 }}>
         <div
+          className="footer-grid"
           style={{
             display: 'grid',
             gridTemplateColumns: '1.4fr repeat(3, 1fr)',
-            gap: 48,
-            marginBottom: 64
+            gap: 'clamp(28px, 4vw, 48px)',
+            marginBottom: 'clamp(36px, 5vw, 64px)'
           }}
         >
           {/* Company Brand Column */}

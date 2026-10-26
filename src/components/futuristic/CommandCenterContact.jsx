@@ -63,9 +63,9 @@ export function CommandCenterContact({ showToast }) {
   };
 
   return (
-    <section id="contact" style={{ padding: '100px 32px', position: 'relative' }}>
+    <section id="contact" style={{ padding: 'clamp(60px, 8vw, 100px) clamp(16px, 4vw, 32px)', position: 'relative' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 64 }}>
+        <div style={{ textAlign: 'center', marginBottom: 'clamp(36px, 5vw, 64px)' }}>
           <AnimatedSectionTitle
             label="COMMAND CENTER TRANSMISSION"
             title="INITIALIZE PROJECT TRANSMISSION"
@@ -78,7 +78,7 @@ export function CommandCenterContact({ showToast }) {
         <div
           style={{
             position: 'relative',
-            padding: 48,
+            padding: 'clamp(20px, 4vw, 48px)',
             borderRadius: 32,
             backgroundColor: 'rgba(12, 12, 18, 0.85)',
             border: '1px solid rgba(255, 45, 85, 0.4)',
@@ -86,7 +86,7 @@ export function CommandCenterContact({ showToast }) {
             boxShadow: '0 30px 100px rgba(0, 0, 0, 0.95), 0 0 60px rgba(255, 45, 85, 0.2)'
           }}
         >
-          <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
+          <form onSubmit={handleSubmit} className="contact-form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
             {/* Name */}
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', fontFamily: 'monospace', color: '#ff2d55', letterSpacing: '0.12em', marginBottom: 8 }}>

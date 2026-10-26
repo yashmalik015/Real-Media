@@ -31,8 +31,8 @@ export function AnimatedHeroTitle({ text = "WE ENGINEER THE DIGITAL FUTURE" }) {
       ref={containerRef}
       style={{
         fontFamily: "'Bebas Neue', sans-serif",
-        fontSize: 'clamp(3.8rem, 7.5vw, 7.8rem)',
-        lineHeight: 0.92,
+        fontSize: 'clamp(2.4rem, 7vw, 7.8rem)',
+        lineHeight: 0.94,
         letterSpacing: '0.03em',
         color: '#ffffff',
         margin: '0 0 28px 0',
@@ -219,11 +219,11 @@ export function AnimatedSectionTitle({ label, title, sub, animationStyle = 'serv
       <h2
         style={{
           fontFamily: "'Bebas Neue', sans-serif",
-          fontSize: 'clamp(2.8rem, 5vw, 4.5rem)',
+          fontSize: 'clamp(1.9rem, 4.5vw, 4.5rem)',
           letterSpacing: '0.04em',
           color: '#ffffff',
           margin: '16px 0 12px',
-          lineHeight: 0.95
+          lineHeight: 0.96
         }}
       >
         {renderAnimatedTitle()}

@@ -34,9 +34,9 @@ export function HolographicTestimonials({ testimonials = [] }) {
   }, [reviews]);
 
   return (
-    <section id="testimonials" style={{ padding: '100px 32px', position: 'relative' }}>
+    <section id="testimonials" style={{ padding: 'clamp(60px, 8vw, 100px) clamp(16px, 4vw, 32px)', position: 'relative' }}>
       <div style={{ maxWidth: 1440, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 64 }}>
+        <div style={{ textAlign: 'center', marginBottom: 'clamp(36px, 5vw, 64px)' }}>
           <AnimatedSectionTitle
             label="VERIFIED HOLOGRAPHIC REVIEWS"
             title="CLIENT TRUST & TESTIMONIALS"
@@ -61,8 +61,8 @@ export function HolographicTestimonials({ testimonials = [] }) {
             id="testimonials-grid"
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-              gap: 28
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
+              gap: 24
             }}
           >
             {reviews.map((rev, idx) => (
@@ -71,7 +71,7 @@ export function HolographicTestimonials({ testimonials = [] }) {
                 onMouseEnter={playHoverSound}
                 style={{
                   position: 'relative',
-                  padding: 36,
+                  padding: 'clamp(20px, 4vw, 36px)',
                   borderRadius: 28,
                   backgroundColor: 'rgba(12, 12, 16, 0.8)',
                   border: '1px solid rgba(255, 45, 85, 0.3)',

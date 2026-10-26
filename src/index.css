@@ -1,7 +1,5 @@
 @import "tailwindcss";
 
-
-
 * {
   box-sizing: border-box;
 }
@@ -16,17 +14,27 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --fui-red: #ff2d55;
+  --fui-red-glow: rgba(255, 45, 85, 0.4);
 }
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
+  max-width: 100vw;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
+  padding: 0;
   min-width: 320px;
+  width: 100%;
+  max-width: 100vw;
   min-height: 100vh;
+  min-height: 100dvh;
   background: #000000;
+  overflow-x: hidden;
 }
 
 button {
@@ -34,9 +42,171 @@ button {
   cursor: pointer;
   color: inherit;
   font: inherit;
+  touch-action: manipulation;
 }
 
-img {
+img, video {
   max-width: 100%;
+  height: auto;
   display: block;
+}
+
+/* ── Universal Responsive Foundations ── */
+.page {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* Fluid responsive section paddings for all devices */
+section[id], .section {
+  padding-left: clamp(16px, 4vw, 32px) !important;
+  padding-right: clamp(16px, 4vw, 32px) !important;
+  box-sizing: border-box;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Touch friendly tap targets on touch devices */
+@media (pointer: coarse) {
+  button, a, input, select, textarea {
+    min-height: 44px;
+  }
+}
+
+/* Responsive card carousels / sliders on mobile */
+@media (max-width: 768px) {
+  .port-card, .course-card {
+    flex: 0 0 min(86vw, 400px) !important;
+    scroll-snap-align: center;
+  }
+}
+
+/* Responsive Grids on Mobile (< 640px) */
+@media (max-width: 640px) {
+  div[style*="minmax(320px"], 
+  div[style*="minmax(340px"], 
+  div[style*="minmax(360px"], 
+  div[style*="minmax(380px"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Lesson Player / Learning Academy Responsive Layout */
+@media (max-width: 960px) {
+  .lesson-player-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .lesson-player-playlist {
+    position: static !important;
+    max-height: 480px !important;
+    margin-top: 16px !important;
+  }
+  .learning-shell-inner > div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+  .learning-shell {
+    padding-left: clamp(12px, 3vw, 20px) !important;
+    padding-right: clamp(12px, 3vw, 20px) !important;
+  }
+}
+
+/* Cybernetic Pipeline Phase Detail Responsiveness */
+@media (max-width: 900px) {
+  .pipeline-detail-card {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+    padding: clamp(20px, 4vw, 36px) !important;
+  }
+}
+
+/* Command Center Contact Form Responsiveness */
+@media (max-width: 768px) {
+  .contact-form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+}
+
+/* Futuristic Footer 4-Column Grid Responsiveness */
+@media (max-width: 1024px) {
+  .footer-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 32px !important;
+  }
+}
+@media (max-width: 600px) {
+  .footer-grid {
+    grid-template-columns: 1fr !important;
+    gap: 28px !important;
+  }
+}
+
+/* Global Navigation Top Header on Mobile */
+@media (max-width: 640px) {
+  .nav-cta-btn {
+    display: none !important;
+  }
+  .nav-logo-sub {
+    display: none !important;
+  }
+}
+
+/* Team Dashboard Responsive Layout */
+@media (max-width: 900px) {
+  .team-dashboard-wrap {
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: calc(100dvh - 80px) !important;
+  }
+  .team-dashboard-aside {
+    width: 100% !important;
+    height: auto !important;
+    position: static !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(255, 45, 85, 0.25) !important;
+    padding: 12px 16px !important;
+  }
+  .team-dashboard-nav {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    gap: 8px !important;
+    padding-bottom: 8px !important;
+    scrollbar-width: none !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .team-dashboard-nav button {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    padding: 8px 14px !important;
+  }
+  .team-dashboard-main {
+    padding: 16px !important;
+  }
+}
+
+/* Video Player HUD Controls Responsiveness */
+@media (max-width: 640px) {
+  .fui-volume-slider {
+    display: none !important;
+  }
+  .fui-skip-btn {
+    display: none !important;
+  }
+  .fui-player-controls {
+    padding: 10px 12px 8px !important;
+    gap: 8px !important;
+  }
+  .fui-timestamp {
+    font-size: 0.72rem !important;
+  }
+}
+
+/* iOS Safari Input Zoom Prevention */
+@media (max-width: 480px) {
+  input, select, textarea, .fui-input {
+    font-size: 16px !important;
+  }
 }

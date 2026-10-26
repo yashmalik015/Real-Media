@@ -281,6 +281,7 @@ export function FuturisticNavbar({
 
             {/* Launch Project CTA */}
             <button
+              className="nav-cta-btn"
               onClick={() => {
                 playClickSound();
                 onStartProject();
@@ -306,19 +307,20 @@ export function FuturisticNavbar({
             {/* Mobile Hamburger Toggle */}
             <button
               className="mobile-toggle"
+              aria-label="Toggle navigation menu"
               onClick={() => {
                 playClickSound();
                 setMobileOpen(!mobileOpen);
               }}
               style={{
                 display: 'none',
-                width: 40,
-                height: 40,
+                width: 42,
+                height: 42,
                 borderRadius: '50%',
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 45, 85, 0.3)',
                 color: '#ffffff',
-                fontSize: '1.2rem',
+                fontSize: '1.25rem',
                 cursor: 'pointer'
               }}
             >
@@ -334,35 +336,131 @@ export function FuturisticNavbar({
           style={{
             position: 'fixed',
             inset: 0,
-            zIndex: 9998,
-            backgroundColor: 'rgba(4, 4, 6, 0.95)',
-            backdropFilter: 'blur(30px)',
+            zIndex: 99998,
+            backgroundColor: 'rgba(4, 4, 6, 0.96)',
+            backdropFilter: 'blur(32px)',
+            WebkitBackdropFilter: 'blur(32px)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 20,
-            padding: 32
+            gap: 16,
+            padding: '40px 24px',
+            overflowY: 'auto'
           }}
         >
-          {navItems.map((item) => (
+          {/* Close button at top-right */}
+          <button
+            onClick={() => { playClickSound(); setMobileOpen(false); }}
+            style={{
+              position: 'absolute',
+              top: 24,
+              right: 24,
+              width: 44,
+              height: 44,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 45, 85, 0.3)',
+              color: '#ffffff',
+              fontSize: '1.3rem',
+              display: 'grid',
+              placeItems: 'center'
+            }}
+          >
+            ✕
+          </button>
+
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, width: '100%', maxWidth: 320 }}>
+            {navItems.map((item) => (
+              <button
+                key={item.value}
+                onClick={() => {
+                  playClickSound();
+                  setMobileOpen(false);
+                  onNavigate(item.value);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: 14,
+                  fontSize: '1.4rem',
+                  fontFamily: "'Bebas Neue', sans-serif",
+                  letterSpacing: '0.12em',
+                  color: page.toLowerCase() === item.value ? '#ff2d55' : '#ffffff',
+                  backgroundColor: page.toLowerCase() === item.value ? 'rgba(255, 45, 85, 0.12)' : 'transparent',
+                  border: page.toLowerCase() === item.value ? '1px solid rgba(255, 45, 85, 0.3)' : '1px solid transparent',
+                  textAlign: 'center'
+                }}
+              >
+                {item.label.toUpperCase()}
+              </button>
+            ))}
+
+            {/* Mobile Drawer CTAs */}
             <button
-              key={item.value}
               onClick={() => {
                 playClickSound();
                 setMobileOpen(false);
-                onNavigate(item.value);
+                onStartProject();
               }}
               style={{
-                fontSize: '1.8rem',
-                fontFamily: "'Bebas Neue', sans-serif",
-                letterSpacing: '0.1em',
-                color: page.toLowerCase() === item.value ? '#ff2d55' : '#ffffff'
+                width: '100%',
+                marginTop: 8,
+                padding: '14px 24px',
+                borderRadius: 999,
+                background: 'linear-gradient(135deg, #ff2d55, #c81e42)',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '0.95rem',
+                border: 'none',
+                boxShadow: '0 0 25px rgba(255, 45, 85, 0.4)'
               }}
             >
-              {item.label.toUpperCase()}
+              Start Project
             </button>
-          ))}
+
+            {!session ? (
+              <button
+                onClick={() => {
+                  playClickSound();
+                  setMobileOpen(false);
+                  onOpenAuth();
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 24px',
+                  borderRadius: 999,
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#ffffff',
+                  fontSize: '0.9rem',
+                  fontWeight: 600
+                }}
+              >
+                Login to Platform
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  playClickSound();
+                  setMobileOpen(false);
+                  onNavigate(session.role === 'team' ? 'team' : session.role === 'client' ? 'client-portal' : 'profile');
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 24px',
+                  borderRadius: 999,
+                  backgroundColor: 'rgba(255, 45, 85, 0.12)',
+                  border: '1px solid rgba(255, 45, 85, 0.4)',
+                  color: '#ffffff',
+                  fontSize: '0.9rem',
+                  fontWeight: 600
+                }}
+              >
+                Open Dashboard ({session.name || 'Account'})
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -370,6 +468,9 @@ export function FuturisticNavbar({
         @media (max-width: 960px) {
           .desktop-nav { display: none !important; }
           .mobile-toggle { display: grid !important; place-items: center; }
+        }
+        @media (max-width: 640px) {
+          .nav-cta-btn { display: none !important; }
         }
       `}</style>
     </>

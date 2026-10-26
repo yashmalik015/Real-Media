@@ -1798,7 +1798,7 @@ function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, s
           {user && <div className="learning-user-chip"><span className="learning-user-dot" />{user.name}</div>}
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 340px", gap: 24, alignItems: "start" }}>
+        <div className="lesson-player-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 340px", gap: 24, alignItems: "start" }}>
           {/* Main player */}
           <div>
             {/* Futuristic Video Player with HUD controls & loading rings */}
@@ -1958,7 +1958,7 @@ function LessonPlayer({ course, lesson, courses, user, onBack, onSelectLesson, s
           </div>
 
           {/* Sidebar – playlist */}
-          <div style={{ position: "sticky", top: 100, border: "1px solid var(--line)", borderRadius: 24, background: "rgba(10,10,12,.9)", padding: 20, maxHeight: "calc(100vh - 120px)", overflowY: "auto" }}>
+          <div className="lesson-player-playlist" style={{ position: "sticky", top: 100, border: "1px solid var(--line)", borderRadius: 24, background: "rgba(10,10,12,.9)", padding: 20, maxHeight: "calc(100vh - 120px)", overflowY: "auto" }}>
             <div className="dashboard-label">Course Playlist</div>
             <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.4rem", marginBottom: 16 }}>{course.title}</div>
             {course.modules?.map(mod => (

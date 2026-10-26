@@ -54,10 +54,10 @@ export function HolographicServices({ onPickService }) {
   }, []);
 
   return (
-    <section id="services" style={{ padding: '100px 32px', position: 'relative' }}>
+    <section id="services" style={{ padding: 'clamp(60px, 8vw, 100px) clamp(16px, 4vw, 32px)', position: 'relative' }}>
       <div style={{ maxWidth: 1440, margin: '0 auto' }}>
         {/* Section Header with Vertical Mask Reveal */}
-        <div style={{ textAlign: 'center', marginBottom: 64 }}>
+        <div style={{ textAlign: 'center', marginBottom: 'clamp(36px, 5vw, 64px)' }}>
           <AnimatedSectionTitle
             label="HOLOGRAPHIC CAPABILITIES MATRIX"
             title="ENGINEERING & CREATIVE MODULES"
@@ -71,7 +71,7 @@ export function HolographicServices({ onPickService }) {
           id="services-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
             gap: 24
           }}
         >
@@ -82,7 +82,7 @@ export function HolographicServices({ onPickService }) {
               onMouseEnter={playHoverSound}
               style={{
                 position: 'relative',
-                padding: 32,
+                padding: 'clamp(20px, 3.5vw, 32px)',
                 borderRadius: 24,
                 backgroundColor: 'rgba(12, 12, 16, 0.75)',
                 border: '1px solid rgba(255, 45, 85, 0.25)',

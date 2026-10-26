@@ -34,8 +34,8 @@ export function LearningPlatformHUD({ onOpenLearning, courses = [] }) {
   const filtered = activeTab === 'All' ? courses : courses.filter((c) => c.category === activeTab);
 
   return (
-    <section id="learning" style={{ padding: '100px 0', position: 'relative' }}>
-      <div style={{ maxWidth: 1440, margin: '0 auto', padding: '0 32px 32px' }}>
+    <section id="learning" style={{ padding: 'clamp(60px, 8vw, 100px) 0', position: 'relative' }}>
+      <div style={{ maxWidth: 1440, margin: '0 auto', padding: '0 clamp(16px, 4vw, 32px) 32px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 20 }}>
           <div>
             <AnimatedSectionTitle
@@ -95,7 +95,7 @@ export function LearningPlatformHUD({ onOpenLearning, courses = [] }) {
         </div>
       ) : (
         /* Horizontal Course Cards Slider */
-        <div style={{ display: 'flex', gap: 28, overflowX: 'auto', padding: '10px 32px 40px', scrollbarWidth: 'none' }}>
+        <div style={{ display: 'flex', gap: 24, overflowX: 'auto', padding: '10px clamp(16px, 4vw, 32px) 40px', scrollbarWidth: 'none' }}>
           {filtered.map((course) => {
             const thumbUrl = getCourseThumbnail(course);
             const cleanDesc = getCleanCourseDescription(course.description);
@@ -107,7 +107,7 @@ export function LearningPlatformHUD({ onOpenLearning, courses = [] }) {
                 onClick={() => { playClickSound(); if (onOpenLearning) onOpenLearning(); }}
                 onMouseEnter={playHoverSound}
                 style={{
-                  flex: '0 0 380px', borderRadius: 24,
+                  flex: '0 0 clamp(280px, 85vw, 380px)', borderRadius: 24,
                   backgroundColor: 'rgba(12, 12, 16, 0.85)',
                   border: '1px solid rgba(255, 45, 85, 0.3)',
                   backdropFilter: 'blur(24px)',

@@ -139,7 +139,7 @@ export function FuturisticPricing({ onSelectPlan, skills = [], pricingData = [] 
   }, [filteredPlans, selectedService]);
 
   return (
-    <section id="pricing" style={{ padding: '100px 32px', position: 'relative', background: '#050508' }}>
+    <section id="pricing" style={{ padding: 'clamp(60px, 8vw, 100px) clamp(16px, 4vw, 32px)', position: 'relative', background: '#050508' }}>
       <div style={{ maxWidth: 1440, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
           <AnimatedSectionTitle
@@ -242,8 +242,8 @@ export function FuturisticPricing({ onSelectPlan, skills = [], pricingData = [] 
           id="pricing-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-            gap: 28,
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))',
+            gap: 24,
             alignItems: 'stretch'
           }}
         >
@@ -253,7 +253,7 @@ export function FuturisticPricing({ onSelectPlan, skills = [], pricingData = [] 
               onMouseEnter={playHoverSound}
               style={{
                 position: 'relative',
-                padding: 36,
+                padding: 'clamp(22px, 4vw, 36px)',
                 borderRadius: 28,
                 backgroundColor: plan.popular ? 'rgba(18, 18, 26, 0.95)' : 'rgba(12, 12, 18, 0.82)',
                 border: plan.popular ? '2px solid #ff2d55' : '1px solid rgba(255, 45, 85, 0.22)',
