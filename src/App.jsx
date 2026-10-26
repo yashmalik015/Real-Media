@@ -1269,7 +1269,7 @@ function LearningPage({ user, onBack, onOpenLesson, showToast }) {
               {!search && (
                 <div style={{ marginBottom: 40 }}>
                   <div style={{ color: "var(--red)", fontSize: ".72rem", letterSpacing: ".2em", textTransform: "uppercase", marginBottom: 16 }}>🔥 Popular</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 24 }}>
                     {[...filtered].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 3).map(course => (
                       <CourseCard key={course.id} course={course} onOpen={() => {
                         const firstLesson = course.modules?.[0]?.lessons?.[0];
@@ -1282,7 +1282,7 @@ function LearningPage({ user, onBack, onOpenLesson, showToast }) {
               {/* All */}
               <div>
                 <div style={{ color: "var(--muted)", fontSize: ".72rem", letterSpacing: ".2em", textTransform: "uppercase", marginBottom: 16 }}>{search ? `Results for "${search}"` : "All Courses"} · {filtered.length}</div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 24 }}>
                   {filtered.map(course => (
                     <CourseCard key={course.id} course={course} onOpen={() => {
                       const firstLesson = course.modules?.[0]?.lessons?.[0];
@@ -1299,32 +1299,228 @@ function LearningPage({ user, onBack, onOpenLesson, showToast }) {
   );
 }
 
-// ── Course Card ───────────────────────────────────────────────────────────────
+// ── Course Card (YouTube Video Style) ──────────────────────────────────────────
 function CourseCard({ course, onOpen }) {
   const lessonsCount = course.modules?.reduce((s, m) => s + (m.lessons?.length || 0), 0) || 0;
+
+  // Extract thumbnail fallback from lessons (e.g. YouTube video thumbnail) if custom thumbnail is not set
+  let fallbackThumbnail = null;
+  if (!course.thumbnail && course.modules) {
+    for (const m of course.modules) {
+      for (const l of (m.lessons || [])) {
+        const ytMatch = (l.driveLink || l.videoUrl || '').match(/(?:v=|youtu\.be\/|embed\/)([^&?/\s]+)/);
+        if (ytMatch?.[1]) {
+          fallbackThumbnail = `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
+          break;
+        }
+      }
+      if (fallbackThumbnail) break;
+    }
+  }
+
+  const thumbUrl = course.thumbnail ? mediaUrl(course.thumbnail) : fallbackThumbnail;
+  const instructorName = course.instructor || course.teacherName || "Assets Weber Academy";
+  const instructorInitial = (instructorName || "A").charAt(0).toUpperCase();
+
+  // Strip markdown syntax for clean, elegant 1-line preview
+  const cleanSnippet = (course.description || '')
+    .replace(/#{1,6}\s?/g, '')
+    .replace(/[*_~`]/g, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+
   return (
     <div
-      className="port-card"
-      style={{ cursor: "pointer" }}
+      className="yt-course-card"
       onClick={onOpen}
+      style={{
+        cursor: "pointer",
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+        borderRadius: 18,
+        padding: 12,
+        backgroundColor: "rgba(255,255,255,0.02)",
+        border: "1px solid rgba(255,255,255,0.07)",
+        transition: "transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "translateY(-4px)";
+        e.currentTarget.style.borderColor = "rgba(255,45,85,0.4)";
+        e.currentTarget.style.boxShadow = "0 14px 35px rgba(0,0,0,0.55)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)";
+        e.currentTarget.style.boxShadow = "none";
+      }}
     >
-      <div className="port-media" style={{ height: 180 }}>
-        {course.thumbnail ? (
-          <img src={mediaUrl(course.thumbnail)} alt={course.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
+      {/* 16:9 Thumbnail Container */}
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          aspectRatio: "16/9",
+          borderRadius: 12,
+          overflow: "hidden",
+          backgroundColor: "#0d0d12",
+          background: "linear-gradient(135deg, #181824, #0a0a0f)",
+        }}
+      >
+        {thumbUrl ? (
+          <img
+            src={thumbUrl}
+            alt={course.title}
+            style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.3s ease" }}
+            loading="lazy"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          />
         ) : (
-          <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", fontSize: "3rem", background: "linear-gradient(135deg,rgba(229,57,53,.15),rgba(0,0,0,.8))" }}>📚</div>
+          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8 }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", backgroundColor: "rgba(255,45,85,0.15)", border: "1px solid rgba(255,45,85,0.3)", display: "grid", placeItems: "center", color: "#ff2d55", fontSize: "1.2rem" }}>
+              ▶
+            </div>
+            <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)", fontFamily: "monospace" }}>
+              {course.category || "COURSE"}
+            </span>
+          </div>
         )}
-        <div className="port-play-btn">▶</div>
-        <div className="port-tag">{course.category}</div>
+
+        {/* Category badge (top left) */}
+        {course.category && (
+          <span style={{
+            position: "absolute",
+            top: 8,
+            left: 8,
+            padding: "3px 8px",
+            borderRadius: 6,
+            backgroundColor: "rgba(0,0,0,0.75)",
+            backdropFilter: "blur(6px)",
+            color: "#fff",
+            fontSize: "0.68rem",
+            fontWeight: 600,
+            letterSpacing: "0.03em"
+          }}>
+            {course.category}
+          </span>
+        )}
+
+        {/* Duration / Lesson Count Pill (bottom right - YouTube style) */}
+        <span style={{
+          position: "absolute",
+          bottom: 8,
+          right: 8,
+          padding: "3px 8px",
+          borderRadius: 4,
+          backgroundColor: "rgba(0,0,0,0.85)",
+          color: "#fff",
+          fontSize: "0.72rem",
+          fontWeight: 700,
+          fontFamily: "monospace",
+          letterSpacing: "0.04em",
+          display: "flex",
+          alignItems: "center",
+          gap: 4
+        }}>
+          {lessonsCount > 0 ? `${lessonsCount} LESSONS` : (course.duration || "PLAYLIST")}
+        </span>
       </div>
-      <div className="port-body">
-        <div className="port-client">{course.teacherName || "Assets Weber"}</div>
-        <h3 style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: "1.3rem" }}>{course.title}</h3>
-        <p style={{ fontSize: ".84rem", marginBottom: 12 }}>{course.description}</p>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", fontSize: ".76rem", color: "var(--muted)" }}>
-          <span>📋 {lessonsCount} lessons</span>
-          <span>👁 {course.views || 0} views</span>
-          {course.students && <span>👥 {course.students} students</span>}
+
+      {/* Video Info Section (YouTube Style: Avatar + Title + Channel + Metadata) */}
+      <div style={{ display: "flex", gap: 12, padding: "2px 4px 4px" }}>
+        {/* Channel Avatar */}
+        <div style={{
+          width: 36,
+          height: 36,
+          borderRadius: "50%",
+          backgroundColor: "#ff2d55",
+          background: "linear-gradient(135deg, #ff2d55, #991b1b)",
+          color: "#fff",
+          display: "grid",
+          placeItems: "center",
+          fontSize: "0.85rem",
+          fontWeight: 700,
+          flexShrink: 0,
+          boxShadow: "0 2px 8px rgba(255,45,85,0.3)"
+        }}>
+          {instructorInitial}
+        </div>
+
+        {/* Details */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Title (YouTube 2-line clamp) */}
+          <h3
+            style={{
+              fontSize: "0.98rem",
+              fontWeight: 600,
+              color: "#ffffff",
+              margin: 0,
+              lineHeight: 1.35,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              textOverflow: "ellipsis"
+            }}
+          >
+            {course.title}
+          </h3>
+
+          {/* Channel / Instructor name with verified checkmark */}
+          <div style={{
+            fontSize: "0.8rem",
+            color: "rgba(255,255,255,0.6)",
+            marginTop: 4,
+            display: "flex",
+            alignItems: "center",
+            gap: 4
+          }}>
+            <span>{instructorName}</span>
+            <span style={{ color: "#30d158", fontSize: "0.75rem" }}>✓</span>
+          </div>
+
+          {/* Metadata line: views • lessons • price */}
+          <div style={{
+            fontSize: "0.76rem",
+            color: "rgba(255,255,255,0.45)",
+            marginTop: 3,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            flexWrap: "wrap"
+          }}>
+            <span>{course.views || 0} views</span>
+            <span>•</span>
+            <span>{lessonsCount} lessons</span>
+            {course.duration && (
+              <>
+                <span>•</span>
+                <span>{course.duration}</span>
+              </>
+            )}
+            <span>•</span>
+            <span style={{ color: course.price ? "#ff2d55" : "#30d158", fontWeight: 600 }}>
+              {course.price ? `$${course.price}` : "FREE"}
+            </span>
+          </div>
+
+          {/* Clean 1-line description snippet without raw markdown */}
+          {cleanSnippet && (
+            <div style={{
+              fontSize: "0.78rem",
+              color: "rgba(255,255,255,0.4)",
+              marginTop: 6,
+              display: "-webkit-box",
+              WebkitLineClamp: 1,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              lineHeight: 1.4
+            }}>
+              {cleanSnippet}
+            </div>
+          )}
         </div>
       </div>
     </div>

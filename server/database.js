@@ -816,7 +816,7 @@ function makeRepository(client, collections) {
       (await courses.find({ published: true }).sort({ sort_order: 1, created_at: -1 }).toArray()).map(courseRow),
     allCourses: async () =>
       (await courses.find().sort({ sort_order: 1, created_at: -1 }).toArray()).map(courseRow),
-    courseById: async (courseId) => courseRow(await courses.findOne({ id: courseId })),
+    courseById: async (courseId) => courseRow(await courses.findOne({ $or: [{ id: courseId }, { _id: courseId }] })),
     createCourse: async (data, userId) => {
       const item = {
         id: id('course'),
@@ -845,15 +845,15 @@ function makeRepository(client, collections) {
       return courseRow(item)
     },
     updateCourse: async (courseId, data) => {
-      const existing = await courses.findOne({ id: courseId })
+      const existing = await courses.findOne({ $or: [{ id: courseId }, { _id: courseId }] })
       if (!existing) return null
       const payload = {
         title: data.title ?? existing.title,
         category: data.category ?? existing.category,
         description: data.description ?? existing.description,
         tags: data.tags ?? existing.tags,
-        thumbnail: data.thumbnail ?? existing.thumbnail,
-        banner: data.banner ?? existing.banner,
+        thumbnail: (data.thumbnail !== undefined && data.thumbnail !== '') ? data.thumbnail : existing.thumbnail,
+        banner: (data.banner !== undefined && data.banner !== '') ? data.banner : existing.banner,
         teacher_id: data.teacherId ?? data.teacher_id ?? existing.teacher_id,
         teacher_name: data.teacherName ?? data.teacher_name ?? existing.teacher_name,
         instructor: data.instructor ?? existing.instructor,
@@ -866,14 +866,14 @@ function makeRepository(client, collections) {
         sort_order: data.sortOrder ?? data.sort_order ?? existing.sort_order,
         updated_at: now(),
       }
-      await courses.updateOne({ id: courseId }, { $set: payload })
-      return courseRow(await courses.findOne({ id: courseId }))
+      await courses.updateOne({ $or: [{ id: courseId }, { _id: courseId }] }, { $set: payload })
+      return courseRow(await courses.findOne({ $or: [{ id: courseId }, { _id: courseId }] }))
     },
     deleteCourse: async (courseId) => {
-      await courses.deleteOne({ id: courseId })
+      await courses.deleteOne({ $or: [{ id: courseId }, { _id: courseId }] })
     },
     incrementCourseViews: async (courseId) => {
-      await courses.updateOne({ id: courseId }, { $inc: { views: 1 } })
+      await courses.updateOne({ $or: [{ id: courseId }, { _id: courseId }] }, { $inc: { views: 1 } })
     },
     searchCourses: async (query) => {
       const q = query.trim().toLowerCase()

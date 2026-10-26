@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { uploadToCloudinaryStream, uploadToCloudinaryLarge } from './cloudinary.js'
+import { uploadToCloudinaryStream, uploadToCloudinaryLarge, uploadToCloudinaryFile } from './cloudinary.js'
 import { safeStorageName, uploadToFirebaseStorage } from './firebaseStorage.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -55,7 +55,7 @@ export function isCloudinaryConfigured() {
 
 export async function uploadFile(file, folder) {
   const isVideo = file.mimetype?.startsWith('video/')
-  const defaultResourceType = isVideo ? 'video' : 'auto'
+  const defaultResourceType = isVideo ? 'video' : 'image'
 
   // Videos larger than 95MB exceed Cloudinary standard plan limits (100MB).
   // Save directly to local disk storage to avoid Cloudinary 400 errors and timeouts.
@@ -68,11 +68,17 @@ export async function uploadFile(file, folder) {
       
       let result
       if (file.path) {
-        // Use chunked upload_large from disk for video or large files
-        result = await uploadToCloudinaryLarge(file.path, {
-          folder: cloudinaryFolder,
-          resourceType: defaultResourceType,
-        })
+        if (isVideo) {
+          result = await uploadToCloudinaryLarge(file.path, {
+            folder: cloudinaryFolder,
+            resourceType: 'video',
+          })
+        } else {
+          result = await uploadToCloudinaryFile(file.path, {
+            folder: cloudinaryFolder,
+            resourceType: 'image',
+          })
+        }
         // Clean up temporary disk file
         await fs.promises.unlink(file.path).catch(() => {})
       } else {

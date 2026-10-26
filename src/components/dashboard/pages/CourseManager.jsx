@@ -70,19 +70,30 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
       };
 
       if (editingCourse) {
-        await api.updateCourse(editingCourse.id, { ...editingCourse, ...payload });
+        let currentThumbnail = editingCourse.thumbnail || '';
         if (thumbnailFile) {
           const fd = new FormData();
           fd.append('thumbnail', thumbnailFile);
-          await api.uploadCourseThumbnail(editingCourse.id, fd);
+          const thumbRes = await api.uploadCourseThumbnail(editingCourse.id, fd);
+          if (thumbRes?.url) {
+            currentThumbnail = thumbRes.url;
+          }
         }
+        await api.updateCourse(editingCourse.id, {
+          ...editingCourse,
+          ...payload,
+          thumbnail: currentThumbnail
+        });
         showToast('Course updated!');
       } else {
         const { course } = await api.createCourse(payload);
         if (thumbnailFile && course) {
           const fd = new FormData();
           fd.append('thumbnail', thumbnailFile);
-          await api.uploadCourseThumbnail(course.id, fd);
+          const thumbRes = await api.uploadCourseThumbnail(course.id, fd);
+          if (thumbRes?.url) {
+            await api.updateCourse(course.id, { thumbnail: thumbRes.url });
+          }
         }
         showToast('Course created! Open "Manage Videos" to add playlists and upload lessons.');
       }
@@ -789,7 +800,26 @@ export function CourseManager({ courses = [], onLoad, showToast }) {
 
           <div>
             <label style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', fontFamily: 'monospace' }}>THUMBNAIL IMAGE</label>
-            <input type="file" accept="image/*" onChange={(e) => setThumbnailFile(e.target.files?.[0] || null)} style={{ marginTop: 6, color: '#fff', fontSize: '0.8rem' }} />
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setThumbnailFile(e.target.files?.[0] || null)}
+              style={{ marginTop: 6, color: '#fff', fontSize: '0.8rem', width: '100%' }}
+            />
+            {(thumbnailFile || editingCourse?.thumbnail) && (
+              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 80, height: 45, borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.2)', flexShrink: 0, backgroundColor: '#000' }}>
+                  <img
+                    src={thumbnailFile ? URL.createObjectURL(thumbnailFile) : mediaUrl(editingCourse.thumbnail)}
+                    alt="Thumbnail preview"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </div>
+                <span style={{ fontSize: '0.72rem', color: '#30d158' }}>
+                  {thumbnailFile ? `New image selected: ${thumbnailFile.name}` : 'Current thumbnail'}
+                </span>
+              </div>
+            )}
           </div>
 
           <div style={{ gridColumn: 'span 2' }}>

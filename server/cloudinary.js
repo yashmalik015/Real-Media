@@ -90,6 +90,29 @@ export async function uploadToCloudinaryLarge(filePath, { folder = 'assetsweber/
 }
 
 /**
+ * Upload an image or standard file directly from disk to Cloudinary using standard uploader.upload.
+ * @param {string} filePath - Absolute path to temporary file on disk
+ * @param {Object} options - Upload options
+ * @returns {Promise<{ url: string, publicId: string, resourceType: string }>}
+ */
+export async function uploadToCloudinaryFile(filePath, { folder = 'assetsweber/uploads', resourceType = 'auto' } = {}) {
+  initCloudinary()
+  const result = await cloudinary.uploader.upload(filePath, {
+    folder,
+    resource_type: resourceType,
+    unique_filename: true,
+    overwrite: false,
+  })
+
+  let url = result.secure_url || result.url
+  return {
+    url,
+    publicId: result.public_id,
+    resourceType: result.resource_type,
+  }
+}
+
+/**
  * Generate a signature for client-side direct upload to Cloudinary.
  * Bypasses reverse proxy size limits (such as Nginx/Hostinger 413) entirely.
  */

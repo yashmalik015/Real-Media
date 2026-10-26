@@ -502,9 +502,14 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
   app.post('/api/courses/:id/thumbnail', requireAuth, upload.single('thumbnail'), async (req, res) => {
     if (req.user.role !== 'team') return res.status(403).json({ message: 'Team access required.' })
     if (!req.file) return res.status(400).json({ message: 'Thumbnail required.' })
-    const uploaded = await uploadFile(req.file, 'courses/thumbnails')
-    const course = await v2.updateCourse(req.params.id, { thumbnail: uploaded.url })
-    res.json({ course, url: uploaded.url })
+    try {
+      const uploaded = await uploadFile(req.file, 'courses/thumbnails')
+      const course = await v2.updateCourse(req.params.id, { thumbnail: uploaded.url })
+      res.json({ course, url: uploaded.url })
+    } catch (err) {
+      console.error('[Course Thumbnail Upload Error]:', err)
+      res.status(500).json({ message: `Thumbnail upload failed: ${err.message || err}` })
+    }
   })
 
   app.get('/api/cloudinary/signature', requireAuth, async (req, res) => {
