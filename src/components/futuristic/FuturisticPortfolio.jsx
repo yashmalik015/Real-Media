@@ -23,9 +23,18 @@ function getMediaSrc(item, options = {}) {
 }
 
 function PortfolioMediaPreview({ item }) {
+  const videoRef = useRef(null);
+  const [videoError, setVideoError] = useState(false);
   const [imgError, setImgError] = useState(false);
   const isVideo = isVideoItem(item);
-  const rawUrl = item.mediaUrl || item.videoUrl || item.thumbnail || item.fileUrl || '';
+  const rawUrl = item.mediaUrl || item.videoUrl || item.fileUrl || item.thumbnail || '';
+
+  // Clean direct video source without broken transform segments
+  let videoSrc = '';
+  if (isVideo && rawUrl) {
+    const clean = mediaUrl(rawUrl);
+    videoSrc = clean.replace(/\/upload\/(?:[a-zA-Z0-9_,:]+\/)?(v\d+\/)/, '/upload/$1');
+  }
 
   // Resolve poster thumbnail
   let poster = '';
@@ -39,12 +48,77 @@ function PortfolioMediaPreview({ item }) {
     poster = optimizedMediaUrl(rawUrl, { width: 720 });
   }
 
+  // Smooth viewport-based autoplay & pause using IntersectionObserver for top performance
+  useEffect(() => {
+    if (!isVideo || !videoRef.current || !videoSrc || videoError) return;
+    const video = videoRef.current;
+    video.defaultMuted = true;
+    video.muted = true;
+
+    // Trigger initial play attempt
+    video.play().catch(() => {});
+
+    let observer;
+    if ('IntersectionObserver' in window) {
+      observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              video.play().catch(() => {});
+            } else {
+              video.pause();
+            }
+          });
+        },
+        { threshold: 0.15 }
+      );
+      observer.observe(video);
+    }
+
+    return () => {
+      if (observer) observer.disconnect();
+    };
+  }, [isVideo, videoSrc, videoError]);
+
+  if (isVideo && !videoError && videoSrc) {
+    return (
+      <video
+        ref={videoRef}
+        src={videoSrc}
+        poster={poster || undefined}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)'
+        }}
+        className="port-img"
+        loop
+        playsInline
+        autoPlay
+        muted
+        preload="metadata"
+        onError={() => setVideoError(true)}
+        onMouseEnter={(e) => {
+          if (e.currentTarget.paused) {
+            e.currentTarget.play().catch(() => {});
+          }
+        }}
+      />
+    );
+  }
+
   if (poster && !imgError) {
     return (
       <img
         src={poster}
         alt=""
-        style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)'
+        }}
         className="port-img"
         loading="lazy"
         onError={() => setImgError(true)}
