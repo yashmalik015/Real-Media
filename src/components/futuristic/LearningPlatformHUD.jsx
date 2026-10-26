@@ -3,6 +3,30 @@ import { playClickSound, playHoverSound } from '../../utils/audio.js';
 import { mediaUrl } from '../../api.js';
 import { AnimatedSectionTitle, AnimatedParagraph, AnimatedButtonText } from './CinematicTypography.jsx';
 
+function getCourseThumbnail(course) {
+  if (course.thumbnail) return mediaUrl(course.thumbnail);
+  if (course.modules) {
+    for (const m of course.modules) {
+      for (const l of (m.lessons || [])) {
+        if (l.thumbnail) return mediaUrl(l.thumbnail);
+        const ytMatch = (l.driveLink || l.videoUrl || '').match(/(?:v=|youtu\.be\/|embed\/)([^&?/\s]+)/);
+        if (ytMatch?.[1]) return `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
+      }
+    }
+  }
+  return null;
+}
+
+function getCleanCourseDescription(desc) {
+  if (!desc) return '';
+  return desc
+    .replace(/#{1,6}\s?/g, '')
+    .replace(/[*_~`]/g, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function LearningPlatformHUD({ onOpenLearning, courses = [] }) {
   const [activeTab, setActiveTab] = useState('All');
 
@@ -72,102 +96,123 @@ export function LearningPlatformHUD({ onOpenLearning, courses = [] }) {
       ) : (
         /* Horizontal Course Cards Slider */
         <div style={{ display: 'flex', gap: 28, overflowX: 'auto', padding: '10px 32px 40px', scrollbarWidth: 'none' }}>
-          {filtered.map((course) => (
-            <div
-              key={course.id}
-              onClick={() => { playClickSound(); if (onOpenLearning) onOpenLearning(); }}
-              onMouseEnter={playHoverSound}
-              style={{
-                flex: '0 0 380px', borderRadius: 24,
-                backgroundColor: 'rgba(12, 12, 16, 0.85)',
-                border: '1px solid rgba(255, 45, 85, 0.3)',
-                backdropFilter: 'blur(24px)',
-                boxShadow: '0 20px 50px rgba(0, 0, 0, 0.85)',
-                overflow: 'hidden', cursor: 'pointer',
-                transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)', position: 'relative'
-              }}
-              className="course-card"
-            >
-              {/* Thumbnail */}
-              <div style={{ position: 'relative', height: 220, overflow: 'hidden' }}>
-                {course.thumbnail ? (
-                  <img
-                    src={mediaUrl(course.thumbnail)}
-                    alt={course.title}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
-                    className="course-img"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div style={{
-                    width: '100%', height: '100%',
-                    background: 'linear-gradient(135deg, rgba(255,45,85,0.2), rgba(12,12,16,0.9))',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '2rem', color: 'rgba(255,255,255,0.2)'
-                  }}>▶</div>
-                )}
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(12,12,16,1) 0%, transparent 70%)' }} />
+          {filtered.map((course) => {
+            const thumbUrl = getCourseThumbnail(course);
+            const cleanDesc = getCleanCourseDescription(course.description);
+            const lessonsCount = course.modules?.reduce((s, m) => s + (m.lessons?.length || 0), 0) || 0;
 
-                {/* Play Button Overlay */}
-                <div
-                  style={{
-                    position: 'absolute', inset: 0, display: 'grid', placeItems: 'center',
-                    backgroundColor: 'rgba(0,0,0,0.3)', opacity: 0, transition: 'opacity 0.3s ease'
-                  }}
-                  className="play-overlay"
-                >
-                  <div style={{
-                    width: 60, height: 60, borderRadius: '50%', backgroundColor: '#ff2d55',
-                    color: '#ffffff', display: 'grid', placeItems: 'center', fontSize: '1.5rem',
-                    boxShadow: '0 0 30px #ff2d55'
-                  }}>▶</div>
-                </div>
-              </div>
-
-              {/* Course Meta */}
-              <div style={{ padding: '20px 24px 24px' }}>
-                {course.category && (
-                  <span style={{
-                    display: 'inline-block', padding: '4px 10px', borderRadius: 999,
-                    backgroundColor: 'rgba(255,45,85,0.15)', color: '#ff2d55',
-                    fontSize: '0.7rem', fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 10
-                  }}>{course.category}</span>
-                )}
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                  <div style={{
-                    width: 28, height: 28, borderRadius: '50%', border: '1px solid #ff2d55',
-                    background: 'linear-gradient(135deg, #ff2d55, #9f1111)',
-                    display: 'grid', placeItems: 'center', color: '#fff', fontSize: '0.7rem', fontWeight: 700
-                  }}>
-                    {(course.teacherName || 'AW')[0]}
-                  </div>
-                  <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)' }}>
-                    {course.teacherName || 'Assets Weber'}
-                  </span>
-                </div>
-
-                <h4 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', color: '#ffffff', margin: '0 0 8px 0', lineHeight: 1.15 }}>
-                  {course.title}
-                </h4>
-                <AnimatedParagraph style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.5, marginBottom: 20 }}>
-                  {course.description || ''}
-                </AnimatedParagraph>
-
-                {/* Lesson count and duration */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                  <span style={{ fontSize: '0.78rem', fontFamily: 'monospace', color: 'rgba(255,255,255,0.5)' }}>
-                    {course.modules?.reduce((s, m) => s + (m.lessons?.length || 0), 0) || 0} Lessons
-                  </span>
-                  {course.totalDuration && (
-                    <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
-                      {course.totalDuration}
-                    </span>
+            return (
+              <div
+                key={course.id}
+                onClick={() => { playClickSound(); if (onOpenLearning) onOpenLearning(); }}
+                onMouseEnter={playHoverSound}
+                style={{
+                  flex: '0 0 380px', borderRadius: 24,
+                  backgroundColor: 'rgba(12, 12, 16, 0.85)',
+                  border: '1px solid rgba(255, 45, 85, 0.3)',
+                  backdropFilter: 'blur(24px)',
+                  boxShadow: '0 20px 50px rgba(0, 0, 0, 0.85)',
+                  overflow: 'hidden', cursor: 'pointer',
+                  transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)', position: 'relative'
+                }}
+                className="course-card"
+              >
+                {/* Thumbnail */}
+                <div style={{ position: 'relative', height: 220, overflow: 'hidden', backgroundColor: '#0d0d12' }}>
+                  {thumbUrl ? (
+                    <img
+                      src={thumbUrl}
+                      alt={course.title}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
+                      className="course-img"
+                      loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: '100%', height: '100%',
+                      background: 'linear-gradient(135deg, rgba(255,45,85,0.2), rgba(12,12,16,0.9))',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '2rem', color: 'rgba(255,255,255,0.2)'
+                    }}>▶</div>
                   )}
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(12,12,16,1) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+                  {/* Play Button Overlay */}
+                  <div
+                    style={{
+                      position: 'absolute', inset: 0, display: 'grid', placeItems: 'center',
+                      backgroundColor: 'rgba(0,0,0,0.3)', opacity: 0, transition: 'opacity 0.3s ease', pointerEvents: 'none'
+                    }}
+                    className="play-overlay"
+                  >
+                    <div style={{
+                      width: 60, height: 60, borderRadius: '50%', backgroundColor: '#ff2d55',
+                      color: '#ffffff', display: 'grid', placeItems: 'center', fontSize: '1.5rem',
+                      boxShadow: '0 0 30px #ff2d55'
+                    }}>▶</div>
+                  </div>
+                </div>
+
+                {/* Course Meta */}
+                <div style={{ padding: '20px 24px 24px' }}>
+                  {course.category && (
+                    <span style={{
+                      display: 'inline-block', padding: '4px 10px', borderRadius: 999,
+                      backgroundColor: 'rgba(255,45,85,0.15)', color: '#ff2d55',
+                      fontSize: '0.7rem', fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 10
+                    }}>{course.category}</span>
+                  )}
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: '50%', border: '1px solid #ff2d55',
+                      background: 'linear-gradient(135deg, #ff2d55, #9f1111)',
+                      display: 'grid', placeItems: 'center', color: '#fff', fontSize: '0.7rem', fontWeight: 700
+                    }}>
+                      {(course.teacherName || course.instructor || 'AW')[0]}
+                    </div>
+                    <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)' }}>
+                      {course.teacherName || course.instructor || 'Assets Weber Academy'}
+                    </span>
+                  </div>
+
+                  <h4 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', color: '#ffffff', margin: '0 0 8px 0', lineHeight: 1.15 }}>
+                    {course.title}
+                  </h4>
+                  {/* Clean 2-line clamped description snippet */}
+                  <AnimatedParagraph style={{
+                    fontSize: '0.85rem',
+                    color: 'rgba(255,255,255,0.55)',
+                    lineHeight: 1.5,
+                    marginBottom: 20,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    minHeight: '2.8em'
+                  }}>
+                    {cleanDesc || 'Master core fundamentals and build industry-grade projects.'}
+                  </AnimatedParagraph>
+
+                  {/* Lesson count and duration */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                    <span style={{ fontSize: '0.78rem', fontFamily: 'monospace', color: 'rgba(255,255,255,0.5)' }}>
+                      {lessonsCount} Lessons
+                    </span>
+                    {(course.totalDuration || course.duration) && (
+                      <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
+                        {course.totalDuration || course.duration}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

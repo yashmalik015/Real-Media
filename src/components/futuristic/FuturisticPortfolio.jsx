@@ -23,74 +23,43 @@ function getMediaSrc(item, options = {}) {
 }
 
 function PortfolioMediaPreview({ item }) {
-  const videoRef = useRef(null);
-  const [videoError, setVideoError] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const isVideo = isVideoItem(item);
-  // Request lightweight 720p compressed preview URL for card thumbnails
-  const src = getMediaSrc(item, { width: 720 });
-  const poster = item.thumbnail
-    ? optimizedMediaUrl(item.thumbnail, { width: 720 })
-    : (src && src.includes('res.cloudinary.com') && isVideo
-        ? src.replace(/\.(mp4|webm|mov|mkv)/i, '.jpg').replace('/video/upload/', '/video/upload/so_0,')
-        : undefined);
+  const rawUrl = item.mediaUrl || item.videoUrl || item.thumbnail || item.fileUrl || '';
 
-  useEffect(() => {
-    if (isVideo && videoRef.current) {
-      videoRef.current.defaultMuted = true;
-      videoRef.current.muted = true;
-      videoRef.current.play().catch(() => {});
-    }
-  }, [isVideo, src]);
-
-  if (isVideo && !videoError && src) {
-    return (
-      <video
-        ref={videoRef}
-        src={src}
-        poster={poster}
-        style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }}
-        className="port-img"
-        loop
-        playsInline
-        autoPlay
-        muted
-        preload="metadata"
-        onError={() => setVideoError(true)}
-      />
-    );
+  // Resolve poster thumbnail
+  let poster = '';
+  if (item.thumbnail) {
+    poster = mediaUrl(item.thumbnail);
+  } else if (rawUrl && rawUrl.includes('res.cloudinary.com') && isVideo) {
+    poster = mediaUrl(rawUrl)
+      .replace(/\.(mp4|webm|mov|mkv)($|\?)/i, '.jpg')
+      .replace(/\/upload\/(?:[a-zA-Z0-9_,:]+\/)?/, '/upload/so_0,w_720,c_limit/');
+  } else if (rawUrl) {
+    poster = optimizedMediaUrl(rawUrl, { width: 720 });
   }
 
-  if (poster) {
+  if (poster && !imgError) {
     return (
       <img
         src={poster}
-        alt={item.title}
+        alt=""
         style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }}
         className="port-img"
         loading="lazy"
+        onError={() => setImgError(true)}
       />
     );
   }
 
-  if (src && !isVideo) {
-    return (
-      <img
-        src={src}
-        alt={item.title}
-        style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }}
-        className="port-img"
-        loading="lazy"
-      />
-    );
-  }
-
-  // Fallback placeholder
+  // Fallback futuristic cyberpunk placeholder
   return (
     <div style={{
       width: '100%', height: '100%',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: 'linear-gradient(135deg, rgba(255,45,85,0.15), rgba(12,12,16,0.9))',
-      fontSize: '2.5rem'
+      fontSize: '2.5rem',
+      color: 'rgba(255,45,85,0.7)'
     }}>
       {isVideo ? '▶' : '🖼'}
     </div>
@@ -492,7 +461,7 @@ export function FuturisticPortfolio({ portfolio = [], isStandalone = false, onNa
               <div style={{ width: '100%', marginBottom: 24 }}>
                 <FuturisticVideoPlayer
                   src={selectedItem.mediaUrl || selectedItem.videoUrl || selectedItem.fileUrl}
-                  poster={selectedItem.thumbnail || (getMediaSrc(selectedItem).includes('res.cloudinary.com') ? getMediaSrc(selectedItem).replace(/\.(mp4|webm|mov|mkv)/i, '.jpg').replace('/video/upload/', '/video/upload/so_0,') : '')}
+                  poster={selectedItem.thumbnail || (selectedItem.mediaUrl && selectedItem.mediaUrl.includes('res.cloudinary.com') ? mediaUrl(selectedItem.mediaUrl).replace(/\.(mp4|webm|mov|mkv)($|\?)/i, '.jpg').replace(/\/upload\/(?:[a-zA-Z0-9_,:]+\/)?/, '/upload/so_0,w_1280,c_limit/') : '')}
                   title={selectedItem.title}
                   autoPlay={true}
                 />

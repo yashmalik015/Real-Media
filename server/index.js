@@ -73,6 +73,7 @@ app.disable('x-powered-by')
 app.use(helmet({
   crossOriginResourcePolicy: false,
   crossOriginOpenerPolicy: false,
+  contentSecurityPolicy: false,
 }))
 // Explicitly list allowed origins so credentials:true works correctly.
 // Browser spec forbids credentials with a wildcard origin.

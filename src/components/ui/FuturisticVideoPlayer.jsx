@@ -103,17 +103,12 @@ export function FuturisticVideoPlayer({
     const cleanUrl = mediaUrl(url);
     if (!cleanUrl.includes('res.cloudinary.com')) return cleanUrl;
 
-    let transform = 'f_auto,q_auto:best,w_1920,c_limit';
-    if (q === '720p') transform = 'f_auto,q_auto,w_1280,c_limit';
-    else if (q === '480p') transform = 'f_auto,q_auto:eco,w_854,c_limit';
-    else if (q === 'auto') transform = 'f_auto,q_auto';
-    else transform = 'f_auto,q_auto:best,w_1920,c_limit'; // 1080p
-
-    // Replace existing transformation segment if present
+    // Direct pre-encoded video URL: strip out any broken/stale transformation segment (e.g. /upload/f_auto,q_auto.../v...)
+    // because Cloudinary on-the-fly video transcoding on large files returns 0-byte responses and breaks HTML5 streaming.
     if (/\/upload\/(?:[a-zA-Z0-9_,:]+\/)?(v\d+\/)/.test(cleanUrl)) {
-      return cleanUrl.replace(/\/upload\/(?:[a-zA-Z0-9_,:]+\/)?(v\d+\/)/, `/upload/${transform}/$1`);
+      return cleanUrl.replace(/\/upload\/(?:[a-zA-Z0-9_,:]+\/)?(v\d+\/)/, '/upload/$1');
     }
-    return cleanUrl.replace('/upload/', `/upload/${transform}/`);
+    return cleanUrl;
   }, [isExternalEmbed]);
 
   const videoSrc = getVideoSrcForQuality(rawUrl, quality);
@@ -249,7 +244,10 @@ export function FuturisticVideoPlayer({
     setHasError(false);
     setIsLoading(true);
     if (videoRef.current) {
+      const direct = getVideoSrcForQuality(rawUrl, quality);
+      if (direct) videoRef.current.src = direct;
       videoRef.current.load();
+      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
     }
   };
 

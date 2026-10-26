@@ -468,8 +468,13 @@ export function optimizedMediaUrl(url, { width = 1280, quality = 'auto' } = {}) 
   if (!url) return ''
   const fullUrl = mediaUrl(url)
   if (fullUrl.includes('res.cloudinary.com') && fullUrl.includes('/upload/')) {
-    // Prevent duplicating transformations if already transformed
-    if (fullUrl.includes('/q_auto') || fullUrl.includes('/f_auto')) {
+    // If it's a video file or video upload route, return fullUrl directly.
+    // Cloudinary on-the-fly video transcoding on large files returns content-length: 0 without range headers, breaking browser streaming!
+    if (/\.(mp4|webm|mov|mkv|avi)($|\?)/i.test(fullUrl) || (fullUrl.includes('/video/upload/') && !/\.(jpg|jpeg|png|webp)($|\?)/i.test(fullUrl))) {
+      return fullUrl
+    }
+    // Prevent duplicating transformations if already transformed (or video frame captures like /so_0/)
+    if (fullUrl.includes('/q_auto') || fullUrl.includes('/f_auto') || fullUrl.includes('/w_') || fullUrl.includes('/so_')) {
       return fullUrl
     }
     const transformStr = width ? `f_auto,q_${quality},w_${width},c_limit` : `f_auto,q_${quality}`
