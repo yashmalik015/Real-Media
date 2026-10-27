@@ -62,6 +62,8 @@ export function FuturisticVideoPlayer({
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [quality, setQuality] = useState('1080p'); // Default to full 1080p crisp fidelity
   const [showQualityMenu, setShowQualityMenu] = useState(false);
+  const [isSwitchingQuality, setIsSwitchingQuality] = useState(false);
+  const [qualityToast, setQualityToast] = useState('');
   const [copiedToast, setCopiedToast] = useState(false);
 
   // Share video action
@@ -103,17 +105,28 @@ export function FuturisticVideoPlayer({
     const cleanUrl = mediaUrl(url);
     if (!cleanUrl.includes('res.cloudinary.com')) return cleanUrl;
 
-    // Direct pre-encoded video URL: strip out any broken/stale transformation segment (e.g. /upload/f_auto,q_auto.../v...)
-    // because Cloudinary on-the-fly video transcoding on large files returns 0-byte responses and breaks HTML5 streaming.
-    if (/\/upload\/(?:[a-zA-Z0-9_,:]+\/)?(v\d+\/)/.test(cleanUrl)) {
-      return cleanUrl.replace(/\/upload\/(?:[a-zA-Z0-9_,:]+\/)?(v\d+\/)/, '/upload/$1');
+    let transform = '';
+    if (q === '720p') {
+      transform = 'w_1280,c_limit';
+    } else if (q === '480p') {
+      transform = 'w_854,c_limit';
+    } else if (q === 'auto') {
+      const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+      transform = isMobile ? 'w_1280,c_limit' : '';
+    } else {
+      // 1080p FHD: full direct stream
+      transform = '';
     }
-    return cleanUrl;
+
+    // Strip any existing transformation segment first
+    const baseClean = cleanUrl.replace(/\/upload\/(?:[a-zA-Z0-9_,:]+\/)?(v\d+\/)/, '/upload/$1');
+    if (!transform) return baseClean;
+    return baseClean.replace('/upload/', `/upload/${transform}/`);
   }, [isExternalEmbed]);
 
   const videoSrc = getVideoSrcForQuality(rawUrl, quality);
 
-  // Quality change handler preserving playback state & position
+  // Quality change handler preserving playback state & position seamlessly
   const handleQualityChange = (newQuality) => {
     if (newQuality === quality) {
       setShowQualityMenu(false);
@@ -122,10 +135,12 @@ export function FuturisticVideoPlayer({
     const currentSrc = getVideoSrcForQuality(rawUrl, quality);
     const nextSrc = getVideoSrcForQuality(rawUrl, newQuality);
 
+    setShowQualityMenu(false);
+
     if (currentSrc === nextSrc) {
-      // Stream URL is the same (direct stream), just update quality indicator without stalling or showing loading spinner
       setQuality(newQuality);
-      setShowQualityMenu(false);
+      setQualityToast(`QUALITY: ${newQuality.toUpperCase()}`);
+      setTimeout(() => setQualityToast(''), 1800);
       return;
     }
 
@@ -134,21 +149,26 @@ export function FuturisticVideoPlayer({
       wasPlayingRef.current = !videoRef.current.paused;
     }
     setQuality(newQuality);
-    setShowQualityMenu(false);
-    setIsLoading(true);
+    setIsSwitchingQuality(true);
+    setQualityToast(`SWITCHING TO ${newQuality.toUpperCase()}...`);
+
+    // Guard timeout to guarantee the loading indicator clears rapidly
+    setTimeout(() => {
+      setIsSwitchingQuality(false);
+      setIsLoading(false);
+    }, 1200);
   };
 
-  // Watchdog to ensure loading state clears if video is actively playing
+  // Watchdog to ensure loading state never hangs
   useEffect(() => {
-    if (isLoading) {
+    if (isLoading || isSwitchingQuality) {
       const timer = setTimeout(() => {
-        if (videoRef.current && !videoRef.current.paused && videoRef.current.currentTime > 0) {
-          setIsLoading(false);
-        }
-      }, 1000);
+        setIsLoading(false);
+        setIsSwitchingQuality(false);
+      }, 1200);
       return () => clearTimeout(timer);
     }
-  }, [isLoading]);
+  }, [isLoading, isSwitchingQuality]);
 
   // Extract YouTube ID
   const getYouTubeEmbedUrl = (url) => {
@@ -418,7 +438,6 @@ export function FuturisticVideoPlayer({
             }
             if (savedTimeRef.current > 0) {
               videoRef.current.currentTime = savedTimeRef.current;
-              savedTimeRef.current = 0;
             }
             if (wasPlayingRef.current) {
               videoRef.current.play().catch(() => {});
@@ -426,15 +445,27 @@ export function FuturisticVideoPlayer({
             }
           }
           setIsLoading(false);
+          setIsSwitchingQuality(false);
         }}
         onCanPlay={() => {
           setIsLoading(false);
+          setIsSwitchingQuality(false);
           if (savedTimeRef.current > 0 && videoRef.current) {
             videoRef.current.currentTime = savedTimeRef.current;
             savedTimeRef.current = 0;
           }
           if (wasPlayingRef.current && videoRef.current && videoRef.current.paused) {
             videoRef.current.play().catch(() => {});
+            setIsPlaying(true);
+          }
+        }}
+        onSeeked={() => {
+          setIsLoading(false);
+          setIsSwitchingQuality(false);
+          savedTimeRef.current = 0;
+          if (wasPlayingRef.current && videoRef.current && videoRef.current.paused) {
+            videoRef.current.play().catch(() => {});
+            setIsPlaying(true);
           }
         }}
         onTimeUpdate={() => {
@@ -442,8 +473,9 @@ export function FuturisticVideoPlayer({
             const ct = videoRef.current.currentTime;
             if (Number.isFinite(ct)) {
               setCurrentTime(ct);
-              if (isLoading && !videoRef.current.paused && ct > 0) {
+              if (ct > 0) {
                 setIsLoading(false);
+                setIsSwitchingQuality(false);
               }
             }
           }
@@ -459,13 +491,18 @@ export function FuturisticVideoPlayer({
         }}
         onProgress={handleProgress}
         onWaiting={() => {
-          if (!videoRef.current || videoRef.current.paused) {
+          if (videoRef.current && !videoRef.current.paused) {
             setIsLoading(true);
           }
         }}
-        onLoadStart={() => setIsLoading(true)}
+        onLoadStart={() => {
+          if (!isSwitchingQuality && (!videoRef.current || videoRef.current.currentTime === 0)) {
+            setIsLoading(true);
+          }
+        }}
         onPlaying={() => {
           setIsLoading(false);
+          setIsSwitchingQuality(false);
           setIsPlaying(true);
         }}
         onPause={() => setIsPlaying(false)}
@@ -475,6 +512,7 @@ export function FuturisticVideoPlayer({
         }}
         onError={(e) => {
           setIsLoading(false);
+          setIsSwitchingQuality(false);
           setHasError(true);
           const err = videoRef.current?.error;
           setErrorMessage(
@@ -492,8 +530,65 @@ export function FuturisticVideoPlayer({
         }}
       />
 
+      {/* Quality Switch In-Flight HUD Badge */}
+      {isSwitchingQuality && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 20,
+            right: 20,
+            padding: '6px 14px',
+            borderRadius: 8,
+            backgroundColor: 'rgba(12, 12, 16, 0.88)',
+            border: '1px solid #ff2d55',
+            color: '#ff2d55',
+            fontSize: '0.74rem',
+            fontFamily: 'monospace',
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            zIndex: 40,
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 4px 20px rgba(255, 45, 85, 0.3)'
+          }}
+        >
+          <div style={{ width: 10, height: 10, borderRadius: '50%', border: '2px solid transparent', borderTopColor: '#ff2d55', animation: 'fuiPlayerSpin 0.8s linear infinite' }} />
+          <span>SWITCHING TO {quality.toUpperCase()}...</span>
+        </div>
+      )}
+
+      {/* Quality Toast Confirmation */}
+      {qualityToast && !isSwitchingQuality && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 20,
+            right: 20,
+            padding: '6px 14px',
+            borderRadius: 8,
+            backgroundColor: 'rgba(12, 12, 16, 0.88)',
+            border: '1px solid rgba(52, 199, 89, 0.7)',
+            color: '#34c759',
+            fontSize: '0.74rem',
+            fontFamily: 'monospace',
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            zIndex: 40,
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 4px 20px rgba(52, 199, 89, 0.2)'
+          }}
+        >
+          <span>✓ {qualityToast}</span>
+        </div>
+      )}
+
       {/* Futuristic Loading / Buffering Animation */}
-      {isLoading && !hasError && (!videoRef.current || videoRef.current.paused || videoRef.current.seeking) && (
+      {isLoading && !hasError && !isSwitchingQuality && (isPlaying || !videoRef.current || videoRef.current.currentTime === 0) && (
         <div
           style={{
             position: 'absolute',

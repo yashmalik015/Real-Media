@@ -74,6 +74,11 @@ export async function uploadToCloudinaryLarge(filePath, { folder = 'assetsweber/
         chunk_size: 6000000, // 6MB chunks
         unique_filename: true,
         overwrite: false,
+        eager: [
+          { width: 1280, crop: 'limit' },
+          { width: 854, crop: 'limit' }
+        ],
+        eager_async: true,
       },
       (err, res) => {
         if (err) reject(err)
