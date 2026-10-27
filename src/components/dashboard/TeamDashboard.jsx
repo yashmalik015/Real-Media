@@ -14,7 +14,8 @@ import {
   ArrowLeft,
   DollarSign,
   Wrench,
-  Layers
+  Layers,
+  Send
 } from 'lucide-react';
 
 import { DashboardOverview } from './pages/DashboardOverview.jsx';
@@ -22,6 +23,7 @@ import { PortfolioManager } from './pages/PortfolioManager.jsx';
 import { CourseManager } from './pages/CourseManager.jsx';
 import { TestimonialManager } from './pages/TestimonialManager.jsx';
 import { RequestCRM } from './pages/RequestCRM.jsx';
+import { CustomOrdersManager } from './pages/CustomOrdersManager.jsx';
 import { MediaLibrary } from './pages/MediaLibrary.jsx';
 import { SettingsPanel } from './pages/SettingsPanel.jsx';
 import { PricingManager } from './pages/PricingManager.jsx';
@@ -146,13 +148,24 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Active / pending client orders (Delivered or Finished orders are excluded from notifications)
+  const activeOrdersCount = projects.filter(p => {
+    const st = (p.status || '').toLowerCase();
+    const ps = (p.projectState || '').toLowerCase();
+    return st !== 'delivered' && st !== 'completed' && ps !== 'finished';
+  }).length;
+
+  // Pending / new inquiries from contact transmissions & custom briefs
+  const pendingTransmissionsCount = inquiries.filter(i => (i.status || 'New') === 'New').length;
+
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'portfolio', label: 'Portfolio CMS', icon: FolderGit2, badge: portfolio.length },
     { id: 'courses', label: 'Courses LMS', icon: BookOpen, badge: courses.length },
     { id: 'testimonials', label: 'Testimonials', icon: Star, badge: testimonials.length },
     { id: 'skills', label: 'Services & Pricing', icon: Layers, badge: skills.length },
-    { id: 'requests', label: 'Client Requests', icon: Inbox, badge: inquiries.filter((i) => i.status === 'New').length || undefined, badgeColor: '#ff2d55' },
+    { id: 'requests', label: 'Client Requests', icon: Inbox, badge: activeOrdersCount > 0 ? activeOrdersCount : undefined, badgeColor: '#ff2d55' },
+    { id: 'transmissions', label: 'Custom & Transmissions', icon: Send, badge: pendingTransmissionsCount > 0 ? pendingTransmissionsCount : undefined, badgeColor: '#ff2d55' },
     { id: 'media', label: 'Media Library', icon: ImageIcon, badge: (portfolio.length + courses.length) || undefined },
     { id: 'settings', label: 'Settings', icon: Settings }
   ];
@@ -428,9 +441,21 @@ export function TeamDashboard({ user, onBack, showToast, onPortfolioChanged }) {
             <DashboardErrorBoundary title="CLIENT REQUESTS">
               <RequestCRM
                 projects={projects}
+                inquiries={inquiries}
                 onLoad={loadAllData}
                 showToast={showToast}
                 settings={settings}
+              />
+            </DashboardErrorBoundary>
+          )}
+
+          {activeNav === 'transmissions' && (
+            <DashboardErrorBoundary title="CUSTOM ORDERS & TRANSMISSIONS">
+              <CustomOrdersManager
+                inquiries={inquiries}
+                projects={projects}
+                onLoad={loadAllData}
+                showToast={showToast}
               />
             </DashboardErrorBoundary>
           )}

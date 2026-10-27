@@ -1,16 +1,35 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { io } from 'socket.io-client';
-import { Search, ExternalLink, Mail, MessageSquare, Check, X, FileText, IndianRupee, Clock, CheckCircle, Send, Paperclip, Download } from 'lucide-react';
+import { Search, ExternalLink, Mail, MessageSquare, Check, X, FileText, IndianRupee, Clock, CheckCircle, Send, Paperclip, Download, Phone, Trash2 } from 'lucide-react';
 import { GlassModal } from '../ui/GlassModal.jsx';
 import { playClickSound, playHoverSound } from '../../../utils/audio.js';
 import { api, mediaUrl } from '../../../api.js';
 
-export function RequestCRM({ projects = [], onLoad, showToast }) {
+export function RequestCRM({ projects = [], inquiries = [], onLoad, showToast }) {
+  const [categoryTab, setCategoryTab] = useState('all'); // all | packages | custom | transmissions
   const [activeTab, setActiveTab] = useState('All');
   const [selectedProject, setSelectedProject] = useState(null);
+  const [selectedTransmission, setSelectedTransmission] = useState(null);
   const [deliveryLinkInput, setDeliveryLinkInput] = useState('');
   const [priceInput, setPriceInput] = useState('');
   const [savingPrice, setSavingPrice] = useState(false);
+  const [updatingTransmissionId, setUpdatingTransmissionId] = useState(null);
+  const [deletingTransmissionId, setDeletingTransmissionId] = useState(null);
+
+  // Split projects into Custom and Standard packages
+  const customProjects = useMemo(() => {
+    return projects.filter(p => {
+      const isCustomPlan = (p.servicePlan || '').toLowerCase().includes('custom');
+      const isZeroPrice = (p.totalAmount || 0) === 0;
+      const isCustomStatus = (p.status || '').toLowerCase().includes('custom quote') || (p.status || '').toLowerCase().includes('under review');
+      const isCustomTitle = (p.title || '').toLowerCase().includes('custom');
+      return isCustomPlan || isZeroPrice || isCustomStatus || isCustomTitle;
+    });
+  }, [projects]);
+
+  const standardProjects = useMemo(() => {
+    return projects.filter(p => !customProjects.includes(p));
+  }, [projects, customProjects]);
 
   // Chat State
   const [chatMessages, setChatMessages] = useState([]);
@@ -79,16 +98,8 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
     e.target.value = '';
   };
 
-  // Default status for projects might be null if they didn't have one initially.
-  // We'll treat null/empty as 'Placed' for display purposes.
   const getDisplayStatus = (status) => status || 'Placed';
-
   const statusTabs = ['All', 'Placed', 'In Progress', 'Review', 'Delivered'];
-
-  const filteredProjects = projects.filter((proj) => {
-    if (activeTab === 'All') return true;
-    return getDisplayStatus(proj.status).toLowerCase() === activeTab.toLowerCase();
-  });
 
   const handleUpdateStatus = async (id, status) => {
     try {
@@ -137,6 +148,37 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
     }
   };
 
+  const handleUpdateInquiryStatus = async (inqId, status) => {
+    setUpdatingTransmissionId(inqId);
+    try {
+      await api.updateInquiry(inqId, status);
+      showToast(`Transmission marked as ${status}.`);
+      if (onLoad) await onLoad();
+      if (selectedTransmission?.id === inqId) {
+        setSelectedTransmission(prev => ({ ...prev, status }));
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to update transmission.');
+    } finally {
+      setUpdatingTransmissionId(null);
+    }
+  };
+
+  const handleDeleteInquiry = async (inqId) => {
+    if (!window.confirm('Delete this transmission?')) return;
+    setDeletingTransmissionId(inqId);
+    try {
+      await api.deleteInquiry(inqId);
+      showToast('Transmission deleted.');
+      if (selectedTransmission?.id === inqId) setSelectedTransmission(null);
+      if (onLoad) await onLoad();
+    } catch (err) {
+      showToast(err.message || 'Failed to delete.');
+    } finally {
+      setDeletingTransmissionId(null);
+    }
+  };
+
   const openProjectModal = (proj) => {
     playClickSound();
     setSelectedProject(proj);
@@ -149,11 +191,28 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
     if (s === 'in progress') return '#007aff';
     if (s === 'review') return '#ff9f0a';
     if (s === 'delivered' || s === 'finished') return '#34c759';
-    return '#ff2d55'; // placed or new
+    return '#ff2d55';
   };
 
+  // Build list based on active categoryTab
+  const projectsToShow = useMemo(() => {
+    if (categoryTab === 'transmissions') return [];
+    let base = categoryTab === 'custom' ? customProjects : (categoryTab === 'packages' ? standardProjects : projects);
+    if (activeTab === 'All') return base;
+    return base.filter(p => getDisplayStatus(p.status).toLowerCase() === activeTab.toLowerCase());
+  }, [categoryTab, activeTab, projects, customProjects, standardProjects]);
+
+  const inquiriesToShow = useMemo(() => {
+    if (categoryTab === 'packages' || categoryTab === 'custom') return [];
+    if (activeTab === 'All') return inquiries;
+    if (activeTab.toLowerCase() === 'placed') return inquiries.filter(i => (i.status || 'New') === 'New');
+    if (activeTab.toLowerCase() === 'in progress') return inquiries.filter(i => (i.status || '').toLowerCase() === 'contacted');
+    if (activeTab.toLowerCase() === 'delivered') return inquiries.filter(i => (i.status || '').toLowerCase() === 'completed' || (i.status || '').toLowerCase() === 'archived');
+    return [];
+  }, [categoryTab, activeTab, inquiries]);
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 28, position: 'relative', zIndex: 1 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24, position: 'relative', zIndex: 1 }}>
       {/* Header */}
       <div>
         <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#ff2d55', letterSpacing: '0.15em' }}>
@@ -164,8 +223,39 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
         </h2>
       </div>
 
-      {/* Status Filter Tabs */}
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 16 }}>
+      {/* 1. Category Switcher (Packages, Custom Orders, Contact Transmissions, All) */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', backgroundColor: 'rgba(255,255,255,0.03)', padding: 6, borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
+        {[
+          { id: 'all', label: `All Requests (${projects.length + inquiries.length})` },
+          { id: 'packages', label: `📦 Package Orders (${standardProjects.length})` },
+          { id: 'custom', label: `⚡ Custom Orders (${customProjects.length})` },
+          { id: 'transmissions', label: `📡 Contact Transmissions (${inquiries.length})` }
+        ].map(cat => {
+          const isActive = categoryTab === cat.id;
+          return (
+            <button
+              key={cat.id}
+              onClick={() => { playClickSound(); setCategoryTab(cat.id); }}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 8,
+                backgroundColor: isActive ? '#ff2d55' : 'transparent',
+                color: isActive ? '#fff' : 'rgba(255,255,255,0.7)',
+                border: 'none',
+                fontWeight: isActive ? 700 : 500,
+                fontSize: '0.84rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {cat.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 2. Status Filter Tabs */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 14 }}>
         {statusTabs.map((tab) => {
           const isActive = activeTab === tab;
           return (
@@ -174,13 +264,13 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
               onClick={() => { playClickSound(); setActiveTab(tab); }}
               onMouseEnter={playHoverSound}
               style={{
-                padding: '8px 18px',
-                borderRadius: 10,
+                padding: '6px 14px',
+                borderRadius: 8,
                 backgroundColor: isActive ? 'rgba(255, 45, 85, 0.2)' : 'rgba(255, 255, 255, 0.04)',
                 border: `1px solid ${isActive ? '#ff2d55' : 'rgba(255, 255, 255, 0.1)'}`,
                 color: isActive ? '#ff2d55' : 'rgba(255, 255, 255, 0.7)',
                 fontWeight: isActive ? 700 : 500,
-                fontSize: '0.85rem',
+                fontSize: '0.82rem',
                 cursor: 'pointer',
                 transition: 'all 0.2s'
               }}
@@ -191,25 +281,108 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
         })}
       </div>
 
-      {/* Project Cards Grid */}
-      {filteredProjects.length === 0 ? (
-        <div style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.5)', background: 'rgba(0,0,0,0.2)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
-          No orders found for this status.
+      {/* Empty State */}
+      {projectsToShow.length === 0 && inquiriesToShow.length === 0 ? (
+        <div style={{ padding: 48, textAlign: 'center', color: 'rgba(255,255,255,0.5)', background: 'rgba(0,0,0,0.2)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
+          No requests or transmissions found for this filter.
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
-          {filteredProjects.map((proj) => {
+          {/* A. Render Inquiries / Contact Transmissions */}
+          {inquiriesToShow.map((inq) => {
+            const isNew = inq.status === 'New' || !inq.status;
+            return (
+              <div
+                key={`inq_${inq.id}`}
+                onClick={() => setSelectedTransmission(inq)}
+                onMouseEnter={playHoverSound}
+                style={{
+                  background: 'rgba(25,25,32,0.7)',
+                  border: `1px solid ${isNew ? 'rgba(255, 45, 85, 0.4)' : 'rgba(0, 122, 255, 0.2)'}`,
+                  borderRadius: 16,
+                  padding: 20,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 14,
+                  transition: 'transform 0.2s, border-color 0.2s, box-shadow 0.2s',
+                  boxShadow: isNew ? '0 0 20px rgba(255, 45, 85, 0.15)' : 'none'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ display: 'inline-block', fontSize: '0.68rem', fontFamily: 'monospace', color: '#007aff', backgroundColor: 'rgba(0, 122, 255, 0.12)', padding: '2px 8px', borderRadius: 6, marginBottom: 4 }}>
+                      📡 CONTACT TRANSMISSION
+                    </div>
+                    <div style={{ color: '#fff', fontWeight: 700, fontSize: '1.1rem' }}>{inq.name}</div>
+                    <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>{inq.company || 'Direct Contact Form'}</div>
+                  </div>
+                  <div style={{ padding: '4px 10px', borderRadius: 8, background: isNew ? 'rgba(255,45,85,0.2)' : 'rgba(52,199,89,0.2)', color: isNew ? '#ff2d55' : '#34c759', fontSize: '0.75rem', fontWeight: 700 }}>
+                    {inq.status || 'New'}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: '0.82rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.5)' }}>Service</span>
+                    <span style={{ color: '#ff2d55', fontFamily: 'monospace', fontWeight: 600 }}>{inq.service}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.5)' }}>Budget</span>
+                    <span style={{ color: '#34c759', fontWeight: 700 }}>{inq.budget || 'Custom Quote'}</span>
+                  </div>
+                </div>
+
+                {/* Direct Phone / Call link */}
+                {inq.phone && (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                    <a
+                      href={`tel:${inq.phone}`}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 6, backgroundColor: 'rgba(52,199,89,0.15)', color: '#34c759', fontSize: '0.78rem', textDecoration: 'none', fontWeight: 600 }}
+                    >
+                      <Phone size={12} /> {inq.phone}
+                    </a>
+                  </div>
+                )}
+
+                <div style={{ marginTop: 'auto', paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>
+                    {new Date(inq.createdAt || inq.created_at || Date.now()).toLocaleDateString()}
+                  </span>
+                  <div style={{ display: 'flex', gap: 6 }} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => handleUpdateInquiryStatus(inq.id, 'Contacted')}
+                      style={{ padding: '4px 8px', borderRadius: 6, backgroundColor: 'rgba(255,149,0,0.15)', border: '1px solid rgba(255,149,0,0.3)', color: '#ff9500', fontSize: '0.72rem', cursor: 'pointer' }}
+                    >
+                      ✓ Contacted
+                    </button>
+                    <button
+                      onClick={() => handleDeleteInquiry(inq.id)}
+                      style={{ padding: '4px 8px', borderRadius: 6, backgroundColor: 'rgba(255,45,85,0.1)', border: '1px solid rgba(255,45,85,0.2)', color: '#ff2d55', fontSize: '0.72rem', cursor: 'pointer' }}
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* B. Render Projects (Standard & Custom) */}
+          {projectsToShow.map((proj) => {
             const statusStr = getDisplayStatus(proj.status);
             const statusColor = getStatusColor(statusStr);
+            const isCustom = customProjects.includes(proj);
             
             return (
               <div
-                key={proj.id}
+                key={`proj_${proj.id}`}
                 onClick={() => openProjectModal(proj)}
                 onMouseEnter={playHoverSound}
                 style={{
                   background: 'rgba(25,25,25,0.6)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  border: `1px solid ${isCustom ? 'rgba(255,149,0,0.25)' : 'rgba(255,255,255,0.1)'}`,
                   borderRadius: 16,
                   padding: 20,
                   cursor: 'pointer',
@@ -219,19 +392,24 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
                   transition: 'transform 0.2s, border-color 0.2s, box-shadow 0.2s',
                 }}
                 onMouseOver={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255,45,85,0.5)';
+                  e.currentTarget.style.borderColor = '#ff2d55';
                   e.currentTarget.style.transform = 'translateY(-2px)';
                   e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
                 }}
                 onMouseOut={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.borderColor = isCustom ? 'rgba(255,149,0,0.25)' : 'rgba(255,255,255,0.1)';
                   e.currentTarget.style.transform = 'none';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
-                    <div style={{ color: '#fff', fontWeight: 700, fontSize: '1.1rem', marginBottom: 4 }}>{proj.clientName}</div>
+                    {isCustom && (
+                      <div style={{ display: 'inline-block', fontSize: '0.68rem', fontFamily: 'monospace', color: '#ff9500', backgroundColor: 'rgba(255, 149, 0, 0.12)', padding: '2px 8px', borderRadius: 6, marginBottom: 4 }}>
+                        ⚡ CUSTOM ORDER
+                      </div>
+                    )}
+                    <div style={{ color: '#fff', fontWeight: 700, fontSize: '1.1rem', marginBottom: 2 }}>{proj.clientName}</div>
                     <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>{proj.title || 'Untitled Project'}</div>
                   </div>
                   <div style={{ padding: '4px 10px', borderRadius: 8, background: `${statusColor}22`, color: statusColor, fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
@@ -246,7 +424,9 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>Amount</span>
-                    <span style={{ color: '#34c759', fontWeight: 700, fontSize: '0.9rem' }}>${proj.totalAmount || 0}</span>
+                    <span style={{ color: (proj.totalAmount || 0) > 0 ? '#34c759' : '#ff9500', fontWeight: 700, fontSize: '0.9rem' }}>
+                      {(proj.totalAmount || 0) > 0 ? `₹${Number(proj.totalAmount).toLocaleString('en-IN')}` : 'Custom Quote Under Review'}
+                    </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>Date</span>
@@ -258,6 +438,101 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
           })}
         </div>
       )}
+
+      {/* Transmission Details Modal */}
+      <GlassModal isOpen={Boolean(selectedTransmission)} onClose={() => setSelectedTransmission(null)} title="CONTACT TRANSMISSION DETAILS" maxWidth={640}>
+        {selectedTransmission && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 16 }}>
+              <div>
+                <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', color: '#fff', margin: 0 }}>
+                  {selectedTransmission.name}
+                </h3>
+                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', marginTop: 2 }}>
+                  🏢 {selectedTransmission.company || 'Individual Client'}
+                </div>
+              </div>
+              <span style={{ padding: '4px 10px', borderRadius: 8, backgroundColor: selectedTransmission.status === 'New' ? 'rgba(255,45,85,0.2)' : 'rgba(52,199,89,0.2)', color: selectedTransmission.status === 'New' ? '#ff2d55' : '#34c759', fontWeight: 700, fontSize: '0.8rem' }}>
+                {selectedTransmission.status || 'New'}
+              </span>
+            </div>
+
+            {/* Direct Contact Actions */}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {selectedTransmission.phone && (
+                <a
+                  href={`tel:${selectedTransmission.phone}`}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, backgroundColor: 'rgba(52,199,89,0.15)', border: '1px solid rgba(52,199,89,0.3)', color: '#34c759', fontWeight: 700, textDecoration: 'none', fontSize: '0.85rem' }}
+                >
+                  <Phone size={14} /> Call: {selectedTransmission.phone}
+                </a>
+              )}
+              {selectedTransmission.phone && (
+                <a
+                  href={`https://wa.me/${selectedTransmission.phone.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, backgroundColor: '#25D36622', border: '1px solid #25D36644', color: '#25D366', fontWeight: 600, textDecoration: 'none', fontSize: '0.85rem' }}
+                >
+                  <MessageSquare size={14} /> WhatsApp Client
+                </a>
+              )}
+              {selectedTransmission.email && (
+                <a
+                  href={`mailto:${selectedTransmission.email}`}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', textDecoration: 'none', fontSize: '0.85rem' }}
+                >
+                  <Mail size={14} /> {selectedTransmission.email}
+                </a>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 20, fontSize: '0.88rem' }}>
+              <div>
+                <span style={{ color: 'rgba(255,255,255,0.4)' }}>Service: </span>
+                <strong style={{ color: '#ff2d55' }}>{selectedTransmission.service}</strong>
+              </div>
+              <div>
+                <span style={{ color: 'rgba(255,255,255,0.4)' }}>Budget: </span>
+                <strong style={{ color: '#34c759' }}>{selectedTransmission.budget || 'Custom Quote'}</strong>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div style={{ padding: 16, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', whiteSpace: 'pre-line', fontSize: '0.9rem', lineHeight: 1.6, color: 'rgba(255,255,255,0.85)' }}>
+              {selectedTransmission.description || 'No description provided.'}
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => handleUpdateInquiryStatus(selectedTransmission.id, 'Contacted')}
+                  disabled={updatingTransmissionId === selectedTransmission.id}
+                  style={{ padding: '8px 14px', borderRadius: 8, backgroundColor: 'rgba(255,149,0,0.2)', border: '1px solid rgba(255,149,0,0.4)', color: '#ff9500', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer' }}
+                >
+                  ✓ Mark Contacted
+                </button>
+                <button
+                  onClick={() => handleUpdateInquiryStatus(selectedTransmission.id, 'Completed')}
+                  disabled={updatingTransmissionId === selectedTransmission.id}
+                  style={{ padding: '8px 14px', borderRadius: 8, backgroundColor: 'rgba(52,199,89,0.2)', border: '1px solid rgba(52,199,89,0.4)', color: '#34c759', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer' }}
+                >
+                  ✓ Mark Completed
+                </button>
+              </div>
+
+              <button
+                onClick={() => handleDeleteInquiry(selectedTransmission.id)}
+                disabled={deletingTransmissionId === selectedTransmission.id}
+                style={{ padding: '8px 14px', borderRadius: 8, backgroundColor: 'rgba(255,45,85,0.15)', border: '1px solid rgba(255,45,85,0.3)', color: '#ff2d55', fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <Trash2 size={13} /> Delete Transmission
+              </button>
+            </div>
+          </div>
+        )}
+      </GlassModal>
 
       {/* Project Details Modal */}
       <GlassModal isOpen={Boolean(selectedProject)} onClose={() => setSelectedProject(null)} title="ORDER DETAILS" maxWidth={720}>

@@ -655,7 +655,17 @@ function makeRepository(client, collections) {
       return hydrateProject(await projects.findOne({ id: projectId }))
     },
     updateProjectStatus: async (projectId, status) => {
-      await projects.updateOne({ id: projectId }, { $set: { status, updated_at: now() } })
+      const isFinished = status === 'Delivered' || status === 'Completed';
+      await projects.updateOne(
+        { id: projectId },
+        {
+          $set: {
+            status,
+            updated_at: now(),
+            ...(isFinished ? { project_state: 'finished' } : {})
+          }
+        }
+      )
       return hydrateProject(await projects.findOne({ id: projectId }))
     },
     updateProjectPrice: async (projectId, totalAmount, status = 'Quote Ready - Awaiting Payment') => {
