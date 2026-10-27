@@ -148,7 +148,7 @@ function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricin
   const [currency, setCurrency] = useState('INR'); // Default to INR
   const EXCHANGE_RATE = 83; // 1 USD = 83 INR
 
-  // Combine skill.tiers from DB and PRICING_DATA fallbacks
+  // Skill.tiers from DB or pricingData
   const plans = useMemo(() => {
     const skillObj = skillsData.find((s) => s.title?.toLowerCase() === safeTitle?.toLowerCase());
     if (skillObj && Array.isArray(skillObj.tiers) && skillObj.tiers.length > 0) {
@@ -167,25 +167,7 @@ function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricin
     const dbPlans = pricingData.filter((p) => p.service === safeTitle || p.category === safeTitle);
     if (dbPlans.length > 0) return dbPlans;
 
-    const staticCategory = PRICING_DATA[safeTitle];
-    if (staticCategory && staticCategory.length > 0) {
-      return staticCategory.map((p, idx) => ({
-        _id: `static_${idx}_${safeTitle}`,
-        name: p.name,
-        price: p.price,
-        deliveryTime: p.turnaround || '3-5 days',
-        inclusions: p.inclusions || (p.features ? p.features.slice(0, 3) : []),
-        features: p.features || [],
-        highlight: p.badge === 'Most Popular' || p.badge === 'Recommended Tier',
-        service: safeTitle
-      }));
-    }
-
-    return [
-      { _id: `fallback_1_${safeTitle}`, name: "Starter", price: "₹4,999", features: ["Essential editing & cuts", "Full HD export"], deliveryTime: "3-5 days", inclusions: ["Normal cuts", "Color grading", "Sound FX", "4K Export"] },
-      { _id: `fallback_2_${safeTitle}`, name: "Professional", price: "₹14,999", features: ["Advanced motion graphics", "Sound FX & mixing", "4K delivery"], deliveryTime: "48-72 hrs", inclusions: ["Custom cuts", "Color grading", "Sound design", "Motion graphics"], highlight: true },
-      { _id: `fallback_3_${safeTitle}`, name: "Premium", price: "₹29,999", features: ["Full cinematic production", "VFX & Compositing", "Unlimited revisions"], deliveryTime: "24-48 hrs", inclusions: ["Full production", "VFX compositing", "Sound FX", "Priority support"] },
-    ];
+    return [];
   }, [pricingData, skillsData, safeTitle]);
 
   return (
@@ -207,45 +189,47 @@ function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricin
         <div style={{ marginTop: 72 }}>
           <SectionHeader label="PRICING" title={`${safeTitle} Plans`} sub="Transparent starting points. Every scope is confirmed before production begins." />
           
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 32, marginBottom: 32 }}>
-            <div style={{
-              display: 'flex', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 30, padding: 4, position: 'relative'
-            }}>
-              <div style={{
-                position: 'absolute', top: 4, bottom: 4, left: currency === 'INR' ? 4 : '50%',
-                width: 'calc(50% - 4px)', backgroundColor: '#ff2d55', borderRadius: 26,
-                transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)', zIndex: 0
-              }} />
-              <button
-                onClick={() => setCurrency('INR')}
-                style={{
-                  position: 'relative', zIndex: 1, padding: '8px 24px', background: 'none', border: 'none',
-                  color: currency === 'INR' ? '#fff' : 'rgba(255,255,255,0.5)', fontFamily: 'monospace',
-                  fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', transition: 'color 0.3s ease'
-                }}
-              >
-                INR (₹)
-              </button>
-              <button
-                onClick={() => setCurrency('USD')}
-                style={{
-                  position: 'relative', zIndex: 1, padding: '8px 24px', background: 'none', border: 'none',
-                  color: currency === 'USD' ? '#fff' : 'rgba(255,255,255,0.5)', fontFamily: 'monospace',
-                  fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', transition: 'color 0.3s ease'
-                }}
-              >
-                USD ($)
-              </button>
-            </div>
-          </div>
+          {plans.length > 0 ? (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 32, marginBottom: 32 }}>
+                <div style={{
+                  display: 'flex', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 30, padding: 4, position: 'relative'
+                }}>
+                  <div style={{
+                    position: 'absolute', top: 4, bottom: 4, left: currency === 'INR' ? 4 : '50%',
+                    width: 'calc(50% - 4px)', backgroundColor: '#ff2d55', borderRadius: 26,
+                    transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)', zIndex: 0
+                  }} />
+                  <button
+                    onClick={() => setCurrency('INR')}
+                    style={{
+                      position: 'relative', zIndex: 1, padding: '8px 24px', background: 'none', border: 'none',
+                      color: currency === 'INR' ? '#fff' : 'rgba(255,255,255,0.5)', fontFamily: 'monospace',
+                      fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', transition: 'color 0.3s ease'
+                    }}
+                  >
+                    INR (₹)
+                  </button>
+                  <button
+                    onClick={() => setCurrency('USD')}
+                    style={{
+                      position: 'relative', zIndex: 1, padding: '8px 24px', background: 'none', border: 'none',
+                      color: currency === 'USD' ? '#fff' : 'rgba(255,255,255,0.5)', fontFamily: 'monospace',
+                      fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', transition: 'color 0.3s ease'
+                    }}
+                  >
+                    USD ($)
+                  </button>
+                </div>
+              </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-            gap: 24,
-            marginTop: 36
-          }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                gap: 24,
+                marginTop: 36
+              }}>
             {plans.map((plan) => {
               const featureList = Array.isArray(plan.features) ? plan.features : String(plan.features || '').split(',').map(f => f.trim()).filter(Boolean);
               const inclusionList = Array.isArray(plan.inclusions) ? plan.inclusions : String(plan.inclusions || '').split(',').map(i => i.trim()).filter(Boolean);
@@ -317,7 +301,45 @@ function ServiceDetail({ title, onBack, onSelectPlan, portfolio, loading, pricin
                 </div>
               );
             })}
-          </div>
+              </div>
+            </>
+          ) : (
+            <div style={{
+              margin: '36px auto 0',
+              maxWidth: 640,
+              padding: '48px 32px',
+              borderRadius: 24,
+              backgroundColor: 'rgba(12,12,16,0.82)',
+              border: '1px dashed rgba(255,45,85,0.3)',
+              textAlign: 'center',
+              backdropFilter: 'blur(16px)',
+              boxShadow: '0 12px 32px rgba(0,0,0,0.5)'
+            }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: 14 }}>⚡</div>
+              <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', color: '#fff', margin: '0 0 10px', letterSpacing: '0.04em' }}>
+                CUSTOM SCOPE & DIRECT QUOTE
+              </h3>
+              <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: 24 }}>
+                This discipline is custom-quoted based on your project deliverables, assets, and turnaround requirements. Request a direct brief and consultation with our team.
+              </p>
+              <button
+                className="btn-primary"
+                onClick={() => onSelectPlan(null, safeTitle)}
+                style={{
+                  padding: '13px 32px',
+                  borderRadius: 999,
+                  background: 'linear-gradient(135deg,#ff2d55,#bd1c3c)',
+                  color: '#fff',
+                  border: 'none',
+                  fontWeight: 700,
+                  fontSize: '0.92rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Request Custom Quote / Start Project
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Portfolio work */}
@@ -372,28 +394,19 @@ function PackageProjectModal({ plan, service, onClose, onOpenPortal, settings, s
         icon: s.icon || '⚡',
         category: s.category || 'Service',
         desc: s.desc || '',
-        tiers: [
-          { name: 'Starter', price: 4999, deliveryTime: '3-5 days', desc: 'Essential package for standard projects and high-engagement content.', inclusions: ['Standard Cuts / Architecture', 'HD / 4K Export', 'Commercial License'], features: ['1 Final Deliverable', '2 Revisions', 'Commercial License'] },
-          { name: 'Professional', price: 14999, deliveryTime: '48-72 hrs', desc: 'High-retention package with custom motion graphics, sound design, or full-stack features.', inclusions: ['Advanced Motion / Architecture', 'Source Files', 'Priority Revisions'], features: ['3 Deliverables', 'Unlimited Revisions', 'Raw Files Included', 'Priority Support'], highlight: true },
-          { name: 'Premium', price: 29999, deliveryTime: '24-48 hrs', desc: 'Commercial-grade production for brand launches, keynotes, and enterprise scale.', inclusions: ['Full Production Pipeline', 'VIP Delivery', 'Dedicated Handler'], features: ['Full Campaign Bundle', 'Priority Delivery', 'Dedicated Handler', 'Source Files'] }
-        ]
+        tiers: []
       }));
     }
     return list;
   }, [skills]);
 
   // Skill & Plan State
-  const initialSkill = service || plan?.service || availableSkills[0]?.title || 'Web Development';
+  const initialSkill = service || plan?.service || availableSkills[0]?.title || 'Video Editing';
   const [activeSkillTitle, setActiveSkillTitle] = useState(initialSkill);
-  const [selectedTier, setSelectedTier] = useState(plan || null);
-  const [isCustomMode, setIsCustomMode] = useState(!plan || plan?.name === 'Custom' || String(plan?.price || '').toLowerCase().includes('custom'));
-
   const activeSkill = availableSkills.find(s => s.title.toLowerCase() === activeSkillTitle.toLowerCase()) || availableSkills[0] || { title: activeSkillTitle, tiers: [] };
-  const currentTiers = Array.isArray(activeSkill.tiers) && activeSkill.tiers.length > 0 ? activeSkill.tiers : [
-    { name: 'Starter', price: 4999, deliveryTime: '3-5 days', desc: 'Essential package for standard projects.', inclusions: ['Standard Deliverable', '4K Export', 'Commercial License'], features: ['1 Final Deliverable', '2 Revisions', 'Commercial License'] },
-    { name: 'Professional', price: 14999, deliveryTime: '48-72 hrs', desc: 'High-retention production with motion graphics & sound design.', inclusions: ['Advanced Motion / Architecture', 'Source Files', 'Priority Revisions'], features: ['3 Deliverables', 'Unlimited Revisions', 'Raw Files Included', 'Priority Support'], highlight: true },
-    { name: 'Premium', price: 29999, deliveryTime: '24-48 hrs', desc: 'Commercial-grade production for brand launches & keynotes.', inclusions: ['Full Production Pipeline', 'VIP Delivery', 'Dedicated Handler'], features: ['Full Campaign Bundle', 'VIP 24-hr Turnaround', 'Dedicated Handler'] }
-  ];
+  const currentTiers = Array.isArray(activeSkill.tiers) ? activeSkill.tiers : [];
+  const [selectedTier, setSelectedTier] = useState(plan || (currentTiers.length > 0 ? currentTiers[0] : null));
+  const [isCustomMode, setIsCustomMode] = useState(!plan || plan?.name === 'Custom' || String(plan?.price || '').toLowerCase().includes('custom') || currentTiers.length === 0);
 
   // Form State
   const [form, setForm] = useState({
@@ -432,6 +445,9 @@ function PackageProjectModal({ plan, service, onClose, onOpenPortal, settings, s
       if (!isCustomMode) {
         setSelectedTier(targetSkill.tiers.find(t => t.highlight || t.popular) || targetSkill.tiers[0]);
       }
+    } else {
+      setSelectedTier(null);
+      setIsCustomMode(true);
     }
   };
 
@@ -718,6 +734,11 @@ function PackageProjectModal({ plan, service, onClose, onOpenPortal, settings, s
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+            {currentTiers.length === 0 && (
+              <div style={{ gridColumn: '1 / -1', fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', padding: '6px 2px' }}>
+                No pre-configured package tiers for {activeSkillTitle} yet. Fill in your requirements below for a custom scope & quote:
+              </div>
+            )}
             {currentTiers.map((tier, idx) => {
               const tierPrice = typeof tier.price === 'number' ? tier.price : Number(String(tier.price || '').replace(/[^\d]/g, '')) || 0;
               const isSelected = !isCustomMode && selectedTier?.name === tier.name;

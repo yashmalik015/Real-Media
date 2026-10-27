@@ -7,59 +7,18 @@ import { PUBLIC_SERVICES } from '../../data/siteData.js';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const DEFAULT_STARTER_TIERS = [
-  {
-    name: 'Starter',
-    price: 4999,
-    deliveryTime: '3-5 days',
-    inclusions: 'Color Grading, Sound FX, Normal Cuts, 4K Export',
-    features: '1 Final Deliverable, 2 Revisions, Commercial License',
-    desc: 'Essential package for standard projects and high-engagement social content.',
-    highlight: false
-  },
-  {
-    name: 'Professional',
-    price: 14999,
-    deliveryTime: '48-72 hrs',
-    inclusions: 'Advanced Color Grading, Custom Motion Graphics, Sound Design & Mixing, Subtitles',
-    features: '3 Deliverables, Unlimited Revisions, Raw Files Included, Priority Support',
-    desc: 'High-retention package with motion graphics, sound design, and custom pacing.',
-    highlight: true
-  },
-  {
-    name: 'Premium',
-    price: 29999,
-    deliveryTime: '24-48 hrs',
-    inclusions: 'Full Production, VFX Compositing, Sound FX & Mixing, 4K Delivery',
-    features: 'Full Campaign Bundle, Priority Delivery, Dedicated Handler, Source Files',
-    desc: 'Commercial-grade production for brand launches, keynotes, and viral campaigns.',
-    highlight: false
-  }
-];
-
 export function FuturisticPricing({ onSelectPlan, skills = [], pricingData = [] }) {
   const [selectedService, setSelectedService] = useState('All');
   const [currency, setCurrency] = useState('INR'); // Default to INR
   const EXCHANGE_RATE = 83; // 1 USD = 83 INR
 
-  // Build unified plans list from the website's active services
+  // Build unified plans list strictly from user-created skills and tiers
   const plans = useMemo(() => {
     const list = [];
-    // Prioritize skills from MongoDB/Admin CMS
-    let sourceSkills = Array.isArray(skills) && skills.length > 0 ? skills : [];
-
-    // Fallback to PUBLIC_SERVICES if no skills in DB
-    if (sourceSkills.length === 0) {
-      sourceSkills = PUBLIC_SERVICES.map(s => ({
-        ...s,
-        tiers: DEFAULT_STARTER_TIERS
-      }));
-    }
+    const sourceSkills = Array.isArray(skills) && skills.length > 0 ? skills : [];
 
     sourceSkills.forEach(skill => {
-      const tiers = Array.isArray(skill.tiers) && skill.tiers.length > 0
-        ? skill.tiers
-        : DEFAULT_STARTER_TIERS;
+      const tiers = Array.isArray(skill.tiers) ? skill.tiers : [];
 
       tiers.forEach((tier, idx) => {
         const rawNum = typeof tier.price === 'number'
@@ -183,71 +142,114 @@ export function FuturisticPricing({ onSelectPlan, skills = [], pricingData = [] 
             </div>
           </div>
 
-          {/* Service Filter Tabs (Only website services) */}
-          <div style={{
-            display: 'flex',
-            gap: 10,
-            justifyContent: 'center',
-            flexWrap: 'wrap',
-            marginTop: 28,
-            maxWidth: 1100,
-            margin: '28px auto 0'
-          }}>
-            {serviceOptions.map((svc) => {
-              const isSelected = selectedService === svc;
-              const count = svc === 'All'
-                ? plans.length
-                : plans.filter(p => p.service === svc).length;
+          {/* Service Filter Tabs (Only when packages exist) */}
+          {plans.length > 0 && (
+            <div style={{
+              display: 'flex',
+              gap: 10,
+              justifyContent: 'center',
+              flexWrap: 'wrap',
+              marginTop: 28,
+              maxWidth: 1100,
+              margin: '28px auto 0'
+            }}>
+              {serviceOptions.map((svc) => {
+                const isSelected = selectedService === svc;
+                const count = svc === 'All'
+                  ? plans.length
+                  : plans.filter(p => p.service === svc).length;
 
-              return (
-                <button
-                  key={svc}
-                  onClick={() => { playClickSound(); setSelectedService(svc); }}
-                  onMouseEnter={playHoverSound}
-                  style={{
-                    padding: '8px 18px',
-                    borderRadius: 999,
-                    border: isSelected ? '1px solid #ff2d55' : '1px solid rgba(255,255,255,0.08)',
-                    background: isSelected ? 'rgba(255, 45, 85, 0.15)' : 'rgba(255,255,255,0.03)',
-                    color: isSelected ? '#ffffff' : 'rgba(255,255,255,0.65)',
-                    fontSize: '0.84rem',
-                    fontWeight: isSelected ? 700 : 500,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    transition: 'all 0.2s ease',
-                    boxShadow: isSelected ? '0 0 16px rgba(255,45,85,0.25)' : 'none'
-                  }}
-                >
-                  <span>{svc}</span>
-                  <span style={{
-                    fontSize: '0.72rem',
-                    padding: '2px 6px',
-                    borderRadius: 999,
-                    background: isSelected ? '#ff2d55' : 'rgba(255,255,255,0.08)',
-                    color: '#fff',
-                    fontFamily: 'monospace'
-                  }}>
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                return (
+                  <button
+                    key={svc}
+                    onClick={() => { playClickSound(); setSelectedService(svc); }}
+                    onMouseEnter={playHoverSound}
+                    style={{
+                      padding: '8px 18px',
+                      borderRadius: 999,
+                      border: isSelected ? '1px solid #ff2d55' : '1px solid rgba(255,255,255,0.08)',
+                      background: isSelected ? 'rgba(255, 45, 85, 0.15)' : 'rgba(255,255,255,0.03)',
+                      color: isSelected ? '#ffffff' : 'rgba(255,255,255,0.65)',
+                      fontSize: '0.84rem',
+                      fontWeight: isSelected ? 700 : 500,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      transition: 'all 0.2s ease',
+                      boxShadow: isSelected ? '0 0 16px rgba(255,45,85,0.25)' : 'none'
+                    }}
+                  >
+                    <span>{svc}</span>
+                    <span style={{
+                      fontSize: '0.72rem',
+                      padding: '2px 6px',
+                      borderRadius: 999,
+                      background: isSelected ? '#ff2d55' : 'rgba(255,255,255,0.08)',
+                      color: '#fff',
+                      fontFamily: 'monospace'
+                    }}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Pricing Cards Grid */}
-        <div
-          id="pricing-grid"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))',
-            gap: 24,
-            alignItems: 'stretch'
-          }}
-        >
-          {filteredPlans.map((plan) => (
+        {/* Pricing Cards Grid or Custom Project Scope Banner */}
+        {filteredPlans.length === 0 ? (
+          <div style={{
+            padding: '64px 32px',
+            textAlign: 'center',
+            backgroundColor: 'rgba(15, 15, 22, 0.85)',
+            border: '1px dashed rgba(255, 45, 85, 0.3)',
+            borderRadius: 28,
+            maxWidth: 720,
+            margin: '40px auto 0',
+            backdropFilter: 'blur(20px)',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
+          }}>
+            <div style={{ fontSize: '3rem', marginBottom: 16 }}>⚡</div>
+            <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', color: '#fff', letterSpacing: '0.04em', margin: '0 0 12px' }}>
+              CUSTOM PROJECT SCOPE & QUOTE
+            </h3>
+            <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.95rem', lineHeight: 1.6, maxWidth: 520, margin: '0 auto 28px' }}>
+              Every client project is scoped individually based on deliverables, requirements, and turnaround. Submit your brief to receive a custom quote and begin production.
+            </p>
+            <button
+              onClick={() => {
+                playClickSound();
+                if (onSelectPlan) onSelectPlan(null, selectedService !== 'All' ? selectedService : 'Custom');
+              }}
+              style={{
+                padding: '14px 36px',
+                borderRadius: 999,
+                background: 'linear-gradient(135deg, #ff2d55, #c81e42)',
+                color: '#fff',
+                border: 'none',
+                fontWeight: 700,
+                fontSize: '0.95rem',
+                cursor: 'pointer',
+                boxShadow: '0 4px 25px rgba(255,45,85,0.4)',
+                letterSpacing: '0.05em'
+              }}
+            >
+              Start Custom Project
+            </button>
+          </div>
+        ) : (
+          <div
+            id="pricing-grid"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))',
+              gap: 24,
+              alignItems: 'stretch'
+            }}
+          >
+            {filteredPlans.map((plan) => (
             <div
               key={plan.id}
               onMouseEnter={playHoverSound}
@@ -396,6 +398,7 @@ export function FuturisticPricing({ onSelectPlan, skills = [], pricingData = [] 
             </div>
           ))}
         </div>
+      )}
       </div>
 
       <style>{`

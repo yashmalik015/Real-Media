@@ -9,41 +9,13 @@ const EMPTY_TIER = {
   name: 'New Plan',
   price: 4999,
   deliveryTime: '3-5 days',
-  inclusions: 'Color Grading, Sound FX, Normal Cuts, 4K Export',
-  features: '2 Revisions, Source Files Included, Commercial License',
-  desc: 'High-quality service package tailored for business growth.',
+  inclusions: '',
+  features: '',
+  desc: '',
   highlight: false
 };
 
-const DEFAULT_STARTER_TIERS = [
-  {
-    name: 'Starter',
-    price: 4999,
-    deliveryTime: '3-5 days',
-    inclusions: 'Color Grading, Sound FX, Normal Cuts, 4K Export',
-    features: '1 Final Deliverable, 2 Revisions, Commercial License',
-    desc: 'Essential package for standard projects and social content.',
-    highlight: false
-  },
-  {
-    name: 'Professional',
-    price: 14999,
-    deliveryTime: '48-72 hrs',
-    inclusions: 'Advanced Color Grading, Custom Motion Graphics, Sound Design & Mixing, Subtitles',
-    features: '3 Deliverables, Unlimited Revisions, Raw Files Included, Priority Support',
-    desc: 'High-retention package with motion graphics and custom pacing.',
-    highlight: true
-  },
-  {
-    name: 'Premium',
-    price: 29999,
-    deliveryTime: '24-48 hrs',
-    inclusions: 'Full Production, VFX Compositing, Sound FX & Mixing, 4K Delivery',
-    features: 'Full Campaign Bundle, Priority Delivery, Dedicated Handler, Source Files',
-    desc: 'Commercial-grade production for brand launches and campaigns.',
-    highlight: false
-  }
-];
+const DEFAULT_STARTER_TIERS = [];
 
 const DEFAULT_INITIAL_SKILLS = [
   {
@@ -52,11 +24,11 @@ const DEFAULT_INITIAL_SKILLS = [
     category: 'Video & Film',
     icon: '🎬',
     desc: 'Cinematic edits, reels, ads, trailers, and brand films built for retention.',
-    startingPrice: 4999,
+    startingPrice: 0,
     turnaround: '48-72 hrs',
     popular: true,
     features: ['Dynamic cuts & pacing', 'Color grading & sound design', '4K & Social exports'],
-    tiers: DEFAULT_STARTER_TIERS
+    tiers: []
   },
   {
     id: 'skill_web_development',
@@ -64,15 +36,11 @@ const DEFAULT_INITIAL_SKILLS = [
     category: 'Engineering',
     icon: '🌐',
     desc: 'High-converting websites, landing pages, portals, and scalable web applications.',
-    startingPrice: 24999,
+    startingPrice: 0,
     turnaround: '5-7 days',
     popular: true,
     features: ['Responsive UI/UX', 'SEO Optimization', 'CMS & Backend Integration'],
-    tiers: [
-      { name: 'Business Website', price: 24999, deliveryTime: '5-7 days', inclusions: 'Responsive Design, Up to 5 Pages, SEO Basics, Contact Form', features: 'Clean Modern UI, Mobile Optimized', desc: 'Professional website for businesses.', highlight: false },
-      { name: 'Premium Website', price: 59999, deliveryTime: '7-14 days', inclusions: 'Custom UI/UX, Advanced Animations, CMS Dashboard, SEO Optimization', features: 'Full CMS, Speed Optimization, 3 Revisions', desc: 'Custom website with animations.', highlight: true },
-      { name: 'Ecommerce Store', price: 99999, deliveryTime: '14-21 days', inclusions: 'Payment Gateway, Admin Dashboard, Product Management, Auth System', features: 'Full E-Commerce, Inventory System', desc: 'Full-featured online store ready to sell.', highlight: false }
-    ]
+    tiers: []
   },
   {
     id: 'skill_app_development',
@@ -80,15 +48,11 @@ const DEFAULT_INITIAL_SKILLS = [
     category: 'Engineering',
     icon: '📱',
     desc: 'Reliable mobile apps with a clean user experience for growing businesses.',
-    startingPrice: 199999,
+    startingPrice: 0,
     turnaround: '2-4 weeks',
     popular: false,
     features: ['iOS & Android', 'Cross-Platform Speed', 'Backend API Architecture'],
-    tiers: [
-      { name: 'MVP App', price: 199999, deliveryTime: '2-4 weeks', inclusions: 'Android/iOS Support, Authentication, API Integration', features: 'Cross-platform, Core Features', desc: 'Minimum viable mobile app for startups.', highlight: false },
-      { name: 'Full App', price: 349999, deliveryTime: '4-8 weeks', inclusions: 'Real-time Systems, Push Notifications, Admin Panel', features: 'Production Ready, Backend Included', desc: 'Full-featured app with custom backend.', highlight: true },
-      { name: 'Enterprise App', price: 599999, deliveryTime: '8-12 weeks', inclusions: 'Advanced Backend, Multi-role System, Analytics Dashboard', features: 'Security Audit, Dedicated Team', desc: 'Complex enterprise-grade application.', highlight: false }
-    ]
+    tiers: []
   },
   {
     id: 'skill_digital_marketing',
@@ -96,15 +60,11 @@ const DEFAULT_INITIAL_SKILLS = [
     category: 'Marketing',
     icon: '📈',
     desc: 'Campaigns and social strategy that turn attention into measurable growth.',
-    startingPrice: 12999,
+    startingPrice: 0,
     turnaround: 'Monthly',
     popular: true,
     features: ['Content Strategy', 'Ad Creatives', 'Monthly Reporting'],
-    tiers: [
-      { name: 'Starter Growth', price: 12999, deliveryTime: 'Monthly Retainer', inclusions: '8 Reels/mo, Basic Editing, Content Calendar', features: '3-day turnaround, Social Planning', desc: 'Perfect for local businesses building presence.', highlight: false },
-      { name: 'Business Growth', price: 24999, deliveryTime: 'Monthly Retainer', inclusions: '16 Reels/mo, Advanced Editing, Thumbnail Design', features: 'Monthly Strategy Call, Motion Graphics', desc: 'All-inclusive social media management.', highlight: true },
-      { name: 'Domination', price: 49999, deliveryTime: 'Monthly Retainer', inclusions: '30 Reels/mo, Cinematic Production, Ad Creatives', features: 'Dedicated Manager, Analytics Reports', desc: 'Full-scale social domination.', highlight: false }
-    ]
+    tiers: []
   },
   {
     id: 'skill_graphic_design',
@@ -112,15 +72,11 @@ const DEFAULT_INITIAL_SKILLS = [
     category: 'Design',
     icon: '🎨',
     desc: 'Distinctive visual assets that keep every customer touchpoint polished.',
-    startingPrice: 4999,
+    startingPrice: 0,
     turnaround: '48 hrs',
     popular: false,
     features: ['Social Media Assets', 'Brand Kits & Logos', 'Print & Campaign Design'],
-    tiers: [
-      { name: 'Basic Design', price: 4999, deliveryTime: '48 hrs', inclusions: '5 Social Designs, PNG & Vector Delivery', features: 'Social Assets, Clean Polish', desc: 'Essential design assets for campaigns.', highlight: false },
-      { name: 'Brand Kit', price: 14999, deliveryTime: '3-5 days', inclusions: '15 Social Designs, Logo Direction, Brand Style Guide', features: 'Brand Assets, Source Files', desc: 'Complete brand identity kit.', highlight: true },
-      { name: 'Agency Retainer', price: 34999, deliveryTime: 'Ongoing', inclusions: 'Unlimited Designs, Full Brand Strategy, Merch & Packaging', features: 'Priority Turnaround, Direct Access', desc: 'Full design support on monthly retainer.', highlight: false }
-    ]
+    tiers: []
   },
   {
     id: 'skill_ui_ux_design',
@@ -128,15 +84,11 @@ const DEFAULT_INITIAL_SKILLS = [
     category: 'Design',
     icon: '✨',
     desc: 'Intuitive digital experiences shaped around user needs and business outcomes.',
-    startingPrice: 19999,
+    startingPrice: 0,
     turnaround: '3-5 days',
     popular: true,
     features: ['User Journeys', 'Figma Prototypes', 'Design Systems'],
-    tiers: [
-      { name: 'Wireframes & UX', price: 19999, deliveryTime: '3-5 days', inclusions: 'User Flow, Wireframes, Interactive Prototype', features: 'Figma File, User Research', desc: 'UX structure and clickable wireframes.', highlight: false },
-      { name: 'Full UI/UX System', price: 49999, deliveryTime: '7-14 days', inclusions: 'Custom UI Design, Design System, Component Library', features: 'Desktop & Mobile, Figma Tokens', desc: 'Complete polished UI/UX design.', highlight: true },
-      { name: 'App UI & System', price: 89999, deliveryTime: '14-21 days', inclusions: 'Full App UI, Design System, Micro-animations', features: 'Unlimited Screens, Design Tokens', desc: 'Comprehensive app UI design & system.', highlight: false }
-    ]
+    tiers: []
   },
   {
     id: 'skill_game_development',
@@ -144,15 +96,11 @@ const DEFAULT_INITIAL_SKILLS = [
     category: 'Gaming',
     icon: '🎮',
     desc: 'Memorable interactive experiences for brands, publishers, and products.',
-    startingPrice: 79999,
+    startingPrice: 0,
     turnaround: '2-4 weeks',
     popular: false,
     features: ['2D & 3D Mechanics', 'Multiplayer & Backend', 'Cross-Platform Build'],
-    tiers: [
-      { name: 'Promotional Game', price: 79999, deliveryTime: '2-4 weeks', inclusions: 'Simple Gameplay, Brand Integration', features: 'Lead Gen Game, Web & Mobile', desc: 'Branded mobile game for marketing.', highlight: false },
-      { name: '2D Game', price: 299999, deliveryTime: '4-8 weeks', inclusions: '2D Assets, Multiplayer Systems, Leaderboard', features: 'Cross-Platform, Backend Integration', desc: 'Full 2D game with backend.', highlight: true },
-      { name: '3D Game', price: 499999, deliveryTime: '8-16 weeks', inclusions: '3D Assets, Multiplayer Systems, Backend Cloud', features: 'Full Production, Dedicated Team', desc: 'Multiplayer 3D game with full backend.', highlight: false }
-    ]
+    tiers: []
   },
   {
     id: 'skill_vfx',
@@ -160,15 +108,11 @@ const DEFAULT_INITIAL_SKILLS = [
     category: 'Visual Effects',
     icon: '🌌',
     desc: 'High-impact visual effects and compositing for content that stands out.',
-    startingPrice: 2999,
+    startingPrice: 0,
     turnaround: '48 hrs',
     popular: true,
     features: ['Clean Compositing', '3D Motion Tracking', 'CGI Integration'],
-    tiers: [
-      { name: 'Basic VFX', price: 2999, deliveryTime: '48 hrs', inclusions: 'Object Removal, Screen Replacement, Clean Compositing', features: 'Per Shot, HD Output', desc: 'Essential visual effects.', highlight: false },
-      { name: 'Advanced VFX', price: 9999, deliveryTime: '3-5 days', inclusions: 'Motion Tracking, CGI Integration, Particle Effects', features: 'Per Shot, 4K Output', desc: 'Cinematic VFX with motion tracking.', highlight: true },
-      { name: 'Cinematic VFX', price: 49999, deliveryTime: '7-14 days', inclusions: '3D Asset Integration, Full Scene Compositing, Matchmoving', features: 'Per Project, Film Grade', desc: 'Full VFX pipeline for film productions.', highlight: false }
-    ]
+    tiers: []
   }
 ];
 
@@ -183,7 +127,7 @@ const EMPTY_FORM = {
   turnaround: '48-72 hrs',
   features: '',
   popular: false,
-  tiers: DEFAULT_STARTER_TIERS
+  tiers: []
 };
 
 export function SkillManager({ showToast, onLoad }) {
@@ -220,7 +164,7 @@ export function SkillManager({ showToast, onLoad }) {
     setEditingItem(null);
     setForm({
       ...EMPTY_FORM,
-      tiers: JSON.parse(JSON.stringify(DEFAULT_STARTER_TIERS))
+      tiers: []
     });
     setIsModalOpen(true);
   };
@@ -237,7 +181,7 @@ export function SkillManager({ showToast, onLoad }) {
       existingTiers = item.tiers.map((t) => ({
         id: t.id || t._id || `tier_${Date.now()}_${Math.random()}`,
         name: t.name || t.title || 'Plan',
-        price: t.price ?? 4999,
+        price: t.price ?? '',
         deliveryTime: t.deliveryTime || t.turnaround || '3-5 days',
         inclusions: Array.isArray(t.inclusions) ? t.inclusions.join(', ') : (t.inclusions || ''),
         features: Array.isArray(t.features) ? t.features.join(', ') : (t.features || ''),
@@ -245,7 +189,7 @@ export function SkillManager({ showToast, onLoad }) {
         highlight: Boolean(t.highlight || t.popular || t.badge === 'Most Popular')
       }));
     } else {
-      existingTiers = JSON.parse(JSON.stringify(DEFAULT_STARTER_TIERS));
+      existingTiers = [];
     }
 
     setForm({
@@ -385,7 +329,7 @@ export function SkillManager({ showToast, onLoad }) {
             service: form.title,
             category: form.category,
             name: tier.name,
-            price: typeof tier.price === 'number' ? `$${tier.price.toLocaleString('en-US')}` : String(tier.price),
+            price: typeof tier.price === 'number' ? `₹${tier.price.toLocaleString('en-IN')}` : String(tier.price),
             deliveryTime: tier.deliveryTime,
             inclusions: tier.inclusions,
             features: tier.features,
@@ -486,7 +430,10 @@ export function SkillManager({ showToast, onLoad }) {
           {filteredSkills.map((skill) => {
             const tierCount = Array.isArray(skill.tiers) ? skill.tiers.length : 0;
             const startPrice = skill.startingPrice || (skill.tiers?.[0]?.price) || 0;
-            const formattedPrice = typeof startPrice === 'number' && startPrice > 0 ? `$${startPrice.toLocaleString('en-US')}` : (startPrice || 'CUSTOM');
+            const numStart = Number(String(startPrice).replace(/[^\d]/g, ''));
+            const formattedPrice = numStart > 0
+              ? `₹${numStart.toLocaleString('en-IN')} (≈ $${Math.max(1, Math.round(numStart / 83)).toLocaleString('en-US')})`
+              : 'CUSTOM QUOTE';
 
             return (
               <div
@@ -639,13 +586,20 @@ export function SkillManager({ showToast, onLoad }) {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)', marginBottom: 6 }}>Starting Price ($)</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <label style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)' }}>Starting Price (₹ INR)</label>
+                    {Number(form.startingPrice) > 0 && (
+                      <span style={{ fontSize: '0.7rem', color: '#34c759', fontFamily: 'monospace' }}>
+                        ≈ ${Math.max(1, Math.round(Number(form.startingPrice) / 83)).toLocaleString()} USD
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="number"
                     value={form.startingPrice}
                     onChange={(e) => setForm({ ...form, startingPrice: e.target.value })}
                     style={{ width: '100%', padding: '10px 14px', borderRadius: 8, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', outline: 'none' }}
-                    placeholder="Auto-calculated"
+                    placeholder="Auto-calculated (in ₹)"
                   />
                 </div>
                 <div>
@@ -703,6 +657,30 @@ export function SkillManager({ showToast, onLoad }) {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {form.tiers.length === 0 && (
+                  <div style={{ padding: '28px 20px', textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 14, border: '1px dashed rgba(255,255,255,0.12)' }}>
+                    <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.88rem', margin: '0 0 12px' }}>
+                      No packages added yet for this service. Visitors will see custom quote options.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleAddTier}
+                      style={{
+                        padding: '8px 18px',
+                        borderRadius: 8,
+                        backgroundColor: 'rgba(255,45,85,0.15)',
+                        border: '1px solid #ff2d55',
+                        color: '#fff',
+                        fontSize: '0.82rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      + Add First Package Tier
+                    </button>
+                  </div>
+                )}
+
                 {form.tiers.map((tier, idx) => (
                   <div
                     key={idx}
@@ -721,15 +699,13 @@ export function SkillManager({ showToast, onLoad }) {
                           <span style={{ fontSize: '0.65rem', padding: '2px 8px', borderRadius: 999, backgroundColor: '#ff2d55', color: '#fff', fontWeight: 700 }}>MOST POPULAR</span>
                         )}
                       </div>
-                      {form.tiers.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveTier(idx)}
-                          style={{ backgroundColor: 'transparent', border: 'none', color: '#ff2d55', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem' }}
-                        >
-                          <Trash2 size={14} /> Remove
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTier(idx)}
+                        style={{ backgroundColor: 'transparent', border: 'none', color: '#ff2d55', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem' }}
+                      >
+                        <Trash2 size={14} /> Remove
+                      </button>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
@@ -743,12 +719,19 @@ export function SkillManager({ showToast, onLoad }) {
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>Price ($) *</label>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                          <label style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)' }}>Price (₹ INR) *</label>
+                          {Number(String(tier.price).replace(/[^\d]/g, '')) > 0 && (
+                            <span style={{ fontSize: '0.7rem', color: '#34c759', fontFamily: 'monospace' }}>
+                              ≈ ${Math.max(1, Math.round(Number(String(tier.price).replace(/[^\d]/g, '')) / 83)).toLocaleString()} USD
+                            </span>
+                          )}
+                        </div>
                         <input
                           value={tier.price}
                           onChange={(e) => handleUpdateTier(idx, 'price', e.target.value)}
                           style={{ width: '100%', padding: '8px 12px', borderRadius: 6, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.85rem' }}
-                          placeholder="e.g. 4999 or Custom"
+                          placeholder="e.g. 4999"
                         />
                       </div>
                       <div>
