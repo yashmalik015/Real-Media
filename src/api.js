@@ -110,6 +110,7 @@ export const api = {
   createProject: (formData) => request('/api/projects', { method: 'POST', body: formData }),
   sendMessage: (projectId, text) => request(`/api/projects/${projectId}/messages`, { method: 'POST', body: { text } }),
   updateStatus: (projectId, status) => request(`/api/projects/${projectId}/status`, { method: 'PATCH', body: { status } }),
+  updateProjectPrice: (projectId, totalAmount, note = '') => request(`/api/projects/${projectId}/price`, { method: 'PATCH', body: { totalAmount, note } }),
   updateDeliveryLink: (projectId, deliveryLink) => request(`/api/projects/${projectId}/delivery-link`, { method: 'PATCH', body: { deliveryLink } }),
   uploadFiles: (projectId, formData) => request(`/api/projects/${projectId}/files`, { method: 'POST', body: formData }),
   getNotifications: () => request('/api/notifications'),

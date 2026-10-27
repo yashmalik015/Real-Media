@@ -588,10 +588,17 @@ app.delete('/api/portfolio/:id', requireAuth, async (req, res) => {
   res.json({ ok: true, deletedId: req.params.id })
 })
 
-app.post('/api/projects', requireAuth, upload.array('files', 20), async (req, res) => {
-  if (req.user.role !== 'client' && req.user.role !== 'learner') {
-    return res.status(403).json({ message: 'User authorization required to place project order.' })
-  }
+app.post('/api/projects', upload.array('files', 20), async (req, res) => {
+  let authUser = null
+  try {
+    const authHeader = req.headers.authorization
+    const cookieToken = req.cookies?.token || req.cookies?.accessToken
+    const token = (authHeader && authHeader.startsWith('Bearer ')) ? authHeader.slice(7) : cookieToken
+    if (token) {
+      const decoded = jwt.verify(token, JWT_SECRET)
+      authUser = await repository.findUserById(decoded.sub || decoded.id)
+    }
+  } catch {}
 
   const { service, title, description, answers = '{}', servicePlan = 'Custom', totalAmount = 0 } = req.body
   if (!service || !title || !description) {
@@ -600,7 +607,7 @@ app.post('/api/projects', requireAuth, upload.array('files', 20), async (req, re
 
   let parsedAnswers
   try {
-    parsedAnswers = JSON.parse(answers || '{}')
+    parsedAnswers = typeof answers === 'string' ? JSON.parse(answers || '{}') : answers
   } catch {
     return res.status(400).json({ message: 'Project answers must be valid JSON.' })
   }
@@ -609,44 +616,86 @@ app.post('/api/projects', requireAuth, upload.array('files', 20), async (req, re
   const projectId = id('project')
   const amountNum = Number(totalAmount) || 0
 
+  let clientId = authUser?.id
+  let clientName = authUser?.name || parsedAnswers.name || req.body.name || 'Client'
+  let clientEmail = (authUser?.email || parsedAnswers.email || req.body.email || '').trim().toLowerCase()
+  let clientPhone = (authUser?.phone || parsedAnswers.phone || req.body.phone || '').trim()
+
+  if (!clientId && clientEmail) {
+    let clientUser = await repository.findUserByEmail(clientEmail)
+    if (!clientUser) {
+      const newUserId = id('user')
+      clientUser = await repository.createUser({
+        id: newUserId,
+        email: clientEmail,
+        name: clientName,
+        phone: clientPhone,
+        role: 'client',
+        createdAt: timestamp,
+        updatedAt: timestamp
+      })
+    }
+    clientId = clientUser.id
+    clientName = clientUser.name
+
+    try {
+      const auth = await createAuthResponse(clientUser)
+      res.cookie('token', auth.accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        sameSite: 'lax',
+      })
+    } catch {}
+  }
+
+  if (!clientId) {
+    clientId = id('guest')
+  }
+
+  const isCustomQuote = servicePlan?.toLowerCase().includes('custom') || amountNum === 0
+  const initialStatus = isCustomQuote ? 'Custom Quote Requested - Under Review' : (amountNum > 0 ? 'Pending Payment' : 'New brief submitted')
+
   const project = await repository.createProject(
     {
       id: projectId,
-      clientId: req.user.id,
+      clientId,
       service,
       title,
       description,
       answersJson: JSON.stringify(parsedAnswers),
-      status: amountNum > 0 ? 'Pending Payment' : 'New brief submitted',
+      status: initialStatus,
       createdAt: timestamp,
       updatedAt: timestamp,
       servicePlan,
-      paymentStatus: amountNum > 0 ? 'pending' : 'fully_paid',
+      paymentStatus: amountNum > 0 && parsedAnswers?.paymentId ? 'fully_paid' : 'pending',
       totalAmount: amountNum,
-      amountPaid: 0,
+      amountPaid: amountNum > 0 && parsedAnswers?.paymentId ? amountNum : 0,
       projectState: 'active',
       razorpayOrderId: null,
-      razorpayPaymentId: null,
+      razorpayPaymentId: parsedAnswers?.paymentId || null,
     },
     await Promise.all((req.files || []).map((file) => filePayload(file, projectId))),
     {
       id: id('msg'),
       projectId,
       senderId: 'system',
-      senderName: 'Buildbig',
+      senderName: 'Assets Weber',
       senderRole: 'system',
-      text: amountNum > 0 ? 'Project brief received. Please complete the payment to begin.' : 'Project brief received. A project handler will review it and continue here.',
+      text: isCustomQuote
+        ? 'Custom project brief received! Our engineering team will review requirements, contact you via phone/chat, and provide your quote.'
+        : (amountNum > 0 ? 'Project brief received. Please complete the payment to begin.' : 'Project brief received. A project handler will review it and continue here.'),
       createdAt: timestamp,
     },
   )
 
-  if (amountNum === 0) {
-    await repository.notify(req.user.id, project.id, 'Project submitted', `${project.title} was sent to the Buildbig team.`)
-    await notifyTeam(project, req.user.name)
+  if (amountNum === 0 || isCustomQuote) {
+    await repository.notify(clientId, project.id, 'Project submitted', `${project.title} was sent to the Assets Weber team.`)
+    await notifyTeam(project, clientName)
   } else if (parsedAnswers && parsedAnswers.paymentId) {
-    await repository.notify(req.user.id, project.id, 'Purchase Successful', `${project.title} purchase completed.`)
-    await notifyTeam(project, req.user.name)
-    await sendPurchaseNotifications({ ...project, answersJson: JSON.stringify(parsedAnswers) });
+    await repository.notify(clientId, project.id, 'Purchase Successful', `${project.title} purchase completed.`)
+    await notifyTeam(project, clientName)
+    await sendPurchaseNotifications({ ...project, answersJson: JSON.stringify(parsedAnswers) }).catch(() => {});
   }
 
   res.status(201).json({ project })
@@ -712,6 +761,32 @@ app.patch('/api/projects/:id/delivery-link', requireAuth, async (req, res) => {
   if (deliveryLink.trim()) {
     await repository.notify(project.clientId, project.id, 'Delivery Link Provided', `Your order "${project.title}" has a delivery link.`)
   }
+  res.json({ project })
+})
+
+app.patch('/api/projects/:id/price', requireAuth, async (req, res) => {
+  if (req.user.role !== 'team') return res.status(403).json({ message: 'Only team can update project price.' })
+  const { totalAmount, note = '', status } = req.body
+  const numAmount = Number(totalAmount)
+  if (isNaN(numAmount) || numAmount < 0) return res.status(400).json({ message: 'Valid price amount required.' })
+
+  const existingProject = await repository.visibleProject(req.user, req.params.id)
+  if (!existingProject) return res.status(404).json({ message: 'Project not found.' })
+
+  const targetStatus = status || (numAmount > 0 ? 'Quote Ready - Awaiting Payment' : 'Review')
+  const project = await repository.updateProjectPrice(req.params.id, numAmount, targetStatus)
+  
+  await repository.addMessage(req.params.id, {
+    id: id('msg'),
+    projectId: req.params.id,
+    senderId: 'system',
+    senderName: 'Assets Weber Team',
+    senderRole: 'system',
+    text: `Quote updated: ₹${numAmount.toLocaleString('en-IN')}.${note ? ` Note: ${note}` : ''} You can now pay via Razorpay on your Client Portal to start production.`,
+    createdAt: now(),
+  })
+  
+  await repository.notify(project.clientId, project.id, 'Quote Ready', `Quote for "${project.title}" has been updated to ₹${numAmount.toLocaleString('en-IN')}. Pay now to proceed.`)
   res.json({ project })
 })
 

@@ -658,6 +658,13 @@ function makeRepository(client, collections) {
       await projects.updateOne({ id: projectId }, { $set: { status, updated_at: now() } })
       return hydrateProject(await projects.findOne({ id: projectId }))
     },
+    updateProjectPrice: async (projectId, totalAmount, status = 'Quote Ready - Awaiting Payment') => {
+      await projects.updateOne(
+        { id: projectId },
+        { $set: { total_amount: Number(totalAmount), payment_status: 'pending', status, updated_at: now() } }
+      )
+      return hydrateProject(await projects.findOne({ id: projectId }))
+    },
     addProjectFiles: async (projectId, files) => {
       if (files.length > 0) {
         await projectFiles.insertMany(files.map((file) => ({ ...file, _id: file.id, project_id: projectId })))

@@ -359,54 +359,157 @@ const SERVICE_FAQS = {
 };
 
 // ── Package Project Modal (replaces InquiryModal) ──────────────────────────────
-function PackageProjectModal({ plan, service, onClose, settings, showToast, session, skills = [] }) {
+function PackageProjectModal({ plan, service, onClose, onOpenPortal, settings, showToast, session, skills = [] }) {
   const isTeam = session?.role === "team";
+
+  // Build unified skills list
+  const availableSkills = useMemo(() => {
+    let list = Array.isArray(skills) && skills.length > 0 ? skills : [];
+    if (list.length === 0) {
+      list = PUBLIC_SERVICES.map(s => ({
+        id: s.id || s.title,
+        title: s.title,
+        icon: s.icon || '⚡',
+        category: s.category || 'Service',
+        desc: s.desc || '',
+        tiers: [
+          { name: 'Starter', price: 4999, deliveryTime: '3-5 days', desc: 'Essential package for standard projects and high-engagement content.', inclusions: ['Standard Cuts / Architecture', 'HD / 4K Export', 'Commercial License'], features: ['1 Final Deliverable', '2 Revisions', 'Commercial License'] },
+          { name: 'Professional', price: 14999, deliveryTime: '48-72 hrs', desc: 'High-retention package with custom motion graphics, sound design, or full-stack features.', inclusions: ['Advanced Motion / Architecture', 'Source Files', 'Priority Revisions'], features: ['3 Deliverables', 'Unlimited Revisions', 'Raw Files Included', 'Priority Support'], highlight: true },
+          { name: 'Premium', price: 29999, deliveryTime: '24-48 hrs', desc: 'Commercial-grade production for brand launches, keynotes, and enterprise scale.', inclusions: ['Full Production Pipeline', 'VIP Delivery', 'Dedicated Handler'], features: ['Full Campaign Bundle', 'Priority Delivery', 'Dedicated Handler', 'Source Files'] }
+        ]
+      }));
+    }
+    return list;
+  }, [skills]);
+
+  // Skill & Plan State
+  const initialSkill = service || plan?.service || availableSkills[0]?.title || 'Web Development';
+  const [activeSkillTitle, setActiveSkillTitle] = useState(initialSkill);
+  const [selectedTier, setSelectedTier] = useState(plan || null);
+  const [isCustomMode, setIsCustomMode] = useState(!plan || plan?.name === 'Custom' || String(plan?.price || '').toLowerCase().includes('custom'));
+
+  const activeSkill = availableSkills.find(s => s.title.toLowerCase() === activeSkillTitle.toLowerCase()) || availableSkills[0] || { title: activeSkillTitle, tiers: [] };
+  const currentTiers = Array.isArray(activeSkill.tiers) && activeSkill.tiers.length > 0 ? activeSkill.tiers : [
+    { name: 'Starter', price: 4999, deliveryTime: '3-5 days', desc: 'Essential package for standard projects.', inclusions: ['Standard Deliverable', '4K Export', 'Commercial License'], features: ['1 Final Deliverable', '2 Revisions', 'Commercial License'] },
+    { name: 'Professional', price: 14999, deliveryTime: '48-72 hrs', desc: 'High-retention production with motion graphics & sound design.', inclusions: ['Advanced Motion / Architecture', 'Source Files', 'Priority Revisions'], features: ['3 Deliverables', 'Unlimited Revisions', 'Raw Files Included', 'Priority Support'], highlight: true },
+    { name: 'Premium', price: 29999, deliveryTime: '24-48 hrs', desc: 'Commercial-grade production for brand launches & keynotes.', inclusions: ['Full Production Pipeline', 'VIP Delivery', 'Dedicated Handler'], features: ['Full Campaign Bundle', 'VIP 24-hr Turnaround', 'Dedicated Handler'] }
+  ];
+
+  // Form State
   const [form, setForm] = useState({
     name: isTeam ? "" : (session?.name || ""),
     email: isTeam ? "" : (session?.email || ""),
     phone: isTeam ? "" : (session?.phone || ""),
     company: "",
-    skill: service || "",
+    skill: initialSkill,
+    title: "",
+    budget: "",
     driveLink: "",
     description: "",
   });
+
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [paymentDone, setPaymentDone] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
 
-  const faqs = SERVICE_FAQS[service] || SERVICE_FAQS.default;
-  const featureList = plan ? (Array.isArray(plan.features) ? plan.features : String(plan.features || '').split(',').map(f => f.trim()).filter(Boolean)) : [];
-  const inclusionList = plan ? (Array.isArray(plan.inclusions) ? plan.inclusions : String(plan.inclusions || '').split(',').map(i => i.trim()).filter(Boolean)) : [];
-  const rawPrice = plan ? Number(String(plan.price).replace(/[^\d]/g, '')) : 0;
-  const isExplicitUsd = String(plan?.price || '').startsWith('$') || (rawPrice < 500 && rawPrice > 0);
+  const isCustom = isCustomMode || !selectedTier || String(selectedTier?.price || '').toLowerCase().includes('custom') || selectedTier?.name === 'Custom';
+
+  const faqs = SERVICE_FAQS[activeSkillTitle] || SERVICE_FAQS.default;
+  const featureList = selectedTier ? (Array.isArray(selectedTier.features) ? selectedTier.features : String(selectedTier.features || '').split(',').map(f => f.trim()).filter(Boolean)) : [];
+  const inclusionList = selectedTier ? (Array.isArray(selectedTier.inclusions) ? selectedTier.inclusions : String(selectedTier.inclusions || '').split(',').map(i => i.trim()).filter(Boolean)) : [];
+  const rawPrice = selectedTier ? Number(String(selectedTier.price).replace(/[^\d]/g, '')) : 0;
+  const isExplicitUsd = String(selectedTier?.price || '').startsWith('$') || (rawPrice < 500 && rawPrice > 0);
   const inrAmount = isCustom ? 0 : (isExplicitUsd ? rawPrice * 83 : rawPrice);
   const priceInPaise = Math.round(inrAmount * 100);
 
+  // Switch skill
+  const handleSelectSkill = (skillTitle) => {
+    setActiveSkillTitle(skillTitle);
+    setForm(prev => ({ ...prev, skill: skillTitle }));
+    const targetSkill = availableSkills.find(s => s.title.toLowerCase() === skillTitle.toLowerCase());
+    if (targetSkill && Array.isArray(targetSkill.tiers) && targetSkill.tiers.length > 0) {
+      if (!isCustomMode) {
+        setSelectedTier(targetSkill.tiers.find(t => t.highlight || t.popular) || targetSkill.tiers[0]);
+      }
+    }
+  };
+
+  // Submit Custom Project Brief
+  const handleCustomSubmit = async () => {
+    if (!form.name || !form.email) { showToast("Please enter your name and email."); return; }
+    if (!form.phone) { showToast("Please enter your phone number so our team can contact you."); return; }
+    if (!form.description) { showToast("Please provide details or description of your project."); return; }
+
+    setLoading(true);
+    try {
+      const targetSkill = form.skill || activeSkillTitle || 'General';
+
+      // 1. Create project in backend / database tied to user (or guest email)
+      const fd = new FormData();
+      fd.append('service', targetSkill);
+      fd.append('title', form.title ? `${targetSkill}: ${form.title}` : `Custom ${targetSkill} — ${form.name}`);
+      fd.append('description', `${form.description}${form.budget ? `\n\nEstimated Budget: ${form.budget}` : ''}${form.driveLink ? `\nRaw Assets / Drive Link: ${form.driveLink}` : ''}`);
+      fd.append('servicePlan', 'Custom');
+      fd.append('totalAmount', 0);
+      fd.append('name', form.name);
+      fd.append('email', form.email);
+      fd.append('phone', form.phone);
+      fd.append('answers', JSON.stringify({
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        company: form.company,
+        budget: form.budget || 'Custom Quote',
+        driveLink: form.driveLink,
+        customOrder: true
+      }));
+
+      await api.createProject(fd).catch(err => {
+        console.warn('[Project Creation Fallback]:', err);
+      });
+
+      // 2. Submit Inquiry so team is notified immediately in Request CRM & socket.io
+      await api.submitInquiry({
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        company: form.company,
+        service: targetSkill,
+        description: `${form.description}${form.budget ? `\nEstimated Budget: ${form.budget}` : ''}${form.driveLink ? `\nDrive Link: ${form.driveLink}` : ''}`,
+        budget: form.budget || 'Custom Quote',
+        driveLink: form.driveLink,
+      }).catch(() => {});
+
+      setPaymentDone(false);
+      setDone(true);
+      if (showToast) showToast('Custom Project Brief Transmitted! Order logged to Client Portal.');
+    } catch (e) {
+      showToast(e.message || 'Submission failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Standard Package Razorpay Payment
   const handleRazorpay = async () => {
     if (!form.name || !form.email) { showToast("Please enter your name and email."); return; }
     if (!form.phone) { showToast("Please enter your phone number."); return; }
     setLoading(true);
     try {
-      // Step 1: Get Razorpay key from backend or env
       const keyRes = await api.getPaymentKey().catch(() => ({ key: null }));
       const rzpKey = keyRes?.key || import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_TaoMw0lsJ25hzS';
       if (!rzpKey) throw new Error('Payment gateway not configured. Please contact support.');
 
-      let orderRes;
-      if (!isCustom) {
-        // Step 2: Create Razorpay order via backend
-        orderRes = await api.createPackageOrder({ amount: priceInPaise, currency: 'INR', receipt: `pkg_${Date.now()}` });
-      }
+      const orderRes = await api.createPackageOrder({ amount: priceInPaise, currency: 'INR', receipt: `pkg_${Date.now()}` });
 
-      // Step 3: Launch Razorpay standard checkout modal
       const launchCheckout = (orderId) => new Promise((resolve, reject) => {
         const options = {
           key: rzpKey,
           amount: priceInPaise,
           currency: 'INR',
           name: 'Assets Weber',
-          description: `${service} — ${plan?.name || 'Package'}`,
+          description: `${form.skill || activeSkillTitle} — ${selectedTier?.name || 'Package'}`,
           order_id: orderId,
           prefill: { name: form.name, email: form.email, contact: form.phone },
           theme: { color: '#ff2d55' },
@@ -427,20 +530,18 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
 
       const paymentResult = await launchCheckout(orderRes?.order_id || orderRes?.id);
 
-      // Step 4: Verify payment signature with backend
       await api.verifyPackagePayment({
         razorpay_payment_id: paymentResult.razorpay_payment_id,
         razorpay_order_id: paymentResult.razorpay_order_id,
         razorpay_signature: paymentResult.razorpay_signature,
       });
 
-      // Step 5: Create project in portal
       const fd = new FormData();
-      fd.append('service', form.skill || service || 'General');
-      fd.append('title', `${form.skill || service} — ${plan?.name || 'Package'} — ${form.name}`);
+      fd.append('service', form.skill || activeSkillTitle || 'General');
+      fd.append('title', `${form.skill || activeSkillTitle} — ${selectedTier?.name || 'Package'} — ${form.name}`);
       fd.append('description', `${form.description || 'Package project'}${form.driveLink ? `\n\nRaw files: ${form.driveLink}` : ''}`);
-      fd.append('servicePlan', plan?.name || 'Custom');
-      fd.append('totalAmount', rawPrice || 0);
+      fd.append('servicePlan', selectedTier?.name || 'Standard');
+      fd.append('totalAmount', inrAmount || 0);
       fd.append('answers', JSON.stringify({
         name: form.name, email: form.email, phone: form.phone,
         company: form.company, driveLink: form.driveLink,
@@ -461,23 +562,6 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
     }
   };
 
-  const handleCustomInquiry = async () => {
-    if (!form.name || !form.email) { showToast("Please enter your name and email."); return; }
-    setLoading(true);
-    try {
-      await api.submitInquiry({
-        name: form.name, email: form.email, phone: form.phone,
-        company: form.company, service: form.skill || service, description: form.description,
-        budget: 'Custom Quote', driveLink: form.driveLink,
-      });
-      setDone(true);
-    } catch (e) {
-      showToast(e.message || 'Submission failed. Please try WhatsApp.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Ensure Razorpay script is loaded
   useEffect(() => {
     if (!window.Razorpay && !isCustom) {
@@ -491,22 +575,63 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
   if (done) {
     return (
       <div className="msf-backdrop">
-        <div className="msf-modal" style={{ textAlign: 'center', maxWidth: 520 }}>
-          <div style={{ fontSize: '3.5rem', marginBottom: 16 }}>{paymentDone ? '🎉' : '✅'}</div>
-          <h2 className="bn" style={{ fontSize: '2rem', marginBottom: 12 }}>
-            {paymentDone ? 'Payment Successful!' : 'Inquiry Received!'}
+        <div className="msf-modal" style={{ textAlign: 'center', maxWidth: 580 }}>
+          <div style={{ fontSize: '3.5rem', marginBottom: 16 }}>{paymentDone ? '🎉' : '📋'}</div>
+          <h2 className="bn" style={{ fontSize: '2.2rem', marginBottom: 12 }}>
+            {paymentDone ? 'Payment Successful!' : 'Custom Project Brief Received!'}
           </h2>
-          <p style={{ color: 'var(--muted)', lineHeight: 1.75, marginBottom: 20 }}>
+          <p style={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.75, marginBottom: 20 }}>
             {paymentDone
-              ? `Thank you, ${form.name}! Your project has been created in the Client Portal. Our team will begin work within 24 hours.`
-              : `Thank you, ${form.name}. We'll review your custom project requirements and send a quote within 24 hours.`
+              ? `Thank you, ${form.name}! Your project has been initialized and is active in your Client Portal. Our team will begin production within 24 hours.`
+              : `Thank you, ${form.name}! Your custom order has been logged into the system and is now listed under "My Orders" in your Client Portal.`
             }
           </p>
+
+          {!paymentDone && (
+            <div style={{
+              textAlign: 'left',
+              backgroundColor: 'rgba(255,45,85,0.06)',
+              border: '1px solid rgba(255,45,85,0.25)',
+              borderRadius: 14,
+              padding: '16px 20px',
+              marginBottom: 24,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12
+            }}>
+              <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#ff2d55', letterSpacing: '0.12em', fontWeight: 700 }}>
+                NEXT STEPS TO PRODUCTION:
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)' }}>
+                <span style={{ color: '#ff2d55', fontWeight: 700 }}>1.</span>
+                <span><strong>Direct Consultation:</strong> Our production team will contact you via <strong>phone call ({form.phone})</strong> and <strong>website DM</strong> to review specs and deliverables.</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)' }}>
+                <span style={{ color: '#ff2d55', fontWeight: 700 }}>2.</span>
+                <span><strong>Quote Assignment:</strong> The team will set and update your tailored order price in your portal.</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)' }}>
+                <span style={{ color: '#ff2d55', fontWeight: 700 }}>3.</span>
+                <span><strong>Secure Checkout:</strong> Pay the updated quote directly on your Client Portal via Razorpay to commence production.</span>
+              </div>
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-            <a className="btn-ghost" href={settings?.bookingUrl || 'https://calendly.com/'} target="_blank" rel="noreferrer">📅 Book Discovery Call</a>
-            <a className="btn-primary" href={`https://wa.me/${(settings?.whatsappNumber || '+919416085060').replace(/\D/g, '')}`} target="_blank" rel="noreferrer">💬 Chat on WhatsApp</a>
+            {onOpenPortal && (
+              <button
+                className="btn-primary"
+                onClick={onOpenPortal}
+                style={{ flex: 1, minWidth: 200, padding: '12px 24px', background: 'linear-gradient(135deg,#ff2d55,#bd1c3c)' }}
+              >
+                🚀 Go to Client Portal & View Order
+              </button>
+            )}
+            <a className="btn-ghost" href={`https://wa.me/${(settings?.whatsappNumber || '+919416085060').replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ flex: 1, minWidth: 160, textAlign: 'center' }}>
+              💬 Chat on WhatsApp
+            </a>
           </div>
-          <button className="service-page-back" style={{ marginTop: 24 }} onClick={onClose}>Close ✕</button>
+          <button className="service-page-back" style={{ marginTop: 20 }} onClick={onClose}>Close ✕</button>
         </div>
       </div>
     );
@@ -514,75 +639,259 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
 
   return (
     <div className="msf-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="msf-modal" style={{ maxWidth: 660, maxHeight: '92vh', overflowY: 'auto' }}>
+      <div className="msf-modal" style={{ maxWidth: 760, maxHeight: '92vh', overflowY: 'auto' }}>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
-            <div style={{ fontSize: '0.7rem', color: '#ff2d55', fontFamily: 'monospace', letterSpacing: '0.14em', marginBottom: 4 }}>{service?.toUpperCase()} // START PROJECT</div>
-            <h2 className="bn" style={{ fontSize: '1.8rem', margin: 0 }}>{plan?.name || 'Custom Project'}</h2>
-            {!isCustom && (
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 6 }}>
-                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.2rem', color: '#ff2d55' }}>${Number(rawPrice).toLocaleString('en-US')}</span>
-                {plan?.period && <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>{plan.period}</span>}
-              </div>
-            )}
+            <div style={{ fontSize: '0.72rem', color: '#ff2d55', fontFamily: 'monospace', letterSpacing: '0.14em', marginBottom: 4 }}>
+              ASSETS WEBER // FUI OS 2045 // PROJECT INITIATION MATRIX
+            </div>
+            <h2 className="bn" style={{ fontSize: '2rem', margin: 0 }}>
+              START A PROJECT
+            </h2>
+            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.84rem', marginTop: 4 }}>
+              Choose a discipline and standard package, or select <strong>Custom Project</strong> for tailored scope, budget, and direct quote.
+            </div>
           </div>
           <button onClick={onClose} className="service-page-back">✕</button>
         </div>
 
-        {/* Package inclusions & delivery */}
-        {(inclusionList.length > 0 || plan?.deliveryTime || featureList.length > 0) && (
-          <div style={{ background: 'rgba(255,45,85,0.05)', border: '1px solid rgba(255,45,85,0.2)', borderRadius: 14, padding: '16px 20px', marginBottom: 24 }}>
-            {plan?.deliveryTime && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: inclusionList.length > 0 || featureList.length > 0 ? 12 : 0 }}>
-                <span style={{ fontSize: '0.7rem', color: '#ff2d55', fontFamily: 'monospace' }}>⏱ DELIVERY TIME</span>
-                <span style={{ fontWeight: 700, color: '#fff', fontSize: '0.9rem' }}>{plan.deliveryTime}</span>
-              </div>
-            )}
-            {inclusionList.length > 0 && (
-              <div style={{ marginBottom: featureList.length > 0 ? 12 : 0 }}>
-                <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', marginBottom: 8 }}>THIS PACKAGE INCLUDES</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {inclusionList.map((inc, i) => (
-                    <span key={i} style={{ padding: '4px 12px', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.85)', fontSize: '0.8rem' }}>{inc}</span>
-                  ))}
+        {/* 1. Skill Disciplines Selector */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 8 }}>
+            TARGET SKILL / DISCIPLINE:
+          </div>
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 6, scrollbarWidth: 'thin' }}>
+            {availableSkills.map((s) => {
+              const isActive = s.title.toLowerCase() === activeSkillTitle.toLowerCase();
+              return (
+                <button
+                  key={s.title}
+                  type="button"
+                  onClick={() => handleSelectSkill(s.title)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: 999,
+                    backgroundColor: isActive ? 'rgba(255,45,85,0.18)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${isActive ? '#ff2d55' : 'rgba(255,255,255,0.1)'}`,
+                    color: isActive ? '#fff' : 'rgba(255,255,255,0.7)',
+                    fontSize: '0.82rem',
+                    fontWeight: isActive ? 700 : 500,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    transition: 'all 0.2s ease',
+                    boxShadow: isActive ? '0 0 15px rgba(255,45,85,0.3)' : 'none'
+                  }}
+                >
+                  <span>{s.icon || '⚡'}</span>
+                  <span>{s.title}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 2. Packages Grid (Standard Tiers + Custom Project Option) */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', letterSpacing: '0.1em' }}>
+              AVAILABLE PACKAGES FOR {activeSkillTitle.toUpperCase()}:
+            </div>
+            <button
+              type="button"
+              onClick={() => { setIsCustomMode(true); setSelectedTier(null); }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: isCustomMode ? '#ff2d55' : 'rgba(255,255,255,0.6)',
+                fontSize: '0.76rem',
+                fontFamily: 'monospace',
+                cursor: 'pointer',
+                textDecoration: 'underline'
+              }}
+            >
+              Need Custom Scope? Click Here →
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+            {currentTiers.map((tier, idx) => {
+              const tierPrice = typeof tier.price === 'number' ? tier.price : Number(String(tier.price || '').replace(/[^\d]/g, '')) || 0;
+              const isSelected = !isCustomMode && selectedTier?.name === tier.name;
+              return (
+                <div
+                  key={tier.name || idx}
+                  onClick={() => {
+                    setSelectedTier(tier);
+                    setIsCustomMode(false);
+                  }}
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: 14,
+                    cursor: 'pointer',
+                    backgroundColor: isSelected ? 'rgba(255,45,85,0.12)' : 'rgba(255,255,255,0.03)',
+                    border: `1.5px solid ${isSelected ? '#ff2d55' : 'rgba(255,255,255,0.08)'}`,
+                    boxShadow: isSelected ? '0 0 20px rgba(255,45,85,0.25)' : 'none',
+                    transition: 'all 0.2s ease',
+                    position: 'relative'
+                  }}
+                >
+                  {tier.highlight && (
+                    <span style={{
+                      position: 'absolute', top: -8, right: 8,
+                      backgroundColor: '#ff2d55', color: '#fff',
+                      fontSize: '0.62rem', padding: '2px 8px', borderRadius: 999, fontWeight: 700
+                    }}>
+                      POPULAR
+                    </span>
+                  )}
+                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff' }}>{tier.name}</div>
+                  <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', color: '#ff2d55', margin: '4px 0' }}>
+                    ₹{tierPrice.toLocaleString('en-IN')}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.3 }}>
+                    ⏱ {tier.deliveryTime || '3-5 days'}
+                  </div>
                 </div>
+              );
+            })}
+
+            {/* Custom Project Card */}
+            <div
+              onClick={() => {
+                setIsCustomMode(true);
+                setSelectedTier(null);
+              }}
+              style={{
+                padding: '12px 14px',
+                borderRadius: 14,
+                cursor: 'pointer',
+                backgroundColor: isCustomMode ? 'rgba(255,45,85,0.15)' : 'rgba(255,255,255,0.03)',
+                border: `1.5px dashed ${isCustomMode ? '#ff2d55' : 'rgba(255,45,85,0.5)'}`,
+                boxShadow: isCustomMode ? '0 0 25px rgba(255,45,85,0.35)' : 'none',
+                transition: 'all 0.2s ease',
+                position: 'relative'
+              }}
+            >
+              <span style={{
+                position: 'absolute', top: -8, right: 8,
+                backgroundColor: '#ff9500', color: '#000',
+                fontSize: '0.62rem', padding: '2px 8px', borderRadius: 999, fontWeight: 800
+              }}>
+                CUSTOM
+              </span>
+              <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#ff2d55', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span>⚡</span> Custom Project
+              </div>
+              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', color: '#ff9500', margin: '4px 0' }}>
+                Tailored Quote
+              </div>
+              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.3 }}>
+                Custom budget & specs
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Selected Tier Summary (if standard package is selected) */}
+        {!isCustom && selectedTier && (
+          <div style={{ background: 'rgba(255,45,85,0.05)', border: '1px solid rgba(255,45,85,0.2)', borderRadius: 14, padding: '14px 18px', marginBottom: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div>
+                <span style={{ fontSize: '0.7rem', color: '#ff2d55', fontFamily: 'monospace' }}>ACTIVE PLAN: </span>
+                <strong style={{ color: '#fff' }}>{activeSkillTitle} — {selectedTier.name}</strong>
+              </div>
+              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', color: '#ff2d55' }}>
+                ₹{inrAmount.toLocaleString('en-IN')}
+              </div>
+            </div>
+            {inclusionList.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {inclusionList.map((inc, i) => (
+                  <span key={i} style={{ padding: '3px 10px', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.8)', fontSize: '0.76rem' }}>
+                    ✓ {inc}
+                  </span>
+                ))}
               </div>
             )}
-            {featureList.length > 0 && (
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {featureList.map((f, i) => (
-                  <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.83rem', color: 'rgba(255,255,255,0.72)' }}>
-                    <span style={{ color: '#34c759', flexShrink: 0 }}>✓</span> {f}
-                  </li>
-                ))}
-              </ul>
-            )}
+          </div>
+        )}
+
+        {/* Custom Project Highlight Box (if custom mode is selected) */}
+        {isCustom && (
+          <div style={{ background: 'rgba(255,149,0,0.06)', border: '1px solid rgba(255,149,0,0.25)', borderRadius: 14, padding: '14px 18px', marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ff9500', fontWeight: 700, fontSize: '0.88rem', marginBottom: 4 }}>
+              <span>⚡</span> CUSTOM PROJECT SCOPE CONFIGURATION
+            </div>
+            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>
+              Specify your skill, estimated budget, and project requirements. Our team will contact you via <strong>phone call</strong> & <strong>chat</strong> to review specs, set the order quote in your portal, and commence production upon payment.
+            </div>
           </div>
         )}
 
         {/* Form fields */}
         <div className="msf-grid">
-          <div className="field"><label>Name *</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Your full name" /></div>
-          <div className="field"><label>Email *</label><input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" /></div>
+          <div className="field">
+            <label>Client Full Name *</label>
+            <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Yash Malik" />
+          </div>
+          <div className="field">
+            <label>Email Transmission Address *</label>
+            <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" />
+          </div>
         </div>
+
         <div className="msf-grid">
-          <div className="field"><label>Phone *</label><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+91 98765 43210" /></div>
-          <div className="field"><label>Company</label><input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="Company / Brand name" /></div>
+          <div className="field">
+            <label>Phone Number (for Consultation Call) *</label>
+            <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+91 94160 85060" />
+          </div>
+          <div className="field">
+            <label>Company / Brand Name</label>
+            <input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="e.g. Assets Weber" />
+          </div>
         </div>
+
+        {/* Custom Project Specific Fields */}
+        {isCustom && (
+          <div className="msf-grid" style={{ marginBottom: 16 }}>
+            <div className="field">
+              <label>Target Skill / Service</label>
+              <select
+                value={form.skill || activeSkillTitle}
+                onChange={(e) => {
+                  setForm({ ...form, skill: e.target.value });
+                  setActiveSkillTitle(e.target.value);
+                }}
+                style={{ width: '100%', padding: '12px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.95rem' }}
+              >
+                {availableSkills.map(s => (
+                  <option key={s.title} value={s.title}>{s.title}</option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Estimated Budget (₹ INR or $ USD)</label>
+              <input
+                value={form.budget}
+                onChange={(e) => setForm({ ...form, budget: e.target.value })}
+                placeholder="e.g. ₹20,000 / $300 / Flexible"
+              />
+            </div>
+          </div>
+        )}
 
         {isCustom && (
           <div className="field" style={{ marginBottom: 16 }}>
-            <label>Required Skill / Service</label>
-            <select value={form.skill} onChange={(e) => setForm({ ...form, skill: e.target.value })} style={{ width: '100%', padding: '12px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.95rem' }}>
-              <option value="" disabled>Select a skill or service...</option>
-              {['Web Development', 'Video Editing', 'Digital Marketing', 'Graphic Design', 'SEO', 'App Development', 'Other'].map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-              {skills.filter(s => !['Web Development', 'Video Editing', 'Digital Marketing', 'Graphic Design', 'SEO', 'App Development', 'Other'].includes(s.title)).map(s => (
-                <option key={s.title} value={s.title}>{s.title}</option>
-              ))}
-            </select>
+            <label>Project Concept / Title</label>
+            <input
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              placeholder="e.g. Next.js SaaS Website / Cinematic Brand Reel"
+            />
           </div>
         )}
 
@@ -598,35 +907,43 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
             placeholder="https://drive.google.com/drive/folders/..."
             style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
           />
-          <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>Share raw footage, assets, or reference files here. Set folder access to "Anyone with link can view".</div>
+          <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>
+            Share raw footage, design files, or references here (set access to "Anyone with link can view").
+          </div>
         </div>
 
         {/* Project description */}
         <div className="field" style={{ marginBottom: 20 }}>
-          <label>Project Description</label>
+          <label>{isCustom ? 'Project Brief & Specifications *' : 'Project Notes / Instructions'}</label>
           <textarea
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
-            placeholder="Describe your vision, target audience, references, and any specific requirements..."
-            style={{ minHeight: 100 }}
+            placeholder={isCustom
+              ? "Describe your vision, deliverables, key features, target timeline, and any reference links..."
+              : "Describe your specific requirements, brand guidelines, or notes for the team..."
+            }
+            style={{ minHeight: 90 }}
           />
         </div>
 
         {/* FAQ Section */}
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', letterSpacing: '0.12em', marginBottom: 12 }}>FREQUENTLY ASKED QUESTIONS</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {faqs.map((faq, i) => (
-              <div key={i} style={{ borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', letterSpacing: '0.12em', marginBottom: 10 }}>
+            FREQUENTLY ASKED QUESTIONS
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {faqs.slice(0, 3).map((faq, i) => (
+              <div key={i} style={{ borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', overflow: 'hidden' }}>
                 <button
+                  type="button"
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'none', border: 'none', color: '#fff', cursor: 'pointer', textAlign: 'left', fontSize: '0.88rem', fontWeight: 600 }}
+                  style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'none', border: 'none', color: '#fff', cursor: 'pointer', textAlign: 'left', fontSize: '0.84rem', fontWeight: 600 }}
                 >
                   {faq.q}
-                  <span style={{ color: '#ff2d55', fontSize: '1rem', flexShrink: 0, marginLeft: 8, transition: 'transform 0.2s', transform: openFaq === i ? 'rotate(45deg)' : 'none' }}>+</span>
+                  <span style={{ color: '#ff2d55', fontSize: '0.9rem', flexShrink: 0, marginLeft: 8 }}>{openFaq === i ? '−' : '+'}</span>
                 </button>
                 {openFaq === i && (
-                  <div style={{ padding: '0 16px 14px', fontSize: '0.84rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.65 }}>{faq.a}</div>
+                  <div style={{ padding: '0 14px 12px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.6 }}>{faq.a}</div>
                 )}
               </div>
             ))}
@@ -636,28 +953,44 @@ function PackageProjectModal({ plan, service, onClose, settings, showToast, sess
         {/* CTA */}
         {isCustom ? (
           <>
-            <button className="btn-primary" onClick={handleCustomInquiry} disabled={loading} style={{ width: '100%', marginBottom: 12, padding: '15px' }}>
-              {loading ? 'Submitting…' : '📋 Submit Custom Quote Request'}
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handleCustomSubmit}
+              disabled={loading}
+              style={{ width: '100%', marginBottom: 8, padding: '15px', fontSize: '1rem', background: 'linear-gradient(135deg,#ff9500,#ff2d55)' }}
+            >
+              {loading ? 'Transmitting Custom Brief…' : '🚀 Transmit Custom Project Brief'}
             </button>
-            <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginBottom: 16 }}>Our team will review and send a detailed quote within 24 hours.</div>
+            <div style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.45)', textAlign: 'center', marginBottom: 14 }}>
+              Order will be listed in your Client Portal. Production team will call ({form.phone || 'your phone'}) and DM on website to finalize quote.
+            </div>
           </>
         ) : (
           <>
             <button
               id="start-project-pay-btn"
+              type="button"
               className="btn-primary"
               onClick={handleRazorpay}
               disabled={loading}
-              style={{ width: '100%', padding: '16px', fontSize: '1rem', letterSpacing: '0.05em', marginBottom: 12, background: 'linear-gradient(135deg,#ff2d55,#bd1c3c)', boxShadow: '0 0 30px rgba(255,45,85,0.4)' }}
+              style={{ width: '100%', padding: '15px', fontSize: '1rem', letterSpacing: '0.05em', marginBottom: 8, background: 'linear-gradient(135deg,#ff2d55,#bd1c3c)', boxShadow: '0 0 30px rgba(255,45,85,0.4)' }}
             >
-              {loading ? '⏳ Processing…' : `🚀 Start Project — Pay $${Number(rawPrice).toLocaleString('en-US')} via Razorpay`}
+              {loading ? '⏳ Processing…' : `🚀 Start Project — Pay ₹${Number(inrAmount).toLocaleString('en-IN')} via Razorpay`}
             </button>
-            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', textAlign: 'center', marginBottom: 16 }}>🔒 Secured by Razorpay · SSL encrypted · UPI, Cards, Net Banking accepted</div>
+            <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.35)', textAlign: 'center', marginBottom: 14 }}>
+              🔒 Secured by Razorpay · UPI, Cards, Net Banking accepted · Direct order creation
+            </div>
           </>
         )}
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <a className="btn-ghost" href={settings?.bookingUrl || 'https://calendly.com/'} target="_blank" rel="noreferrer" style={{ flex: 1, textAlign: 'center' }}>📅 Book Discovery Call</a>
-          <a className="btn-primary" href={`https://wa.me/${(settings?.whatsappNumber || '+919416085060').replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ flex: 1, textAlign: 'center', background: '#25d366', boxShadow: 'none' }}>💬 Chat on WhatsApp</a>
+
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <a className="btn-ghost" href={settings?.bookingUrl || 'https://calendly.com/'} target="_blank" rel="noreferrer" style={{ flex: 1, textAlign: 'center', fontSize: '0.84rem' }}>
+            📅 Book Discovery Call
+          </a>
+          <a className="btn-primary" href={`https://wa.me/${(settings?.whatsappNumber || '+919416085060').replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ flex: 1, textAlign: 'center', background: '#25d366', boxShadow: 'none', fontSize: '0.84rem' }}>
+            💬 Chat on WhatsApp
+          </a>
         </div>
       </div>
     </div>
@@ -3031,7 +3364,7 @@ export default function App() {
 
       {/* Modals */}
       {showSearch && <GlobalSearch onClose={() => setShowSearch(false)} onNavigate={requestPage} />}
-      {showInquiry && <PackageProjectModal plan={selectedPlan?.plan || null} service={selectedPlan?.service || selectedService || ""} onClose={() => { setShowInquiry(false); setSelectedPlan(null); }} settings={settings} showToast={showToast} session={session} skills={skills} />}
+      {showInquiry && <PackageProjectModal plan={selectedPlan?.plan || null} service={selectedPlan?.service || selectedService || ""} onClose={() => { setShowInquiry(false); setSelectedPlan(null); }} onOpenPortal={() => { setShowInquiry(false); setSelectedPlan(null); setPage('client-portal'); }} settings={settings} showToast={showToast} session={session} skills={skills} />}
       {showAuth && <LoginModal onLogin={onLogin} onGoogleLogin={onGoogleLogin} onClose={() => setShowAuth(false)} />}
       {showVerification && (
         <VerificationModal 

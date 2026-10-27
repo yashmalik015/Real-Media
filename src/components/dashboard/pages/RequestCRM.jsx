@@ -9,6 +9,8 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
   const [activeTab, setActiveTab] = useState('All');
   const [selectedProject, setSelectedProject] = useState(null);
   const [deliveryLinkInput, setDeliveryLinkInput] = useState('');
+  const [priceInput, setPriceInput] = useState('');
+  const [savingPrice, setSavingPrice] = useState(false);
 
   // Chat State
   const [chatMessages, setChatMessages] = useState([]);
@@ -114,10 +116,32 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
     }
   };
 
+  const handleUpdatePrice = async (id) => {
+    const amount = Number(priceInput);
+    if (isNaN(amount) || amount < 0) {
+      showToast('Please enter a valid price in INR.');
+      return;
+    }
+    setSavingPrice(true);
+    try {
+      await api.updateProjectPrice(id, amount);
+      showToast(`Quote price updated to ₹${amount.toLocaleString('en-IN')}! Client notified.`);
+      if (selectedProject && selectedProject.id === id) {
+        setSelectedProject((prev) => ({ ...prev, totalAmount: amount, status: 'Quote Ready - Awaiting Payment' }));
+      }
+      await onLoad();
+    } catch (err) {
+      showToast(err.message || 'Failed to update price.');
+    } finally {
+      setSavingPrice(false);
+    }
+  };
+
   const openProjectModal = (proj) => {
     playClickSound();
     setSelectedProject(proj);
     setDeliveryLinkInput(proj.deliveryLink || '');
+    setPriceInput(proj.totalAmount || '');
   };
 
   const getStatusColor = (status) => {
@@ -241,20 +265,39 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             
             {/* Header Info */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.1)', flexWrap: 'wrap', gap: 16 }}>
               <div>
                 <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', color: '#fff', margin: 0 }}>
-                  {selectedProject.clientName}
+                  {selectedProject.clientName || selectedProject.answers?.name || 'Client Order'}
                 </h3>
                 <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', marginTop: 4 }}>
                   {selectedProject.title || 'Untitled Project'}
+                </div>
+                {/* Client Direct Contact: Phone & Email */}
+                <div style={{ display: 'flex', gap: 16, marginTop: 10, flexWrap: 'wrap' }}>
+                  {(selectedProject.answers?.phone || selectedProject.clientPhone) && (
+                    <a
+                      href={`tel:${selectedProject.answers?.phone || selectedProject.clientPhone}`}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#34c759', fontSize: '0.86rem', fontWeight: 600, textDecoration: 'none', background: 'rgba(52,199,89,0.1)', padding: '4px 12px', borderRadius: 8, border: '1px solid rgba(52,199,89,0.3)' }}
+                    >
+                      📞 Call: {selectedProject.answers?.phone || selectedProject.clientPhone}
+                    </a>
+                  )}
+                  {(selectedProject.answers?.email || selectedProject.clientEmail) && (
+                    <a
+                      href={`mailto:${selectedProject.answers?.email || selectedProject.clientEmail}`}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#007aff', fontSize: '0.86rem', fontWeight: 600, textDecoration: 'none', background: 'rgba(0,122,255,0.1)', padding: '4px 12px', borderRadius: 8, border: '1px solid rgba(0,122,255,0.3)' }}
+                    >
+                      ✉️ {selectedProject.answers?.email || selectedProject.clientEmail}
+                    </a>
+                  )}
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
                 <span style={{ padding: '6px 14px', borderRadius: 8, backgroundColor: 'rgba(255,45,85,0.15)', color: '#ff2d55', fontWeight: 700, fontFamily: 'monospace' }}>
                   {selectedProject.service}
                 </span>
-                <span style={{ color: '#34c759', fontWeight: 700, fontSize: '1.2rem' }}>${selectedProject.totalAmount || 0}</span>
+                <span style={{ color: '#34c759', fontWeight: 700, fontSize: '1.2rem' }}>₹{Number(selectedProject.totalAmount || 0).toLocaleString('en-IN')}</span>
               </div>
             </div>
 
@@ -355,6 +398,55 @@ export function RequestCRM({ projects = [], onLoad, showToast }) {
                     >
                       Save
                     </button>
+                  </div>
+                </div>
+
+                {/* Set / Update Price Order (Team Quote) */}
+                <div style={{ gridColumn: '1 / -1', marginTop: 8, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,45,85,0.06)', border: '1px solid rgba(255,45,85,0.2)' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: '#ff2d55', fontWeight: 700, marginBottom: 8 }}>
+                    SET / UPDATE ORDER PRICE (₹ INR) — CLIENT WILL PAY VIA RAZORPAY
+                  </label>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+                      <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#fff', fontWeight: 700 }}>₹</span>
+                      <input
+                        type="number"
+                        placeholder="e.g. 15000"
+                        value={priceInput}
+                        onChange={(e) => setPriceInput(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px 10px 30px',
+                          borderRadius: 8,
+                          background: 'rgba(0,0,0,0.6)',
+                          border: '1px solid rgba(255,45,85,0.4)',
+                          color: '#fff',
+                          fontSize: '1rem',
+                          fontWeight: 700,
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <button
+                      onClick={() => handleUpdatePrice(selectedProject.id)}
+                      disabled={savingPrice}
+                      style={{
+                        padding: '10px 20px',
+                        borderRadius: 8,
+                        background: 'linear-gradient(135deg, #ff2d55, #c81e42)',
+                        color: '#fff',
+                        border: 'none',
+                        fontWeight: 700,
+                        fontSize: '0.88rem',
+                        cursor: savingPrice ? 'not-allowed' : 'pointer',
+                        boxShadow: '0 0 15px rgba(255,45,85,0.3)'
+                      }}
+                    >
+                      {savingPrice ? 'Updating…' : 'Update Price & Send Quote to Client ⚡'}
+                    </button>
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.45)', marginTop: 6 }}>
+                    Once updated, the client will immediately see this quote and a "Pay via Razorpay" button on their Client Portal.
                   </div>
                 </div>
               </div>

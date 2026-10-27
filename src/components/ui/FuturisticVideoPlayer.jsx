@@ -119,6 +119,16 @@ export function FuturisticVideoPlayer({
       setShowQualityMenu(false);
       return;
     }
+    const currentSrc = getVideoSrcForQuality(rawUrl, quality);
+    const nextSrc = getVideoSrcForQuality(rawUrl, newQuality);
+
+    if (currentSrc === nextSrc) {
+      // Stream URL is the same (direct stream), just update quality indicator without stalling or showing loading spinner
+      setQuality(newQuality);
+      setShowQualityMenu(false);
+      return;
+    }
+
     if (videoRef.current) {
       savedTimeRef.current = videoRef.current.currentTime || 0;
       wasPlayingRef.current = !videoRef.current.paused;
@@ -127,6 +137,18 @@ export function FuturisticVideoPlayer({
     setShowQualityMenu(false);
     setIsLoading(true);
   };
+
+  // Watchdog to ensure loading state clears if video is actively playing
+  useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => {
+        if (videoRef.current && !videoRef.current.paused && videoRef.current.currentTime > 0) {
+          setIsLoading(false);
+        }
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading]);
 
   // Extract YouTube ID
   const getYouTubeEmbedUrl = (url) => {
@@ -418,7 +440,12 @@ export function FuturisticVideoPlayer({
         onTimeUpdate={() => {
           if (videoRef.current) {
             const ct = videoRef.current.currentTime;
-            if (Number.isFinite(ct)) setCurrentTime(ct);
+            if (Number.isFinite(ct)) {
+              setCurrentTime(ct);
+              if (isLoading && !videoRef.current.paused && ct > 0) {
+                setIsLoading(false);
+              }
+            }
           }
         }}
         onDurationChange={() => {
@@ -431,7 +458,11 @@ export function FuturisticVideoPlayer({
           }
         }}
         onProgress={handleProgress}
-        onWaiting={() => setIsLoading(true)}
+        onWaiting={() => {
+          if (!videoRef.current || videoRef.current.paused) {
+            setIsLoading(true);
+          }
+        }}
         onLoadStart={() => setIsLoading(true)}
         onPlaying={() => {
           setIsLoading(false);
@@ -462,7 +493,7 @@ export function FuturisticVideoPlayer({
       />
 
       {/* Futuristic Loading / Buffering Animation */}
-      {isLoading && !hasError && (
+      {isLoading && !hasError && (!videoRef.current || videoRef.current.paused || videoRef.current.seeking) && (
         <div
           style={{
             position: 'absolute',

@@ -374,12 +374,17 @@ export function registerV2Routes(app, { repository, v2, upload, requireAuth, has
 
   // ── Inquiries (public submit, team manage) ──
   app.post('/api/inquiries', async (req, res) => {
-    const inquiry = await v2.createInquiry(req.body)
-    if (deps.io) {
-      deps.io.emit('newInquiry', inquiry)
+    try {
+      const inquiry = await v2.createInquiry(req.body)
+      if (io) {
+        io.emit('newInquiry', inquiry)
+      }
+      await sendInquiryNotification(req.body).catch((err) => console.warn('[Inquiry Notification Error]:', err.message));
+      res.status(201).json({ inquiry })
+    } catch (err) {
+      console.error('[Create Inquiry Error]:', err)
+      res.status(500).json({ message: err.message || 'Failed to submit inquiry.' })
     }
-    await sendInquiryNotification(req.body);
-    res.status(201).json({ inquiry })
   })
 
   app.get('/api/inquiries', requireAuth, async (req, res) => {

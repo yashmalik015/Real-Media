@@ -455,8 +455,11 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
 
       const { id: order_id, amount, currency } = await api.createPaymentOrder({ projectId: order.id, amount: order.totalAmount });
       
+      const keyRes = await api.getPaymentKey().catch(() => ({ key: null }));
+      const rzpKey = keyRes?.key || import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_TaoMw0lsJ25hzS';
+
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        key: rzpKey,
         amount: amount.toString(),
         currency: currency || 'INR',
         name: 'Assets Weber Studio',
@@ -675,10 +678,13 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {filteredOrders.map(order => {
                 const done = order.status === 'Completed' || order.status === 'Delivered' || order.projectState === 'finished';
-                const paid = order.paymentStatus === 'fully_paid' || (order.amountPaid >= order.totalAmount && order.totalAmount > 0);
+                const hasQuote = (order.totalAmount || 0) > 0;
+                const paid = order.paymentStatus === 'fully_paid' || (order.amountPaid >= order.totalAmount && hasQuote);
+                const isCustomOrder = !hasQuote || order.servicePlan?.toLowerCase().includes('custom') || order.status?.includes('Custom Quote') || order.status?.includes('Under Review');
+
                 const steps = [
-                  { label: 'Placed', done: true },
-                  { label: 'In Progress', done: order.status !== 'Pending Payment' },
+                  { label: 'Brief Received', done: true },
+                  { label: isCustomOrder && !hasQuote ? 'Quote Review' : 'In Progress', done: hasQuote && (order.status !== 'Pending Payment' && order.status !== 'Quote Ready - Awaiting Payment') },
                   { label: 'Review', done: order.status === 'Review' || done },
                   { label: 'Delivered', done }
                 ];
@@ -695,7 +701,9 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
                     }}>
                       <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', color: 'rgba(255,255,255,0.6)' }}>
                         <span>Ordered {new Date(order.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                        <span style={{ color: '#34c759', fontWeight: 700 }}>${(order.totalAmount || 0).toLocaleString()}</span>
+                        <span style={{ color: hasQuote ? '#34c759' : '#ff9500', fontWeight: 700 }}>
+                          {hasQuote ? `₹${(order.totalAmount || 0).toLocaleString('en-IN')}` : '⚡ Custom Quote Under Review'}
+                        </span>
                         <span>{order.service}</span>
                       </div>
                       <span style={{ fontFamily: 'monospace', color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem' }}>
@@ -706,13 +714,13 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
                     {/* Order body */}
                     <div style={{ padding: '20px 24px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                        <span style={{ fontSize: '1.2rem' }}>{done ? '✅' : '⚡'}</span>
+                        <span style={{ fontSize: '1.2rem' }}>{done ? '✅' : (!hasQuote ? '⏳' : '⚡')}</span>
                         <div>
-                          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', color: done ? '#34c759' : '#ff2d55' }}>
-                            {done ? 'Delivered' : order.status?.toUpperCase() || 'IN PROGRESS'}
+                          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', color: done ? '#34c759' : (!hasQuote ? '#ff9500' : '#ff2d55') }}>
+                            {done ? 'Delivered' : (!hasQuote ? 'CUSTOM QUOTE UNDER REVIEW' : order.status?.toUpperCase() || 'IN PROGRESS')}
                           </div>
                           <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
-                            {order.servicePlan || 'Custom'} · Payment: <span style={{ color: paid ? '#34c759' : '#ff9500', fontWeight: 600 }}>{paid ? 'Paid' : 'Pending'}</span>
+                            {order.servicePlan || 'Custom'} · Payment: <span style={{ color: paid ? '#34c759' : (hasQuote ? '#ff2d55' : '#ff9500'), fontWeight: 600 }}>{paid ? 'Paid' : (hasQuote ? 'Awaiting Payment' : 'Quote Pending')}</span>
                           </div>
                         </div>
                       </div>
@@ -735,9 +743,77 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
                       {/* Title & description */}
                       <div style={{ fontSize: '0.92rem', fontWeight: 600, marginBottom: 4 }}>{order.title}</div>
                       {order.description && (
-                        <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.84rem', lineHeight: 1.5, margin: '0 0 12px' }}>
+                        <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.84rem', lineHeight: 1.5, margin: '0 0 12px', whiteSpace: 'pre-line' }}>
                           {order.description}
                         </p>
+                      )}
+
+                      {/* Custom Order Callout when price is not set yet */}
+                      {!hasQuote && (
+                        <div style={{
+                          margin: '12px 0 16px',
+                          padding: '14px 18px',
+                          borderRadius: 12,
+                          backgroundColor: 'rgba(255, 149, 0, 0.08)',
+                          border: '1px solid rgba(255, 149, 0, 0.25)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 6
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ff9500', fontWeight: 700, fontSize: '0.85rem' }}>
+                            <span>⏳</span> OUR PRODUCTION TEAM IS REVIEWING YOUR CUSTOM BRIEF
+                          </div>
+                          <div style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
+                            Our team will contact you via <strong>phone call</strong> and <strong>website DM</strong> to discuss your specifications, deliverables, and timeline. Once the quote is set by the team, you can pay directly via Razorpay right here to initiate production.
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Quote Ready Alert when price is set by team and awaiting payment */}
+                      {hasQuote && !paid && (
+                        <div style={{
+                          margin: '12px 0 16px',
+                          padding: '16px 20px',
+                          borderRadius: 14,
+                          backgroundColor: 'rgba(52, 199, 89, 0.08)',
+                          border: '1px solid rgba(52, 199, 89, 0.3)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 10
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                            <div style={{ color: '#34c759', fontWeight: 700, fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span>⚡</span> QUOTE APPROVED & READY FOR COMMENCEMENT
+                            </div>
+                            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', color: '#fff' }}>
+                              ₹{order.totalAmount.toLocaleString('en-IN')}
+                            </div>
+                          </div>
+                          <div style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>
+                            The engineering team has finalized your project price. Pay now via Razorpay (UPI, Credit/Debit Cards, Net Banking) to immediately start production.
+                          </div>
+                          <button
+                            onClick={() => handlePayment(order)}
+                            disabled={processingPayment}
+                            style={{
+                              alignSelf: 'flex-start',
+                              padding: '10px 22px',
+                              borderRadius: 10,
+                              background: 'linear-gradient(135deg, #ff2d55, #c81e42)',
+                              boxShadow: '0 0 20px rgba(255,45,85,0.4)',
+                              border: 'none',
+                              color: '#fff',
+                              fontWeight: 700,
+                              fontSize: '0.88rem',
+                              cursor: processingPayment ? 'not-allowed' : 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8
+                            }}
+                          >
+                            <IndianRupee size={15} /> Pay ₹{order.totalAmount.toLocaleString('en-IN')} via Razorpay & Start Project
+                          </button>
+                        </div>
                       )}
 
                       {/* Delivery Link */}
@@ -771,12 +847,12 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
 
                       {/* Action buttons and Reviews */}
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-                        <button onClick={() => { setActiveTab('chat'); handleSendMessage(`Question about order "${order.title}"`); }} style={{
+                        <button onClick={() => { setActiveTab('chat'); handleSendMessage(`Question regarding order "${order.title}"`); }} style={{
                           padding: '8px 16px', borderRadius: 10, backgroundColor: '#25D366',
                           border: 'none', color: '#fff', fontWeight: 600, fontSize: '0.82rem',
                           display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer'
                         }}>
-                          <MessageSquare size={14} /> Chat
+                          <MessageSquare size={14} /> DM Team
                         </button>
 
                         <button onClick={() => setActiveTab('store')} style={{
@@ -784,17 +860,17 @@ export function ClientPortal({ user, skills = [], onBackToStudent, showToast, on
                           backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
                           color: 'rgba(255,255,255,0.7)', fontWeight: 500, fontSize: '0.82rem', cursor: 'pointer'
                         }}>
-                          Order Again
+                          Explore More Skills
                         </button>
                         
-                        {!paid && (
+                        {hasQuote && !paid && (
                           <button onClick={() => handlePayment(order)} disabled={processingPayment} style={{
                             padding: '8px 16px', borderRadius: 10,
                             backgroundColor: processingPayment ? 'rgba(255,45,85,0.5)' : '#ff2d55',
                             border: 'none', color: '#fff', fontWeight: 600, fontSize: '0.82rem', cursor: processingPayment ? 'not-allowed' : 'pointer',
                             display: 'flex', alignItems: 'center', gap: 6
                           }}>
-                            <IndianRupee size={14} /> Pay Now
+                            <IndianRupee size={14} /> Pay Now (₹{order.totalAmount.toLocaleString('en-IN')})
                           </button>
                         )}
                       </div>
